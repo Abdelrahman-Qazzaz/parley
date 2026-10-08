@@ -32,6 +32,7 @@ import { useServerReady } from "../hooks/server/useServerReady";
 import { SourcesContext, type ExistingSource } from "./context";
 import type { StagedSource } from "./types";
 import { useTranscriptWatcher } from "./useTranscriptWatcher";
+import { localId } from "../lib/localId";
 
 type Drafts = Record<string, StagedSource[]>;
 
@@ -40,7 +41,7 @@ function stageSource(
     Partial<StagedSource>,
 ): StagedSource {
   return {
-    localId: crypto.randomUUID(),
+    localId: localId(),
     sourceUploadId: null,
     previewUrl: null,
     charCount: null,

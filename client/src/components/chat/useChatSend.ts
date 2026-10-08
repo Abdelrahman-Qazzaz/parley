@@ -13,6 +13,7 @@ import { useServer } from "../../hooks/server/useServer";
 import { useToast } from "../../hooks/toast/useToast";
 import type { StagedSource } from "../../sources/types";
 import type { PendingTurn } from "./types";
+import { localId } from "../../lib/localId";
 
 /** Deltas arrive faster than a long reply can be re-parsed; batch them. */
 const FLUSH_INTERVAL_MS = 80;
@@ -92,7 +93,7 @@ function toStoredTurns(
 ): ChatMessage[] {
   const createdAt = new Date().toISOString();
   const user: ChatMessage = {
-    id: `local:${crypto.randomUUID()}`,
+    id: `local:${localId()}`,
     role: "user",
     content: input.content,
     chosenModelId: null,
@@ -266,7 +267,7 @@ export function useChatSend() {
               ...toStoredTurns(
                 input,
                 target,
-                storedAssistantId ?? `local:${crypto.randomUUID()}`,
+                storedAssistantId ?? `local:${localId()}`,
                 deltas.text,
               ),
             ],
