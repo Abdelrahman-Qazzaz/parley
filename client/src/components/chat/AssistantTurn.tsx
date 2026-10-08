@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { describeModel } from "../../api/models";
+import { useChatModelsQuery } from "../../hooks/queries/useModelsQuery";
+import { useServerReady } from "../../hooks/server/useServerReady";
 import { Icon } from "../ui/Icon";
 import { Markdown } from "./Markdown";
 
@@ -12,6 +15,9 @@ export function AssistantTurn({
   streaming?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const { models } = useChatModelsQuery(useServerReady());
+  const model = models.find((entry) => entry.id === modelId);
+  const modelName = model ? describeModel(model).name : modelId;
 
   const copy = async () => {
     await navigator.clipboard.writeText(content);
@@ -42,9 +48,9 @@ export function AssistantTurn({
             <Icon name={copied ? "check" : "copy"} className="h-3.5 w-3.5" />
             <span className="text-xs">{copied ? "Copied" : "Copy"}</span>
           </button>
-          {modelId && (
+          {modelName && (
             <span className="font-mono text-[11px] text-faint opacity-0 transition-opacity group-hover/turn:opacity-100">
-              {modelId}
+              {modelName}
             </span>
           )}
         </div>
