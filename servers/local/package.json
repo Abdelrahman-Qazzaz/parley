@@ -1,0 +1,39 @@
+{
+  "name": "summarizer-server",
+  "private": true,
+  "type": "module",
+  "packageManager": "npm@11.14.1",
+  "scripts": {
+    "build": "tsx scripts/build.ts",
+    "start:api": "node dist/api.js",
+    "dev": "tsx watch --inspect=9229 api/index.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "check:unused": "tsc --noEmit && tsx scripts/checkUnusedMembers.ts",
+    "db:generate": "drizzle-kit generate",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "1.19.2",
+    "@libsql/client": "0.18.0",
+    "dotenv": "17.3.1",
+    "drizzle-orm": "0.45.2",
+    "hono": "4.12.12",
+    "socket.io": "4.8.3",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "25.6.0",
+    "drizzle-kit": "0.31.10",
+    "esbuild": "^0.28.2",
+    "eslint": "9.39.4",
+    "tsx": "4.20.5",
+    "typescript": "5.7.3",
+    "typescript-eslint": "8.57.0",
+    "vitest": "4.1.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

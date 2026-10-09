@@ -1,0 +1,8 @@
+`npm run dev` starts the API, which also runs transcription.
+
+Use Debugger: (port 9229) (debugger attached to this port in devcontainer)
+
+1. Open chrome://inspect
+2. Configure → add 127.0.0.1:9229
+3. Click "inspect" under Remote Target
+4. use keyword "debugger" instead of breakpoints
