@@ -2,7 +2,7 @@
 .gitorder
 package.json
 mise.toml
-compose.yaml
+servers/cloud/compose.yaml
 knip.json
 Dockerfile
 *.config.*

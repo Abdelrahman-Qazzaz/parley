@@ -2,7 +2,7 @@
 # whichever platform this is deployed to: one migrate one-shot that must finish
 # first, then the API, the worker (scale this one), and the YouTube fetcher.
 #
-#   doppler run -- docker compose up --build
+#   doppler run -- docker compose -f servers/cloud/compose.yaml up --build
 #
 # Secrets are passed through from the environment rather than read from a file:
 # the .env files only carry DOPPLER_TOKEN, and this keeps plaintext secrets off
@@ -21,7 +21,7 @@ services:
   # DATABASE_URL, not the application's other secrets.
   migrate:
     build:
-      context: ./servers/cloud/backend
+      context: ./backend
     command: ["node", "dist/migrate.js"]
     environment:
       - DATABASE_URL
@@ -29,7 +29,7 @@ services:
 
   api:
     build:
-      context: ./servers/cloud/backend
+      context: ./backend
     command: ["node", "dist/api.js"]
     environment:
       - DATABASE_URL
@@ -70,7 +70,7 @@ services:
   # transcribe-worker=3` is the whole scaling story.
   transcribe-worker:
     build:
-      context: ./servers/cloud/backend
+      context: ./backend
     command: ["node", "dist/transcribe-worker.js"]
     environment:
       - DATABASE_URL
@@ -88,7 +88,7 @@ services:
   # for the API to be healthy rather than merely started.
   youtube-fetcher:
     build:
-      context: ./servers/cloud/youtube-fetcher
+      context: ./youtube-fetcher
     environment:
       - MQ_URL
       - SUPABASE_URL
