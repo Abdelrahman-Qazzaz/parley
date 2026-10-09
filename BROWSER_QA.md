@@ -9,7 +9,7 @@ Build and load the browser template on the host as described in [`.sbx/README.md
 Run the app and create a seven-day session for the dedicated `playwright-e2e` database user:
 
 ```sh
-npm run dev
+npm run dev:cloud
 npm run browser:auth
 ```
 
