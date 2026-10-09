@@ -88,7 +88,7 @@ services:
   # for the API to be healthy rather than merely started.
   youtube-fetcher:
     build:
-      context: ./youtube-fetcher
+      context: ./servers/cloud/youtube-fetcher
     environment:
       - MQ_URL
       - SUPABASE_URL

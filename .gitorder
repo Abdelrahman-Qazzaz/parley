@@ -39,10 +39,10 @@ servers/cloud/backend/test/*
 servers/cloud/backend/*
 
 # Fetcher implementation before its tests
-youtube-fetcher/app/*
-youtube-fetcher/scripts/*
-youtube-fetcher/test/*
-youtube-fetcher/*
+servers/cloud/youtube-fetcher/app/*
+servers/cloud/youtube-fetcher/scripts/*
+servers/cloud/youtube-fetcher/test/*
+servers/cloud/youtube-fetcher/*
 
 # Client data flow before UI
 client/src/config.ts
