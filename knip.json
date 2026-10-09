@@ -20,6 +20,10 @@
       // env and throws under a bare `npx knip`. Treated as a plain entry above.
       "drizzle": false
     },
+    "servers/local": {
+      "entry": ["test/**/*.test.ts"],
+      "project": ["**/*.ts"]
+    },
     // Entries/project come from the vite plugin's defaults.
     "client": {}
   }

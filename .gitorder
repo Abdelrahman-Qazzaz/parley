@@ -38,6 +38,14 @@ servers/cloud/backend/scripts/*
 servers/cloud/backend/test/*
 servers/cloud/backend/*
 
+# Local server: foundations before the API
+servers/local/shared/*
+servers/local/drizzle/*
+servers/local/api/*
+servers/local/scripts/*
+servers/local/test/*
+servers/local/*
+
 # Fetcher implementation before its tests
 servers/cloud/youtube-fetcher/app/*
 servers/cloud/youtube-fetcher/scripts/*
