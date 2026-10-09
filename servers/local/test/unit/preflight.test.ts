@@ -31,7 +31,7 @@ describe("verifyServices", () => {
       ]),
     ).rejects.toThrow(
       "Startup aborted — the following services are unavailable:\n" +
-        "  - yt-dlp: not installed, or not on PATH. `npm start` from the repo root provides it through mise\n" +
+        "  - yt-dlp: not installed, or not on PATH. The repo root's npm scripts provide it through mise\n" +
         "  - Claude Code: Not logged in",
     );
   });

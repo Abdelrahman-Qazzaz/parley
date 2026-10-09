@@ -13,7 +13,7 @@ type ServiceCheck = {
  */
 function reasonOf(reason: unknown) {
   if ((reason as NodeJS.ErrnoException | null)?.code === "ENOENT") {
-    return "not installed, or not on PATH. `npm start` from the repo root provides it through mise";
+    return "not installed, or not on PATH. The repo root's npm scripts provide it through mise";
   }
   return messageOf(reason);
 }

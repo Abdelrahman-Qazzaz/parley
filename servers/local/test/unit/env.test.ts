@@ -14,7 +14,7 @@ describe("apiEnvSchema", () => {
     expect(result.success).toBe(true);
     expect(result.data).toMatchObject({
       PORT: 3001,
-      CLIENT_DIR: "../client/dist",
+      CLIENT_DIR: "../../client/dist",
       ALLOWED_HOSTS: [],
     });
   });

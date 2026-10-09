@@ -45,7 +45,7 @@ export const apiEnvSchema = baseEnvSchema.extend({
    * The built client, which the API serves when it's there. Relative to the
    * working directory, like the migrations.
    */
-  CLIENT_DIR: z.string().min(1).default("../client/dist"),
+  CLIENT_DIR: z.string().min(1).default("../../client/dist"),
   /**
    * Names the app answers to besides this machine's, comma-separated: the
    * Tailscale name `tailscale serve` puts it behind, so a phone on the same
