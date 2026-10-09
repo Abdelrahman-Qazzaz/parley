@@ -1,5 +1,5 @@
 alias sanda='sbx run --name summarizer'
-alias sand='sbx exec -it summarizer bash'
+alias sand='sbx exec -it summarizer tmux new -A -s main'
 # 3001 serves the API and the websocket; Socket.IO attaches to the same server.
 alias sand_ports='sbx ports summarizer --publish 5173:5173 && sbx ports summarizer --publish 3001:3001'
 
