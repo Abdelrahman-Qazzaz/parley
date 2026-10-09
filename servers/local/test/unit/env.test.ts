@@ -13,7 +13,7 @@ describe("apiEnvSchema", () => {
     const result = apiEnvSchema.safeParse(validBase);
     expect(result.success).toBe(true);
     expect(result.data).toMatchObject({
-      PORT: 3001,
+      PORT: 3002,
       CLIENT_DIR: "../../client/dist",
       ALLOWED_HOSTS: [],
     });

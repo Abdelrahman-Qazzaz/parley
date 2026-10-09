@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsx scripts/build.ts",
     "start:api": "node dist/api.js",
-    "dev": "tsx watch --inspect=9229 api/index.ts",
+    "dev": "tsx watch --inspect=9231 api/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "check:unused": "tsc --noEmit && tsx scripts/checkUnusedMembers.ts",

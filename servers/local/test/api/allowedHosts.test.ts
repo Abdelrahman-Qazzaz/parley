@@ -57,7 +57,7 @@ describe("requests from off this machine", () => {
     expect((await formPost("https://evil.test")).status).toBe(403);
   });
 
-  it.each(["http://localhost:3001", "http://127.0.0.1:5173"])(
+  it.each(["http://localhost:3002", "http://127.0.0.1:5173"])(
     "go through when a form post comes from a page at %s",
     async (origin) => {
       // Past the origin check, the empty form fails validation instead.

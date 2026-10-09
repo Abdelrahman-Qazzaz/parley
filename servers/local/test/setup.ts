@@ -2,7 +2,7 @@ import { vi } from "vitest";
 
 process.env.NODE_ENV = "test";
 // DATA_DIR comes from globalSetup.ts.
-process.env.PORT = "3001";
+process.env.PORT = "3002";
 // No built client, whether or not one has been built: the suites that want
 // one make their own.
 process.env.CLIENT_DIR = "/nonexistent/client";

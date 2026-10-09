@@ -40,7 +40,7 @@ export const baseEnvSchema = z.object({
 
 /** Exported for its own unit test; the API reads env through getApiEnv. */
 export const apiEnvSchema = baseEnvSchema.extend({
-  PORT: z.coerce.number().int().positive().default(3001),
+  PORT: z.coerce.number().int().positive().default(3002),
   /**
    * The built client, which the API serves when it's there. Relative to the
    * working directory, like the migrations.
