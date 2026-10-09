@@ -9,7 +9,7 @@ import { ApiError, apiJson, jsonRequest } from "./http";
 
 /**
  * Wire names for the request fields, mirroring the server's FORM_KEYS
- * (backend/shared/keys.ts). A field the server doesn't recognise is silently
+ * (servers/cloud/backend/shared/keys.ts). A field the server doesn't recognise is silently
  * dropped by its validator, so these have to match exactly.
  */
 const FORM_KEYS = {

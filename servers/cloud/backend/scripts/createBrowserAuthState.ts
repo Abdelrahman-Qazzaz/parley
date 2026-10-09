@@ -7,7 +7,7 @@ const userId = process.env.PLAYWRIGHT_USER_ID?.trim() || "playwright-e2e";
 const expiresAtEpochSeconds = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7;
 const outputPath = resolve(
   import.meta.dirname,
-  "../../output/playwright/auth-state.json",
+  "../../../../output/playwright/auth-state.json",
 );
 
 /**

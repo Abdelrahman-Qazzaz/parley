@@ -1,4 +1,4 @@
-// Mirrors the server's YOUTUBE_HOSTS (backend/api/src/schema/upload.schema.ts)
+// Mirrors the server's YOUTUBE_HOSTS (servers/cloud/backend/api/src/schema/upload.schema.ts)
 // so the composer can offer a transcript the moment a link is typed — the
 // server remains the authority on what it will actually accept.
 const YOUTUBE_HOSTS = new Set([

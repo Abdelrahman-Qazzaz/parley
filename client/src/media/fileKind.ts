@@ -43,7 +43,7 @@ export const IMAGE_ACCEPT = "image/*,.png,.jpg,.jpeg,.gif,.webp,.avif";
 export const MEDIA_ACCEPT =
   "audio/*,video/*,.mp3,.wav,.m4a,.aac,.ogg,.flac,.opus,.weba,.mp4,.webm,.mov,.mkv,.avi,.m4v";
 
-/** Mirrors the server's caps (backend/shared/storage/schema.ts) for instant feedback. */
+/** Mirrors the server's caps (servers/cloud/backend/shared/storage/schema.ts) for instant feedback. */
 export const MAX_IMAGE_BYTES = 10 * 1024 * 1024;
 export const MAX_AUDIO_BYTES = 50 * 1024 * 1024;
 

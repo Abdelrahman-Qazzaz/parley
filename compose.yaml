@@ -21,7 +21,7 @@ services:
   # DATABASE_URL, not the application's other secrets.
   migrate:
     build:
-      context: ./backend
+      context: ./servers/cloud/backend
     command: ["node", "dist/migrate.js"]
     environment:
       - DATABASE_URL
@@ -29,7 +29,7 @@ services:
 
   api:
     build:
-      context: ./backend
+      context: ./servers/cloud/backend
     command: ["node", "dist/api.js"]
     environment:
       - DATABASE_URL
@@ -70,7 +70,7 @@ services:
   # transcribe-worker=3` is the whole scaling story.
   transcribe-worker:
     build:
-      context: ./backend
+      context: ./servers/cloud/backend
     command: ["node", "dist/transcribe-worker.js"]
     environment:
       - DATABASE_URL

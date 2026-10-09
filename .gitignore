@@ -19,10 +19,10 @@ yarn.lock
 pnpm-lock.yaml
 bun.lock
 bun.lockb
-backend/erl_crash.dump
+servers/cloud/backend/erl_crash.dump
 
 # Logger JSON output
-backend/shared/logger/logs/
+servers/cloud/backend/shared/logger/logs/
 
 
 **/.claude

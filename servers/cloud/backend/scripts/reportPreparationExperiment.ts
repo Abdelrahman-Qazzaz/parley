@@ -21,7 +21,10 @@ type RequestMetric = {
   };
   preparationGroups: { durationMs: number; operations: Operation[] }[];
 };
-const folder = new URL("../../output/preparation-metrics/", import.meta.url);
+const folder = new URL(
+  "../../../../output/preparation-metrics/",
+  import.meta.url,
+);
 async function readJson(name: string) {
   return JSON.parse(await readFile(new URL(name, folder), "utf8"));
 }

@@ -13,30 +13,30 @@ tsconfig*.json
 requirements*.txt
 
 # Backend foundations before API consumers
-backend/shared/types.ts
-backend/shared/keys.ts
-backend/shared/env.ts
-backend/shared/message-queue/*
-backend/drizzle/*.sql
-backend/drizzle/meta/*
-backend/drizzle/*
-backend/shared/db/*
-backend/shared/data/*
-backend/shared/ai/*
-backend/shared/*
-backend/api/src/schema/*
-backend/api/src/auth/*
-backend/api/src/data/*
-backend/api/src/controllers/*
-backend/api/src/middleware/*
-backend/api/src/routes/*
-backend/api/src/sockets/*
-backend/api/src/utils/*
-backend/api/src/*
-backend/transcribe-worker/*
-backend/scripts/*
-backend/test/*
-backend/*
+servers/cloud/backend/shared/types.ts
+servers/cloud/backend/shared/keys.ts
+servers/cloud/backend/shared/env.ts
+servers/cloud/backend/shared/message-queue/*
+servers/cloud/backend/drizzle/*.sql
+servers/cloud/backend/drizzle/meta/*
+servers/cloud/backend/drizzle/*
+servers/cloud/backend/shared/db/*
+servers/cloud/backend/shared/data/*
+servers/cloud/backend/shared/ai/*
+servers/cloud/backend/shared/*
+servers/cloud/backend/api/src/schema/*
+servers/cloud/backend/api/src/auth/*
+servers/cloud/backend/api/src/data/*
+servers/cloud/backend/api/src/controllers/*
+servers/cloud/backend/api/src/middleware/*
+servers/cloud/backend/api/src/routes/*
+servers/cloud/backend/api/src/sockets/*
+servers/cloud/backend/api/src/utils/*
+servers/cloud/backend/api/src/*
+servers/cloud/backend/transcribe-worker/*
+servers/cloud/backend/scripts/*
+servers/cloud/backend/test/*
+servers/cloud/backend/*
 
 # Fetcher implementation before its tests
 youtube-fetcher/app/*

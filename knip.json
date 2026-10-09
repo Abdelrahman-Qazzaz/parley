@@ -5,7 +5,7 @@
       "entry": [],
       "project": []
     },
-    "backend": {
+    "servers/cloud/backend": {
       "entry": [
         "api/index.ts",
         "transcribe-worker/index.ts",
