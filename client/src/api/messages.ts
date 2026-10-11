@@ -1,4 +1,3 @@
-import { conversationMessagesEndpoint } from "../config";
 import type {
   ChatMessage,
   MessageAttachmentInput,
@@ -9,6 +8,7 @@ import type {
   SendMessageBody,
 } from "@summarizer/contract";
 import { apiFetch, apiJson, jsonRequest } from "./http";
+import type { Server } from "./server";
 
 export type {
   ChatMessage,
@@ -29,10 +29,12 @@ export const MAX_CONTEXT_MESSAGES = 50;
 export type SendMessageInput = SendMessageBody & { conversationId: string };
 
 export async function fetchMessages(
+  server: Server,
   conversationId: string,
 ): Promise<MessagesResponse> {
   const data = await apiJson<MessagesResponse>(
-    conversationMessagesEndpoint(conversationId),
+    server,
+    `/conversations/${conversationId}/messages`,
   );
   if (!Array.isArray(data?.messages)) {
     throw new Error("Invalid messages response");
@@ -78,11 +80,13 @@ function dispatchSseEvent(rawEvent: string, callbacks: StreamCallbacks): void {
  * if this stream dies — a failure here means "refetch", not "the turn was lost".
  */
 export async function streamMessage(
+  server: Server,
   input: SendMessageInput,
   callbacks: StreamCallbacks,
 ): Promise<void> {
   const response = await apiFetch(
-    conversationMessagesEndpoint(input.conversationId),
+    server,
+    `/conversations/${input.conversationId}/messages`,
     jsonRequest("POST", {
       messageContent: input.messageContent,
       chosenModelId: input.chosenModelId,

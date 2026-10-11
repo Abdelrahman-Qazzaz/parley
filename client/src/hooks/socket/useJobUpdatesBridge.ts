@@ -4,6 +4,7 @@ import { SocketContext } from "./context";
 import { queryKeys } from "../../lib/queryClient";
 import { useToast } from "../toast/useToast";
 import type { Job } from "../../api/jobs";
+import { useServer } from "../server/useServer";
 
 type JobUpdatedPayload = {
   audioUploadId: string;
@@ -15,6 +16,7 @@ type JobUpdatedPayload = {
  * failures are announced — a finished transcript is already visible on its chip.
  */
 export function useJobUpdatesBridge(enabled: boolean) {
+  const server = useServer();
   const socket = useContext(SocketContext);
   const queryClient = useQueryClient();
   const toast = useToast();
@@ -25,11 +27,15 @@ export function useJobUpdatesBridge(enabled: boolean) {
     const handler = async ({ audioUploadId }: JobUpdatedPayload) => {
       if (!audioUploadId) return;
       await queryClient.invalidateQueries({
-        queryKey: queryKeys.job(audioUploadId),
+        queryKey: queryKeys.job(server.id, audioUploadId),
       });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.jobs });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.jobs(server.id),
+      });
 
-      const job = queryClient.getQueryData<Job>(queryKeys.job(audioUploadId));
+      const job = queryClient.getQueryData<Job>(
+        queryKeys.job(server.id, audioUploadId),
+      );
       if (job?.status === "failed") {
         toast.show({
           kind: "error",
@@ -41,8 +47,12 @@ export function useJobUpdatesBridge(enabled: boolean) {
     // Updates published while the socket was down were delivered to nobody, so
     // reconnecting has to re-read rather than wait for the next push.
     const onReconnect = () => {
-      void queryClient.invalidateQueries({ queryKey: ["job"] });
-      void queryClient.invalidateQueries({ queryKey: queryKeys.jobs });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.allJobs(server.id),
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.jobs(server.id),
+      });
     };
 
     socket.on("jobUpdated", handler);
@@ -51,5 +61,5 @@ export function useJobUpdatesBridge(enabled: boolean) {
       socket.off("jobUpdated", handler);
       socket.off("connect", onReconnect);
     };
-  }, [enabled, socket, queryClient, toast]);
+  }, [enabled, server, socket, queryClient, toast]);
 }

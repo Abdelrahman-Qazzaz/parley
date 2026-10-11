@@ -1,28 +1,30 @@
-import { chatModelsEndpoint, transcriptionModelsEndpoint } from "../config";
 import type {
   ChatModel,
   ModelsResponse,
   TranscribeModel,
 } from "@summarizer/contract";
 import { apiJson } from "./http";
+import type { Server } from "./server";
 
 export type { ChatModel, TranscribeModel };
 
 export const DEFAULT_TEXT_MODEL = "openai/gpt-4o-mini";
 export const DEFAULT_TRANSCRIPTION_MODEL = "nova-3-general";
 
-async function fetchModels<T>(endpoint: string): Promise<T[]> {
-  const data = await apiJson<ModelsResponse<T>>(endpoint);
+async function fetchModels<T>(server: Server, path: string): Promise<T[]> {
+  const data = await apiJson<ModelsResponse<T>>(server, path);
   if (!Array.isArray(data?.models)) throw new Error("Invalid models response");
   return data.models;
 }
 
-export function fetchChatModels(): Promise<ChatModel[]> {
-  return fetchModels<ChatModel>(chatModelsEndpoint());
+export function fetchChatModels(server: Server): Promise<ChatModel[]> {
+  return fetchModels<ChatModel>(server, "/models/chat");
 }
 
-export function fetchTranscriptionModels(): Promise<TranscribeModel[]> {
-  return fetchModels<TranscribeModel>(transcriptionModelsEndpoint());
+export function fetchTranscriptionModels(
+  server: Server,
+): Promise<TranscribeModel[]> {
+  return fetchModels<TranscribeModel>(server, "/models/transcription");
 }
 
 /** Fall back to the first available model when the preferred one isn't offered. */

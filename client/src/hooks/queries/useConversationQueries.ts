@@ -7,17 +7,20 @@ import {
 } from "../../api/conversations";
 import { errorMessage } from "../../api/http";
 import { queryKeys } from "../../lib/queryClient";
+import { useServer } from "../server/useServer";
 import { useToast } from "../toast/useToast";
 
 export function useConversationsQuery(enabled: boolean) {
+  const server = useServer();
   return useQuery({
-    queryKey: queryKeys.conversations,
-    queryFn: fetchConversations,
+    queryKey: queryKeys.conversations(server.id),
+    queryFn: () => fetchConversations(server),
     enabled,
   });
 }
 
 export function useRenameConversationMutation() {
+  const server = useServer();
   const queryClient = useQueryClient();
   const toast = useToast();
 
@@ -28,10 +31,10 @@ export function useRenameConversationMutation() {
     }: {
       conversationId: string;
       title: string;
-    }) => renameConversation(conversationId, title),
+    }) => renameConversation(server, conversationId, title),
     onSuccess: (updated) => {
       queryClient.setQueryData<Conversation[]>(
-        queryKeys.conversations,
+        queryKeys.conversations(server.id),
         (current) =>
           current?.map((conversation) =>
             conversation.id === updated.id ? updated : conversation,
@@ -48,20 +51,21 @@ export function useRenameConversationMutation() {
 }
 
 export function useDeleteConversationMutation() {
+  const server = useServer();
   const queryClient = useQueryClient();
   const toast = useToast();
 
   return useMutation({
     mutationFn: ({ conversationId }: { conversationId: string }) =>
-      deleteConversation(conversationId),
+      deleteConversation(server, conversationId),
     onSuccess: (_result, { conversationId }) => {
       queryClient.setQueryData<Conversation[]>(
-        queryKeys.conversations,
+        queryKeys.conversations(server.id),
         (current) =>
           current?.filter((conversation) => conversation.id !== conversationId),
       );
       queryClient.removeQueries({
-        queryKey: queryKeys.messages(conversationId),
+        queryKey: queryKeys.messages(server.id, conversationId),
       });
     },
     onError: (error) => {

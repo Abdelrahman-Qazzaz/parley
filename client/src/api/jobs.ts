@@ -1,4 +1,3 @@
-import { jobEndpoint, jobsListEndpoint } from "../config";
 import type {
   Job,
   JobSource,
@@ -7,6 +6,7 @@ import type {
   JobSummary,
 } from "@summarizer/contract";
 import { apiFetch, apiJson } from "./http";
+import type { Server } from "./server";
 
 export type { Job, JobSource, JobStatus, JobsPage, JobSummary };
 
@@ -15,26 +15,36 @@ export type JobsFilters = {
   q?: string | null;
 };
 
-export async function fetchJob(audioUploadId: string): Promise<Job> {
-  const data = await apiJson<Job>(jobEndpoint(audioUploadId));
+export async function fetchJob(
+  server: Server,
+  audioUploadId: string,
+): Promise<Job> {
+  const data = await apiJson<Job>(server, `/jobs/transcribe/${audioUploadId}`);
   if (!data?.audioUploadId) throw new Error("Invalid job response");
   return data;
 }
 
 export async function fetchJobs(
+  server: Server,
   params: JobsFilters & { limit?: number; cursor?: string | null } = {},
 ): Promise<JobsPage> {
-  const url = new URL(jobsListEndpoint());
-  if (params.limit != null) url.searchParams.set("limit", String(params.limit));
-  if (params.cursor) url.searchParams.set("cursor", params.cursor);
-  if (params.status) url.searchParams.set("status", params.status);
-  if (params.q) url.searchParams.set("q", params.q);
+  const query = new URLSearchParams();
+  if (params.limit != null) query.set("limit", String(params.limit));
+  if (params.cursor) query.set("cursor", params.cursor);
+  if (params.status) query.set("status", params.status);
+  if (params.q) query.set("q", params.q);
 
-  const data = await apiJson<JobsPage>(url.toString());
+  const path = query.size > 0 ? `/jobs?${query}` : "/jobs";
+  const data = await apiJson<JobsPage>(server, path);
   if (!Array.isArray(data?.jobs)) throw new Error("Invalid jobs response");
   return { jobs: data.jobs, nextCursor: data.nextCursor ?? null };
 }
 
-export async function deleteJob(audioUploadId: string): Promise<void> {
-  await apiFetch(jobEndpoint(audioUploadId), { method: "DELETE" });
+export async function deleteJob(
+  server: Server,
+  audioUploadId: string,
+): Promise<void> {
+  await apiFetch(server, `/jobs/transcribe/${audioUploadId}`, {
+    method: "DELETE",
+  });
 }

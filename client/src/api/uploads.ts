@@ -1,10 +1,3 @@
-import {
-  uploadAudioConfirmEndpoint,
-  uploadAudioEndpoint,
-  uploadImageConfirmEndpoint,
-  uploadImageEndpoint,
-  uploadYoutubeEndpoint,
-} from "../config";
 import type {
   QueuedYoutube,
   QueueYoutubeBody,
@@ -12,6 +5,7 @@ import type {
   UploadedImage,
 } from "@summarizer/contract";
 import { ApiError, apiJson, jsonRequest } from "./http";
+import type { Server } from "./server";
 
 export type { UploadedImage };
 
@@ -34,11 +28,13 @@ type UploadTarget = { uploadId: string; signedUploadUrl: string };
  * key, and the bytes go there without passing through the API.
  */
 async function uploadToStorage(
-  mintEndpoint: string,
+  server: Server,
+  mintPath: string,
   file: File,
 ): Promise<string> {
   const { uploadId, signedUploadUrl } = await apiJson<UploadTarget>(
-    mintEndpoint,
+    server,
+    mintPath,
     jsonRequest("POST", {}),
   );
 
@@ -62,11 +58,15 @@ async function uploadToStorage(
 }
 
 /** Stored immediately on drop; the signed URL is what previews the image. */
-export async function uploadImage(file: File): Promise<UploadedImage> {
-  const uploadId = await uploadToStorage(uploadImageEndpoint(), file);
+export async function uploadImage(
+  server: Server,
+  file: File,
+): Promise<UploadedImage> {
+  const uploadId = await uploadToStorage(server, "/upload/image", file);
 
   return apiJson<UploadedImage>(
-    uploadImageConfirmEndpoint(),
+    server,
+    "/upload/image/confirm",
     jsonRequest("POST", {
       [FORM_KEYS.uploadId]: uploadId,
       [FORM_KEYS.fileName]: file.name,
@@ -75,11 +75,13 @@ export async function uploadImage(file: File): Promise<UploadedImage> {
 }
 
 /** Deletes a resolved image removed from a draft. */
-export async function deleteImage(imageUploadId: string): Promise<void> {
-  await apiJson<{ message: string }>(
-    `${uploadImageEndpoint()}/${imageUploadId}`,
-    { method: "DELETE" },
-  );
+export async function deleteImage(
+  server: Server,
+  imageUploadId: string,
+): Promise<void> {
+  await apiJson<{ message: string }>(server, `/upload/image/${imageUploadId}`, {
+    method: "DELETE",
+  });
 }
 
 /**
@@ -87,15 +89,19 @@ export async function deleteImage(imageUploadId: string): Promise<void> {
  * `source` records what it came from; the transcribe job is queued server-side
  * once the upload is confirmed.
  */
-export async function uploadAudio(upload: {
-  file: File;
-  source: "audio" | "video";
-  transcriptModelId: string;
-}): Promise<UploadedAudio> {
-  const uploadId = await uploadToStorage(uploadAudioEndpoint(), upload.file);
+export async function uploadAudio(
+  server: Server,
+  upload: {
+    file: File;
+    source: "audio" | "video";
+    transcriptModelId: string;
+  },
+): Promise<UploadedAudio> {
+  const uploadId = await uploadToStorage(server, "/upload/audio", upload.file);
 
   return apiJson<UploadedAudio>(
-    uploadAudioConfirmEndpoint(),
+    server,
+    "/upload/audio/confirm",
     jsonRequest("POST", {
       [FORM_KEYS.uploadId]: uploadId,
       [FORM_KEYS.fileName]: upload.file.name,
@@ -107,11 +113,13 @@ export async function uploadAudio(upload: {
 
 /** The audio is fetched and transcribed server-side — nothing leaves this device. */
 export async function requestYoutubeTranscript(
+  server: Server,
   youtubeUrl: string,
   transcriptModelId: string,
 ): Promise<QueuedYoutube> {
   return apiJson<QueuedYoutube>(
-    uploadYoutubeEndpoint(),
+    server,
+    "/upload/youtube",
     jsonRequest("POST", {
       youtubeUrl,
       [FORM_KEYS.transcriptModelId]: transcriptModelId,

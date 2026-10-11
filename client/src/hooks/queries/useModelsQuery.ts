@@ -6,15 +6,17 @@ import {
   type TranscribeModel,
 } from "../../api/models";
 import { queryKeys } from "../../lib/queryClient";
+import { useServer } from "../server/useServer";
 
 /** The catalogs only change when the app does. */
 const MODEL_CATALOG_STALE_MS = 60 * 60_000;
 
 /** The chat models, in the order the API lists them. */
 export function useChatModelsQuery(enabled: boolean) {
+  const server = useServer();
   const query = useQuery({
-    queryKey: queryKeys.chatModels,
-    queryFn: fetchChatModels,
+    queryKey: queryKeys.chatModels(server.id),
+    queryFn: () => fetchChatModels(server),
     enabled,
     staleTime: MODEL_CATALOG_STALE_MS,
   });
@@ -28,9 +30,10 @@ export function useChatModelsQuery(enabled: boolean) {
 
 /** The transcription models, in the order the API lists them. */
 export function useTranscriptionModelsQuery(enabled: boolean) {
+  const server = useServer();
   const query = useQuery({
-    queryKey: queryKeys.transcriptionModels,
-    queryFn: fetchTranscriptionModels,
+    queryKey: queryKeys.transcriptionModels(server.id),
+    queryFn: () => fetchTranscriptionModels(server),
     enabled,
     staleTime: MODEL_CATALOG_STALE_MS,
   });

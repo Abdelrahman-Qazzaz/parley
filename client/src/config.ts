@@ -1,87 +1,35 @@
+import type { Server } from "./api/server";
+
 /** Dev host — keep API + WebSocket on the same hostname so session cookies are sent. */
 const DEV_HOST = "localhost";
 
 /**
- * API origin without trailing slash (session cookies are set on this host).
- * A production build is served by the API itself, so by default it calls its
- * own origin: the empty string. In development Vite serves the client, and
- * the API is on its own port.
+ * The hosted server. Its session cookies are set on this host. A production
+ * build is served by the cloud API itself, so by default it calls its own
+ * origin: the empty string. In development Vite serves the client, and the
+ * API is on its own port.
  */
-export const apiBase = (
-  import.meta.env.VITE_API_URL ??
-  (import.meta.env.DEV ? `http://${DEV_HOST}:3001` : "")
-).replace(/\/$/, "");
+export const cloudServer: Server = {
+  id: "cloud",
+  baseUrl: (
+    import.meta.env.VITE_API_URL ??
+    (import.meta.env.DEV ? `http://${DEV_HOST}:3001` : "")
+  ).replace(/\/$/, ""),
+  signIn: "session",
+};
 
 export function authLoginUrl(): string {
-  return `${apiBase}/auth/login`;
+  return `${cloudServer.baseUrl}/auth/login`;
 }
 
 export function authMeEndpoint(): string {
-  return `${apiBase}/auth/me`;
+  return `${cloudServer.baseUrl}/auth/me`;
 }
 
 export function authRefreshEndpoint(): string {
-  return `${apiBase}/auth/refresh`;
+  return `${cloudServer.baseUrl}/auth/refresh`;
 }
 
 export function authLogoutEndpoint(): string {
-  return `${apiBase}/auth/logout`;
-}
-
-export function jobEndpoint(audioUploadId: string): string {
-  return `${apiBase}/jobs/transcribe/${audioUploadId}`;
-}
-
-export function jobsListEndpoint(): string {
-  return `${apiBase}/jobs`;
-}
-
-export function chatModelsEndpoint(): string {
-  return `${apiBase}/models/chat`;
-}
-
-export function transcriptionModelsEndpoint(): string {
-  return `${apiBase}/models/transcription`;
-}
-
-export function conversationsEndpoint(): string {
-  return `${apiBase}/conversations`;
-}
-
-export function conversationEndpoint(conversationId: string): string {
-  return `${apiBase}/conversations/${conversationId}`;
-}
-
-export function conversationMessagesEndpoint(conversationId: string): string {
-  return `${apiBase}/conversations/${conversationId}/messages`;
-}
-
-export function uploadImageEndpoint(): string {
-  return `${apiBase}/upload/image`;
-}
-
-export function uploadImageConfirmEndpoint(): string {
-  return `${apiBase}/upload/image/confirm`;
-}
-
-export function uploadAudioEndpoint(): string {
-  return `${apiBase}/upload/audio`;
-}
-
-export function uploadAudioConfirmEndpoint(): string {
-  return `${apiBase}/upload/audio/confirm`;
-}
-
-export function uploadYoutubeEndpoint(): string {
-  return `${apiBase}/upload/youtube`;
-}
-
-/**
- * Socket.IO lives on the API's own origin — the server attaches it to the same
- * HTTP server, so there is no second URL to configure and the session cookie
- * that authenticates the handshake is already in scope.
- */
-export function socketIoUrl(): string | undefined {
-  // Socket.IO reads an empty string as a host; undefined means this page's.
-  return apiBase || undefined;
+  return `${cloudServer.baseUrl}/auth/logout`;
 }

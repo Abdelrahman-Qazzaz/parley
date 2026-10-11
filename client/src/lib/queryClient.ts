@@ -1,5 +1,6 @@
 import { QueryClient, type Query } from "@tanstack/react-query";
 import { createSyncStoragePersister } from "@tanstack/query-sync-storage-persister";
+import type { Server } from "../api/server";
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,15 +12,24 @@ export const queryClient = new QueryClient({
   },
 });
 
-/** Centralized query keys so the socket bridge and mutations stay in sync. */
+type ServerId = Server["id"];
+
+/**
+ * Centralized query keys so the socket bridge and mutations stay in sync. Each
+ * starts with the server it was asked of, since the two servers' ids and
+ * catalogs are unrelated.
+ */
 export const queryKeys = {
-  chatModels: ["models", "chat"] as const,
-  transcriptionModels: ["models", "transcription"] as const,
-  jobs: ["jobs"] as const,
-  job: (audioUploadId: string) => ["job", audioUploadId] as const,
-  conversations: ["conversations"] as const,
-  messages: (conversationId: string) =>
-    ["conversations", conversationId, "messages"] as const,
+  chatModels: (server: ServerId) => [server, "models", "chat"] as const,
+  transcriptionModels: (server: ServerId) =>
+    [server, "models", "transcription"] as const,
+  jobs: (server: ServerId) => [server, "jobs"] as const,
+  allJobs: (server: ServerId) => [server, "job"] as const,
+  job: (server: ServerId, audioUploadId: string) =>
+    [server, "job", audioUploadId] as const,
+  conversations: (server: ServerId) => [server, "conversations"] as const,
+  messages: (server: ServerId, conversationId: string) =>
+    [server, "conversations", conversationId, "messages"] as const,
 };
 
 /**
@@ -32,7 +42,7 @@ export const queryKeys = {
  */
 function shouldPersist(query: Query): boolean {
   if (query.state.status !== "success") return false;
-  const [root, second] = query.queryKey as string[];
+  const [, root, second] = query.queryKey as string[];
   if (root === "models") return true;
   // queryKeys.messages() also starts with "conversations", so the list is
   // matched by its exact single-segment key rather than by prefix.
@@ -62,6 +72,6 @@ export const persistOptions = {
   }),
   maxAge: 24 * 60 * 60 * 1000,
   // Bump when a cached shape changes, to drop entries written by an older build.
-  buster: "v1",
+  buster: "v2",
   dehydrateOptions: { shouldDehydrateQuery: shouldPersist },
 };

@@ -28,6 +28,7 @@ import {
   type FileKind,
 } from "../media/fileKind";
 import { youtubeLabel } from "../media/youtube";
+import { useServer } from "../hooks/server/useServer";
 import { useToast } from "../hooks/toast/useToast";
 import { useTranscriptionModelsQuery } from "../hooks/queries/useModelsQuery";
 import { useAuth } from "../hooks/auth/useAuth";
@@ -66,6 +67,7 @@ function releasePreview(source: StagedSource) {
  */
 export function SourcesProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
+  const server = useServer();
   const { user } = useAuth();
   const { models: transcriptionModels } = useTranscriptionModelsQuery(!!user);
   const [drafts, setDrafts] = useState<Drafts>({});
@@ -150,7 +152,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
       try {
         if (kind === "image") {
           patch({ status: "uploading" });
-          const uploaded = await uploadImage(file);
+          const uploaded = await uploadImage(server, file);
           // Swap the local object URL for the signed one and let the blob go;
           // the preview then survives being handed to the sent message.
           const withBlobPreview = draftsRef.current[draftKey]?.find(
@@ -179,7 +181,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
         }
 
         patch({ status: "uploading" });
-        const uploaded = await uploadAudio({
+        const uploaded = await uploadAudio(server, {
           file: speech,
           source: kind,
           transcriptModelId:
@@ -196,7 +198,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [patcherFor],
+    [patcherFor, server],
   );
 
   const runYoutubeFetch = useCallback(
@@ -205,6 +207,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
       try {
         patch({ status: "uploading" });
         const queued = await requestYoutubeTranscript(
+          server,
           url,
           transcriptModelRef.current ?? DEFAULT_TRANSCRIPTION_MODEL,
         );
@@ -219,7 +222,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
         });
       }
     },
-    [patcherFor],
+    [patcherFor, server],
   );
 
   const addFiles = useCallback(
@@ -338,7 +341,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
         removed.status === "ready" &&
         removed.sourceUploadId
       ) {
-        void deleteImage(removed.sourceUploadId).catch((error) => {
+        void deleteImage(server, removed.sourceUploadId).catch((error) => {
           toast.show({
             kind: "error",
             message: errorMessage(error, "Image cleanup failed."),
@@ -355,7 +358,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
         };
       });
     },
-    [toast],
+    [server, toast],
   );
 
   const retrySource = useCallback(

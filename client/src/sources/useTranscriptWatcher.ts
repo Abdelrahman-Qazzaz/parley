@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { fetchJob, type Job } from "../api/jobs";
+import { useServer } from "../hooks/server/useServer";
 import { useSocketConnected } from "../hooks/socket/useSocketConnected";
 import { queryKeys } from "../lib/queryClient";
 import type { StagedSource } from "./types";
@@ -24,6 +25,7 @@ export function useTranscriptWatcher(
     patch: Partial<StagedSource>,
   ) => void,
 ) {
+  const server = useServer();
   const socketConnected = useSocketConnected();
 
   const pendingAudioUploadIds = useMemo(() => {
@@ -40,8 +42,8 @@ export function useTranscriptWatcher(
 
   const results = useQueries({
     queries: pendingAudioUploadIds.map((audioUploadId) => ({
-      queryKey: queryKeys.job(audioUploadId),
-      queryFn: () => fetchJob(audioUploadId),
+      queryKey: queryKeys.job(server.id, audioUploadId),
+      queryFn: () => fetchJob(server, audioUploadId),
       refetchInterval: socketConnected ? (false as const) : OFFLINE_POLL_MS,
       staleTime: 0,
     })),

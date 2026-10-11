@@ -1,3 +1,4 @@
+import type { Server } from "./server";
 import { refreshSession } from "./session";
 
 /**
@@ -40,20 +41,27 @@ export function errorMessage(error: unknown, fallback: string): string {
 }
 
 /**
- * Returns the raw response so streaming callers (the SSE reply) can read the
- * body themselves; throws before that on any non-2xx.
+ * Sends a request to `path` on `server`. Returns the raw response so streaming
+ * callers (the SSE reply) can read the body themselves; throws before that on
+ * any non-2xx.
  *
- * A 401 usually means the access token expired between refreshes, so the
- * session is refreshed and the request sent once more; if the session is
- * over, the 401 stands.
+ * On a server with a session, a 401 usually means the access token expired
+ * between refreshes, so the session is refreshed and the request sent once
+ * more; if the session is over, the 401 stands.
  */
 export async function apiFetch(
-  url: string,
+  server: Server,
+  path: string,
   init: RequestInit = {},
 ): Promise<Response> {
-  const send = () => fetch(url, { credentials: "include", ...init });
+  const hasSession = server.signIn === "session";
+  const send = () =>
+    fetch(`${server.baseUrl}${path}`, {
+      credentials: hasSession ? "include" : "same-origin",
+      ...init,
+    });
   let response = await send();
-  if (response.status === 401 && (await refreshSession())) {
+  if (hasSession && response.status === 401 && (await refreshSession())) {
     response = await send();
   }
   if (!response.ok) {
@@ -64,10 +72,11 @@ export async function apiFetch(
 }
 
 export async function apiJson<T>(
-  url: string,
+  server: Server,
+  path: string,
   init: RequestInit = {},
 ): Promise<T> {
-  const response = await apiFetch(url, init);
+  const response = await apiFetch(server, path, init);
   return (await response.json()) as T;
 }
 

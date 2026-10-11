@@ -9,6 +9,7 @@ import {
   type MessagesResponse,
 } from "../../api/messages";
 import { queryKeys } from "../../lib/queryClient";
+import { useServer } from "../../hooks/server/useServer";
 import { useToast } from "../../hooks/toast/useToast";
 import type { StagedSource } from "../../sources/types";
 import type { PendingTurn } from "./types";
@@ -169,6 +170,7 @@ type SendInput = {
  * in one chat keeps streaming while you read or write in another.
  */
 export function useChatSend() {
+  const server = useServer();
   const queryClient = useQueryClient();
   const toast = useToast();
   const [pendingTurns, setPendingTurns] = useState<Record<string, PendingTurn>>(
@@ -188,11 +190,11 @@ export function useChatSend() {
 
       try {
         if (!conversationId) {
-          const created = await createConversation();
+          const created = await createConversation(server);
           const createdId = created.id;
           conversationId = createdId;
           queryClient.setQueryData<Conversation[]>(
-            queryKeys.conversations,
+            queryKeys.conversations(server.id),
             (current) => [
               created,
               ...(current ?? []).filter(
@@ -221,6 +223,7 @@ export function useChatSend() {
 
         try {
           await streamMessage(
+            server,
             {
               conversationId: target,
               messageContent: input.content,
@@ -244,10 +247,10 @@ export function useChatSend() {
         // message, and it only grows. Cancel first so an in-flight fetch can't
         // land on top of this.
         await queryClient.cancelQueries({
-          queryKey: queryKeys.messages(target),
+          queryKey: queryKeys.messages(server.id, target),
         });
         queryClient.setQueryData<MessagesResponse>(
-          queryKeys.messages(target),
+          queryKeys.messages(server.id, target),
           (current) => ({
             lastMessageId: storedAssistantId ?? current?.lastMessageId ?? null,
             messages: [
@@ -265,11 +268,11 @@ export function useChatSend() {
         // Stale, but not refetched now: the next mount reconciles the local
         // user-message id against the stored one at no cost here.
         void queryClient.invalidateQueries({
-          queryKey: queryKeys.messages(target),
+          queryKey: queryKeys.messages(server.id, target),
           refetchType: "none",
         });
         void queryClient.invalidateQueries({
-          queryKey: queryKeys.conversations,
+          queryKey: queryKeys.conversations(server.id),
         });
       } catch (error) {
         if (conversationId) {
@@ -277,7 +280,7 @@ export function useChatSend() {
           // The run outlives this stream server-side; a refetch is how a reply
           // that finished anyway still reaches the screen.
           void queryClient.invalidateQueries({
-            queryKey: queryKeys.messages(conversationId),
+            queryKey: queryKeys.messages(server.id, conversationId),
           });
         }
         input.onRestore(input.content, input.sources, conversationId ?? "new");
@@ -294,7 +297,7 @@ export function useChatSend() {
         );
       }
     },
-    [dropPending, queryClient, toast],
+    [dropPending, queryClient, server, toast],
   );
 
   return { pendingTurns, sendingKeys, send };

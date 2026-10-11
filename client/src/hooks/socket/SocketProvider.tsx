@@ -1,13 +1,17 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { io } from "socket.io-client";
 import { refreshSession } from "../../api/session";
-import { socketIoUrl } from "../../config";
+import { useServer } from "../server/useServer";
 import { SocketContext, type AppSocket } from "./context";
 
 export function SocketProvider({ children }: { children: ReactNode }) {
-  // Create the socket once via a lazy state initializer; only tear it down on unmount.
+  const server = useServer();
+  // Create the socket once via a lazy state initializer; only tear it down on
+  // unmount. Socket.IO lives on the server's own origin, attached to its HTTP
+  // server, so there is no second URL to configure.
   const [socket] = useState<AppSocket>(() =>
-    io(socketIoUrl(), {
+    // Socket.IO reads an empty string as a host; undefined means this page's.
+    io(server.baseUrl || undefined, {
       transports: ["websocket"],
       autoConnect: true,
       withCredentials: true,
@@ -48,7 +52,7 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       socket.off("connect", onConnect);
       socket.off("connect_error", onConnectError);
     };
-  }, [socket]);
+  }, [server, socket]);
 
   return (
     <SocketContext.Provider value={socket}>{children}</SocketContext.Provider>
