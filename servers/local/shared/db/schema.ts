@@ -17,6 +17,11 @@ export const jobStatuses = [
   "completed",
   "failed",
 ] as const;
+/**
+ * What a job's audio came from. Unlike status, it isn't checked in the
+ * database; the enum only types the column.
+ */
+const jobSources = ["audio", "video", "youtube"] as const;
 const attachmentKinds = ["image", "audio"] as const;
 const chatRoles = ["user", "assistant"] as const;
 export const DEFAULT_CONVERSATION_TITLE = "New conversation";
@@ -69,7 +74,7 @@ export const AudioTranscriptionJobs = sqliteTable(
       .references(() => Attachments.attachmentId, {
         onDelete: "cascade",
       }),
-    source: text("source").notNull(), // 'video' | 'audio' | 'youtube'
+    source: text("source", { enum: jobSources }).notNull(),
     // Origin URL for 'youtube' jobs; null for direct uploads. Stored for history
     // display and to enable transcript caching by video id later.
     YT_sourceUrl: text("YT_source_url"),
