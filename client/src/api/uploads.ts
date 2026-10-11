@@ -5,7 +5,14 @@ import {
   uploadImageEndpoint,
   uploadYoutubeEndpoint,
 } from "../config";
+import type {
+  QueuedYoutube,
+  UploadedAudio,
+  UploadedImage,
+} from "@summarizer/contract";
 import { ApiError, apiJson, jsonRequest } from "./http";
+
+export type { UploadedImage };
 
 /**
  * Wire names for the request fields, mirroring the server's FORM_KEYS
@@ -53,14 +60,6 @@ async function uploadToStorage(
   return uploadId;
 }
 
-export type UploadedImage = {
-  imageUploadId: string;
-  fileName: string;
-  mimeType: string;
-  size: number;
-  url: string;
-};
-
 /** Stored immediately on drop; the signed URL is what previews the image. */
 export async function uploadImage(file: File): Promise<UploadedImage> {
   const uploadId = await uploadToStorage(uploadImageEndpoint(), file);
@@ -81,15 +80,6 @@ export async function deleteImage(imageUploadId: string): Promise<void> {
     { method: "DELETE" },
   );
 }
-
-type UploadedAudio = {
-  audioUploadId: string;
-  fileName: string;
-  /** What storage holds, which the server reads back rather than trusting us. */
-  size: number;
-  mimeType: string;
-  source: "audio" | "video";
-};
 
 /**
  * Speech audio — already extracted from video and compressed by the caller.
@@ -113,12 +103,6 @@ export async function uploadAudio(upload: {
     }),
   );
 }
-
-type QueuedYoutube = {
-  audioUploadId: string;
-  source: "youtube";
-  url: string;
-};
 
 /** The audio is fetched and transcribed server-side — nothing leaves this device. */
 export async function requestYoutubeTranscript(

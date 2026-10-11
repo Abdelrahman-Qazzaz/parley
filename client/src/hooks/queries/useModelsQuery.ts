@@ -3,7 +3,7 @@ import {
   fetchChatModels,
   fetchTranscriptionModels,
   type ChatModel,
-  type TranscriptionModel,
+  type TranscribeModel,
 } from "../../api/models";
 import { queryKeys } from "../../lib/queryClient";
 
@@ -44,4 +44,4 @@ export function useTranscriptionModelsQuery(enabled: boolean) {
 
 // Stable empty lists, so callers' memos don't rerun while loading.
 const NO_CHAT_MODELS: ChatModel[] = [];
-const NO_TRANSCRIPTION_MODELS: TranscriptionModel[] = [];
+const NO_TRANSCRIPTION_MODELS: TranscribeModel[] = [];

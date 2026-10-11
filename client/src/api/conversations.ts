@@ -1,17 +1,15 @@
 import { conversationEndpoint, conversationsEndpoint } from "../config";
+import type {
+  Conversation,
+  ConversationsResponse,
+  RenameConversationBody,
+} from "@summarizer/contract";
 import { apiFetch, apiJson, jsonRequest } from "./http";
 
-export type Conversation = {
-  id: string;
-  title: string;
-  createdAt: string;
-  updatedAt: string;
-};
+export type { Conversation };
 
 export async function fetchConversations(): Promise<Conversation[]> {
-  const data = await apiJson<{ conversations: Conversation[] }>(
-    conversationsEndpoint(),
-  );
+  const data = await apiJson<ConversationsResponse>(conversationsEndpoint());
   if (!Array.isArray(data?.conversations)) {
     throw new Error("Invalid conversations response");
   }
@@ -28,7 +26,9 @@ export async function renameConversation(
 ): Promise<Conversation> {
   return apiJson<Conversation>(
     conversationEndpoint(conversationId),
-    jsonRequest("PATCH", { conversationTitle: title }),
+    jsonRequest("PATCH", {
+      conversationTitle: title,
+    } satisfies RenameConversationBody),
   );
 }
 

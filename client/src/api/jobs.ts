@@ -1,32 +1,14 @@
 import { jobEndpoint, jobsListEndpoint } from "../config";
+import type {
+  Job,
+  JobSource,
+  JobStatus,
+  JobsPage,
+  JobSummary,
+} from "@summarizer/contract";
 import { apiFetch, apiJson } from "./http";
 
-export type JobStatus = "queued" | "processing" | "completed" | "failed";
-export type JobSource = "audio" | "video" | "youtube";
-
-export type Job = {
-  audioUploadId: string;
-  fileName: string;
-  source: JobSource;
-  status: JobStatus;
-  transcript: string | null;
-  error: string | null;
-};
-
-/** What the paginated list returns — no transcript body. */
-export type JobSummary = {
-  audioUploadId: string;
-  fileName: string;
-  source: JobSource;
-  status: JobStatus;
-  createdAt: string;
-  error: string | null;
-};
-
-export type JobsPage = {
-  jobs: JobSummary[];
-  nextCursor: string | null;
-};
+export type { Job, JobSource, JobStatus, JobsPage, JobSummary };
 
 export type JobsFilters = {
   status?: JobStatus | null;

@@ -1,12 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { io, type Socket } from "socket.io-client";
+import { io } from "socket.io-client";
 import { refreshSession } from "../../api/session";
 import { socketIoUrl } from "../../config";
-import { SocketContext } from "./context";
+import { SocketContext, type AppSocket } from "./context";
 
 export function SocketProvider({ children }: { children: ReactNode }) {
   // Create the socket once via a lazy state initializer; only tear it down on unmount.
-  const [socket] = useState<Socket>(() =>
+  const [socket] = useState<AppSocket>(() =>
     io(socketIoUrl(), {
       transports: ["websocket"],
       autoConnect: true,

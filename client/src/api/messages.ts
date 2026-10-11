@@ -1,35 +1,21 @@
 import { conversationMessagesEndpoint } from "../config";
+import type {
+  ChatMessage,
+  MessageAttachmentInput,
+  MessageImage,
+  MessagesResponse,
+  MessageTranscript,
+  ReplyStreamEvents,
+  SendMessageBody,
+} from "@summarizer/contract";
 import { apiFetch, apiJson, jsonRequest } from "./http";
 
-export type MessageImage = {
-  imageUploadId: string;
-  fileName: string;
-  mimeType: string;
-  size: number;
-  url: string;
-};
-
-/** A transcript this turn was sent with, in the order it was attached. */
-export type MessageTranscript = {
-  audioUploadId: string;
-  fileName: string;
-  source: string;
-};
-
-export type ChatMessage = {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  chosenModelId: string | null;
-  conversationId: string;
-  createdAt: string;
-  attachments: MessageImage[];
-  transcriptAttachments: MessageTranscript[];
-};
-
-export type MessagesResponse = {
-  lastMessageId: string | null;
-  messages: ChatMessage[];
+export type {
+  ChatMessage,
+  MessageAttachmentInput,
+  MessageImage,
+  MessagesResponse,
+  MessageTranscript,
 };
 
 /**
@@ -40,17 +26,7 @@ export type MessagesResponse = {
  */
 export const MAX_CONTEXT_MESSAGES = 50;
 
-export type MessageAttachmentInput =
-  | { type: "image"; imageUploadId: string }
-  | { type: "transcript"; audioUploadId: string };
-
-export type SendMessageInput = {
-  conversationId: string;
-  messageContent: string;
-  chosenModelId: string;
-  attachments: MessageAttachmentInput[];
-  lastMessageId: string | null;
-};
+export type SendMessageInput = SendMessageBody & { conversationId: string };
 
 export async function fetchMessages(
   conversationId: string,
@@ -78,7 +54,13 @@ function dispatchSseEvent(rawEvent: string, callbacks: StreamCallbacks): void {
   }
   if (dataLines.length === 0) return;
 
-  const data = JSON.parse(dataLines.join("\n")) as Record<string, unknown>;
+  // Checked field by field rather than trusted, since a stream can be cut off
+  // or come from a proxy's error page.
+  const data = JSON.parse(dataLines.join("\n")) as Partial<
+    ReplyStreamEvents["delta"] &
+      ReplyStreamEvents["done"] &
+      ReplyStreamEvents["error"]
+  >;
   if (eventName === "delta" && typeof data.delta === "string") {
     callbacks.onDelta(data.delta);
   } else if (eventName === "done" && typeof data.lastMessageId === "string") {
@@ -106,7 +88,7 @@ export async function streamMessage(
       chosenModelId: input.chosenModelId,
       attachments: input.attachments,
       lastMessageId: input.lastMessageId,
-    }),
+    } satisfies SendMessageBody),
   );
 
   if (!response.body) throw new Error("The response stream was empty");
