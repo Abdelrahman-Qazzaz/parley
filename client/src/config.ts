@@ -16,6 +16,34 @@ export const cloudServer: Server = {
     (import.meta.env.DEV ? `http://${DEV_HOST}:3001` : "")
   ).replace(/\/$/, ""),
   signIn: "session",
+  uploads: "signed",
+  defaultChatModelId: "openai/gpt-4o-mini",
+  defaultTranscribeModelId: "nova-3-general",
+};
+
+const LOCAL_PORT = "3002";
+
+/**
+ * Whether the local server itself served this page, as it does for someone
+ * using only this computer. Its API is then this page's own origin, and the
+ * cloud isn't reachable from here.
+ */
+export const servedByLocalServer =
+  ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) &&
+  window.location.port === LOCAL_PORT;
+
+/** The server on the user's own machine, which chats through their Claude Code. */
+export const localServer: Server = {
+  id: "local",
+  baseUrl: servedByLocalServer
+    ? ""
+    : (
+        import.meta.env.VITE_LOCAL_API_URL ?? `http://${DEV_HOST}:${LOCAL_PORT}`
+      ).replace(/\/$/, ""),
+  signIn: "none",
+  uploads: "direct",
+  defaultChatModelId: "sonnet",
+  defaultTranscribeModelId: "small",
 };
 
 export function authLoginUrl(): string {

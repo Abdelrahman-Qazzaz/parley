@@ -13,10 +13,7 @@ import {
   uploadImage,
 } from "../api/uploads";
 import { errorMessage } from "../api/http";
-import {
-  DEFAULT_TRANSCRIPTION_MODEL,
-  resolveDefaultModel,
-} from "../api/models";
+import { resolveDefaultModel } from "../api/models";
 import { extractAudioFromVideo } from "../media/extractAudio";
 import { compressAudioForSpeech } from "../media/compressAudio";
 import {
@@ -79,7 +76,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
     transcriptModelPick ??
     resolveDefaultModel(
       transcriptionModels.map((model) => model.id),
-      DEFAULT_TRANSCRIPTION_MODEL,
+      server.defaultTranscribeModelId,
     );
 
   // Mirrors read by the async upload runs and by callbacks that must not change
@@ -185,7 +182,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
           file: speech,
           source: kind,
           transcriptModelId:
-            transcriptModelRef.current ?? DEFAULT_TRANSCRIPTION_MODEL,
+            transcriptModelRef.current ?? server.defaultTranscribeModelId,
         });
         patch({
           status: "transcribing",
@@ -209,7 +206,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
         const queued = await requestYoutubeTranscript(
           server,
           url,
-          transcriptModelRef.current ?? DEFAULT_TRANSCRIPTION_MODEL,
+          transcriptModelRef.current ?? server.defaultTranscribeModelId,
         );
         patch({
           status: "transcribing",

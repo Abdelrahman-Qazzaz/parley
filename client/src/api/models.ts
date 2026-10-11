@@ -8,9 +8,6 @@ import type { Server } from "./server";
 
 export type { ChatModel, TranscribeModel };
 
-export const DEFAULT_TEXT_MODEL = "openai/gpt-4o-mini";
-export const DEFAULT_TRANSCRIPTION_MODEL = "nova-3-general";
-
 async function fetchModels<T>(server: Server, path: string): Promise<T[]> {
   const data = await apiJson<ModelsResponse<T>>(server, path);
   if (!Array.isArray(data?.models)) throw new Error("Invalid models response");

@@ -2,13 +2,13 @@ import { useMemo, useRef, useState, type DragEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   CHARS_PER_TOKEN,
-  DEFAULT_TEXT_MODEL,
   meetsRequirements,
   resolveDefaultModel,
   type MessageRequirements,
 } from "../../api/models";
 import { useAuth } from "../../hooks/auth/useAuth";
 import { useChatModelsQuery } from "../../hooks/queries/useModelsQuery";
+import { useServer } from "../../hooks/server/useServer";
 import { MAX_CONTEXT_MESSAGES } from "../../api/messages";
 import { useMessagesQuery } from "../../hooks/queries/useMessagesQuery";
 import { isSourceInFlight, type StagedSource } from "../../sources/types";
@@ -35,6 +35,7 @@ function blockedReasonFor(sources: StagedSource[]): string | null {
 export function ChatView() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const server = useServer();
   const { user } = useAuth();
   const draftKey = conversationId ?? NEW_CHAT_KEY;
 
@@ -101,7 +102,7 @@ export function ChatView() {
   const modelId =
     modelPick && eligibleIds.includes(modelPick)
       ? modelPick
-      : resolveDefaultModel(eligibleIds, DEFAULT_TEXT_MODEL);
+      : resolveDefaultModel(eligibleIds, server.defaultChatModelId);
 
   const sending = !!sendingKeys[draftKey];
   const blockedReason = blockedReasonFor(sources);

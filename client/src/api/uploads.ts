@@ -5,7 +5,7 @@ import type {
   UploadedImage,
 } from "@summarizer/contract";
 import { ApiError, apiJson, jsonRequest } from "./http";
-import type { Server } from "./server";
+import { serverUrl, type Server } from "./server";
 
 export type { UploadedImage };
 
@@ -17,9 +17,18 @@ export type { UploadedImage };
 const FORM_KEYS = {
   uploadId: "uploadId",
   fileName: "fileName",
+  file: "file",
   audioSource: "audioSource",
   transcriptModelId: "transcriptModelId",
 } as const;
+
+/** A multipart request carrying `file` and the other fields given. */
+function directUpload(file: File, fields: Record<string, string> = {}) {
+  const form = new FormData();
+  form.append(FORM_KEYS.file, file);
+  for (const [name, value] of Object.entries(fields)) form.append(name, value);
+  return { method: "POST", body: form };
+}
 
 type UploadTarget = { uploadId: string; signedUploadUrl: string };
 
@@ -57,21 +66,30 @@ async function uploadToStorage(
   return uploadId;
 }
 
-/** Stored immediately on drop; the signed URL is what previews the image. */
+/** Stored immediately on drop; its url is what previews the image. */
 export async function uploadImage(
   server: Server,
   file: File,
 ): Promise<UploadedImage> {
-  const uploadId = await uploadToStorage(server, "/upload/image", file);
-
-  return apiJson<UploadedImage>(
-    server,
-    "/upload/image/confirm",
-    jsonRequest("POST", {
-      [FORM_KEYS.uploadId]: uploadId,
-      [FORM_KEYS.fileName]: file.name,
-    }),
-  );
+  let uploaded: UploadedImage;
+  if (server.uploads === "direct") {
+    uploaded = await apiJson<UploadedImage>(
+      server,
+      "/upload/image",
+      directUpload(file),
+    );
+  } else {
+    const uploadId = await uploadToStorage(server, "/upload/image", file);
+    uploaded = await apiJson<UploadedImage>(
+      server,
+      "/upload/image/confirm",
+      jsonRequest("POST", {
+        [FORM_KEYS.uploadId]: uploadId,
+        [FORM_KEYS.fileName]: file.name,
+      }),
+    );
+  }
+  return { ...uploaded, url: serverUrl(server, uploaded.url) };
 }
 
 /** Deletes a resolved image removed from a draft. */
@@ -97,6 +115,17 @@ export async function uploadAudio(
     transcriptModelId: string;
   },
 ): Promise<UploadedAudio> {
+  if (server.uploads === "direct") {
+    return apiJson<UploadedAudio>(
+      server,
+      "/upload/audio",
+      directUpload(upload.file, {
+        [FORM_KEYS.audioSource]: upload.source,
+        [FORM_KEYS.transcriptModelId]: upload.transcriptModelId,
+      }),
+    );
+  }
+
   const uploadId = await uploadToStorage(server, "/upload/audio", upload.file);
 
   return apiJson<UploadedAudio>(

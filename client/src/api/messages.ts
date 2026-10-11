@@ -8,7 +8,7 @@ import type {
   SendMessageBody,
 } from "@summarizer/contract";
 import { apiFetch, apiJson, jsonRequest } from "./http";
-import type { Server } from "./server";
+import { serverUrl, type Server } from "./server";
 
 export type {
   ChatMessage,
@@ -39,7 +39,16 @@ export async function fetchMessages(
   if (!Array.isArray(data?.messages)) {
     throw new Error("Invalid messages response");
   }
-  return data;
+  return {
+    ...data,
+    messages: data.messages.map((message) => ({
+      ...message,
+      attachments: message.attachments.map((image) => ({
+        ...image,
+        url: serverUrl(server, image.url),
+      })),
+    })),
+  };
 }
 
 type StreamCallbacks = {
