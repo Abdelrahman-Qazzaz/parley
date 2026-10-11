@@ -9,6 +9,8 @@ vi.mock("../../shared/db", async () =>
 // The Tailscale name a phone would reach the app by. Read when the app is
 // first built, which is after this.
 process.env.ALLOWED_HOSTS = "macbook.tail1234.ts.net";
+// The hosted client, which calls this machine from the browser.
+process.env.ALLOWED_ORIGINS = "https://summarizer.example.app/";
 
 import type { ServerType } from "@hono/node-server";
 import { createApp } from "../../api/app";
@@ -133,5 +135,64 @@ describe("socket connections", () => {
 
   it("are refused when addressed to another name", async () => {
     expect(await handshake({ Host: `evil.test:${port}` })).toBe(403);
+  });
+});
+
+/** The preflight a browser sends before another origin's JSON request. */
+function preflight(origin: string, headers: Record<string, string> = {}) {
+  return request("http://localhost/conversations", {
+    method: "OPTIONS",
+    headers: {
+      Origin: origin,
+      "Access-Control-Request-Method": "POST",
+      "Access-Control-Request-Headers": "content-type",
+      ...headers,
+    },
+  });
+}
+
+describe("pages from another origin", () => {
+  it("may call the API when the origin is in ALLOWED_ORIGINS", async () => {
+    const res = await preflight("https://summarizer.example.app");
+
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+      "https://summarizer.example.app",
+    );
+  });
+
+  it("may call the API from this machine, as the Vite dev server does", async () => {
+    const res = await preflight("http://localhost:5173");
+
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
+      "http://localhost:5173",
+    );
+  });
+
+  it("are refused at the preflight when the origin isn't trusted", async () => {
+    const res = await preflight("https://evil.test");
+
+    expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
+  });
+
+  it("are told this machine may be reached, when Chrome asks", async () => {
+    const res = await preflight("https://summarizer.example.app", {
+      "Access-Control-Request-Private-Network": "true",
+    });
+
+    expect(res.headers.get("Access-Control-Allow-Private-Network")).toBe(
+      "true",
+    );
+  });
+
+  it("aren't told so when the origin isn't trusted", async () => {
+    const res = await preflight("https://evil.test", {
+      "Access-Control-Request-Private-Network": "true",
+    });
+
+    expect(res.headers.get("Access-Control-Allow-Private-Network")).toBeNull();
+  });
+
+  it("may post a form from an origin in ALLOWED_ORIGINS", async () => {
+    expect((await formPost("https://summarizer.example.app")).status).toBe(400);
   });
 });

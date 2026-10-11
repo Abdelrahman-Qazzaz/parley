@@ -3,6 +3,7 @@ import path from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { compress } from "hono/compress";
+import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
 import { getApiEnv } from "../shared/env";
 import { jobsRouter } from "./src/routes/jobs.router";
@@ -25,11 +26,30 @@ export async function createApp() {
     }
     await next();
   });
-  // The client is served from the API's origin, so no cross-origin request is
-  // allowed at all, and a browser won't send another site's JSON or DELETE
-  // without asking first. A form post goes without asking, though, so any
-  // site open in the browser could forge an upload: those are refused unless
-  // they come from a page on this machine.
+  // Chrome asks before a public page reaches this machine, with a preflight
+  // that must say so explicitly; the user then allows it once. Ahead of
+  // cors(), which answers the preflight itself.
+  app.use("*", async (c, next) => {
+    await next();
+    if (
+      c.req.method === "OPTIONS" &&
+      c.req.header("Access-Control-Request-Private-Network") === "true" &&
+      isAllowedOrigin(c.req.header("Origin"))
+    ) {
+      c.res.headers.set("Access-Control-Allow-Private-Network", "true");
+    }
+  });
+  // A page from another origin may call the API only if it's one the app
+  // trusts: this machine's (Vite in development) or the hosted client's, in
+  // ALLOWED_ORIGINS. Any other site's JSON or DELETE is refused at the
+  // preflight. There are no cookies, so nothing is sent with credentials.
+  app.use(
+    "*",
+    cors({ origin: (origin) => (isAllowedOrigin(origin) ? origin : null) }),
+  );
+  // A form post goes without a preflight, so any site open in the browser
+  // could forge an upload: those are refused unless they come from a page
+  // the app trusts.
   app.use("*", csrf({ origin: isAllowedOrigin }));
   // The chat model catalog is ~50KB of JSON and every client downloads it;
   // gzip takes that to ~7KB. Streamed chat replies are left alone: hono skips
