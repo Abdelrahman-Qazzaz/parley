@@ -50,6 +50,13 @@ describe("the built client", () => {
     expect(res.status).toBe(404);
   });
 
+  it("answers this computer's section with its page", async () => {
+    const res = await get("/local/550e8400-e29b-41d4-a716-446655440000");
+
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("<title>app</title>");
+  });
+
   it("serves the page at the root, where the client starts", async () => {
     const res = await get("/");
 

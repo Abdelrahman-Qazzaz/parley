@@ -78,6 +78,10 @@ export async function createApp() {
     app.get("/", page);
     app.get("/chat", page);
     app.get("/chat/*", page);
+    // This computer's section, which is the only one a page served from here
+    // can use.
+    app.get("/local", page);
+    app.get("/local/*", page);
   }
   return app;
 }
