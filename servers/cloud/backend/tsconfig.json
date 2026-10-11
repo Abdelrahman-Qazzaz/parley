@@ -11,7 +11,8 @@
     "noEmit": true,
     "strict": true,
     "skipLibCheck": true,
-    "types": ["node"]
+    "types": ["node"],
+    "paths": { "@summarizer/contract": ["../../../packages/contract/index.ts"] }
   },
   "include": [
     "api/**/*.ts",

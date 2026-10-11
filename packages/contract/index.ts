@@ -1,0 +1,177 @@
+/**
+ * What goes over the wire between the client and either server: the cloud
+ * one (servers/cloud) and the local one (servers/local). Both servers answer
+ * in these shapes and the client reads them, so a change here fails the type
+ * check of whichever side no longer matches.
+ *
+ * Types only, imported with `import type`: nothing here exists at runtime, so
+ * no build has to reach this folder. Timestamps are ISO 8601 strings.
+ *
+ * Sign-in and the way a file gets uploaded differ between the servers on
+ * purpose, so neither is here; what an upload answers with is.
+ */
+
+/* ------------------------------------------------------------------ errors */
+
+/** Every 4xx and 5xx answer with a body. */
+export type ErrorBody = { message: string };
+
+/* ----------------------------------------------------------- conversations */
+
+export type Conversation = {
+  id: string;
+  title: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+/** GET /conversations, most recently active first. */
+export type ConversationsResponse = { conversations: Conversation[] };
+
+/** PATCH /conversations/:conversationId */
+export type RenameConversationBody = { conversationTitle: string };
+
+/* ---------------------------------------------------------------- messages */
+
+/** An image a user turn carried. */
+export type MessageImage = {
+  imageUploadId: string;
+  fileName: string;
+  mimeType: string;
+  size: number;
+  /**
+   * Where the image is: a signed link from the cloud server, or a path
+   * relative to the local server, which may be reached by more than one name.
+   */
+  url: string;
+};
+
+/** A transcript a user turn was sent with, in the order it was attached. */
+export type MessageTranscript = {
+  audioUploadId: string;
+  fileName: string;
+  source: string;
+};
+
+export type ChatMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  chosenModelId: string | null;
+  conversationId: string;
+  createdAt: string;
+  attachments: MessageImage[];
+  transcriptAttachments: MessageTranscript[];
+};
+
+/** GET /conversations/:conversationId/messages, oldest first. */
+export type MessagesResponse = {
+  lastMessageId: string | null;
+  messages: ChatMessage[];
+};
+
+export type MessageAttachmentInput =
+  | { type: "image"; imageUploadId: string }
+  | { type: "transcript"; audioUploadId: string };
+
+/**
+ * POST /conversations/:conversationId/messages, and PATCH on a message to
+ * edit it and answer again.
+ */
+export type SendMessageBody = {
+  messageContent: string;
+  chosenModelId: string;
+  attachments: MessageAttachmentInput[];
+  /** The conversation's head as the client last saw it. */
+  lastMessageId: string | null;
+};
+
+/**
+ * The server-sent events a reply streams back, by event name: pieces of the
+ * answer, then either done or error.
+ */
+export type ReplyStreamEvents = {
+  delta: { delta: string };
+  done: { lastMessageId: string };
+  error: ErrorBody;
+};
+
+/* ------------------------------------------------------------------ models */
+
+/** A chat model, whichever provider serves it. */
+export type ChatModel = {
+  id: string;
+  name: string;
+  /** The longest prompt it takes, in tokens, when known. */
+  contextTokens: number | null;
+  /** Whether a turn may carry images. */
+  acceptsImages: boolean;
+};
+
+/** A transcription model, whichever provider serves it. */
+export type TranscribeModel = { id: string; name: string };
+
+/** GET /models/chat and GET /models/transcription */
+export type ModelsResponse<Model> = { models: Model[] };
+
+/* -------------------------------------------------------------------- jobs */
+
+export type JobStatus = "queued" | "processing" | "completed" | "failed";
+export type JobSource = "audio" | "video" | "youtube";
+
+/** GET /jobs/:audioUploadId */
+export type Job = {
+  audioUploadId: string;
+  fileName: string;
+  source: JobSource;
+  status: JobStatus;
+  /** Only once the job has completed. */
+  transcript: string | null;
+  error: string | null;
+};
+
+/** A job as the history list shows it, without its transcript. */
+export type JobSummary = {
+  audioUploadId: string;
+  fileName: string;
+  source: JobSource;
+  status: JobStatus;
+  createdAt: string;
+  error: string | null;
+};
+
+/** GET /jobs, newest first. */
+export type JobsPage = {
+  jobs: JobSummary[];
+  /** Pass back as `cursor` for the next page; null on the last one. */
+  nextCursor: string | null;
+};
+
+/* ----------------------------------------------------------------- uploads */
+
+/** What an image upload answers with, once the image is stored. */
+export type UploadedImage = MessageImage;
+
+/** What an audio upload answers with, once its transcription is queued. */
+export type UploadedAudio = {
+  audioUploadId: string;
+  fileName: string;
+  size: number;
+  mimeType: string;
+  source: "audio" | "video";
+};
+
+/** POST /upload/youtube, once the fetch is queued. */
+export type QueuedYoutube = {
+  audioUploadId: string;
+  source: "youtube";
+  url: string;
+};
+
+/* ------------------------------------------------------------------ socket */
+
+/** What the servers emit over Socket.IO, by event name. */
+export type ServerToClientEvents = {
+  /** A job changed; refetch it. */
+  jobUpdated: (event: { audioUploadId: string }) => void;
+};
