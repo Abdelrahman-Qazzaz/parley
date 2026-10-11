@@ -79,6 +79,15 @@ const createdAt = "2026-07-22T00:00:00.000Z";
 const updatedAt = "2026-07-22T00:00:00.000Z";
 const row = { id: conversationId, title: "My chat", createdAt, updatedAt };
 
+/** A conversation as the database hands it over, where the JSON has strings. */
+function rowOf(conversation: typeof row) {
+  return {
+    ...conversation,
+    createdAt: new Date(conversation.createdAt),
+    updatedAt: new Date(conversation.updatedAt),
+  };
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockSelect.mockImplementation(() => ({ from: mockFrom }));
@@ -118,7 +127,7 @@ describe("GET /conversations", () => {
     expect(mockSelect).not.toHaveBeenCalled();
   });
   it("lists the user's conversations, most recently active first", async () => {
-    mockOrderBy.mockResolvedValueOnce([row]);
+    mockOrderBy.mockResolvedValueOnce([rowOf(row)]);
     const res = await (
       await createApp()
     ).request("http://localhost/conversations", {
@@ -137,7 +146,7 @@ describe("GET /conversations", () => {
 
 describe("GET /conversations/:conversationId", () => {
   it("returns the conversation for the owner", async () => {
-    mockLimit.mockResolvedValueOnce([row]);
+    mockLimit.mockResolvedValueOnce([rowOf(row)]);
     const res = await (
       await createApp()
     ).request(`http://localhost/conversations/${conversationId}`, {
@@ -168,7 +177,7 @@ describe("GET /conversations/:conversationId", () => {
 
 describe("POST /conversations", () => {
   it("creates a conversation with the given title", async () => {
-    mockInsertReturning.mockResolvedValueOnce([row]);
+    mockInsertReturning.mockResolvedValueOnce([rowOf(row)]);
     const res = await (
       await createApp()
     ).request("http://localhost/conversations", {
@@ -185,7 +194,7 @@ describe("POST /conversations", () => {
   });
   it("creates a conversation without a body (title falls back to the DB default)", async () => {
     mockInsertReturning.mockResolvedValueOnce([
-      { ...row, title: "New conversation" },
+      rowOf({ ...row, title: "New conversation" }),
     ]);
     const res = await (
       await createApp()
@@ -216,7 +225,7 @@ describe("POST /conversations", () => {
 describe("PATCH /conversations/:conversationId", () => {
   it("renames the conversation", async () => {
     const renamed = { ...row, title: "Renamed" };
-    mockUpdateReturning.mockResolvedValueOnce([renamed]);
+    mockUpdateReturning.mockResolvedValueOnce([rowOf(renamed)]);
     const res = await (
       await createApp()
     ).request(`http://localhost/conversations/${conversationId}`, {

@@ -1,4 +1,5 @@
 import { DeepgramClient } from "@deepgram/sdk";
+import type { TranscribeModel } from "@summarizer/contract";
 import { getBaseEnv } from "../env";
 import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
 
@@ -97,9 +98,6 @@ export function getTranscribeModelData(): Promise<TranscribeModelData> {
     fetchTranscribeModelData,
   );
 }
-
-/** A transcription model as this app describes it, whichever provider serves it. */
-type TranscribeModel = { id: string; name: string };
 
 /**
  * Deepgram's speech-to-text models, by the id a job is created with. Its own

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
+import type { UploadedImage } from "@summarizer/contract";
 import { sign } from "../../../shared/storage/sign";
 import {
   checkUpload,
@@ -84,7 +85,7 @@ export async function handleImageConfirm(c: Context) {
     size: upload.sizeBytes,
     mimeType: upload.contentType,
     url: signedUrl,
-  });
+  } satisfies UploadedImage);
 }
 
 /**

@@ -1,4 +1,5 @@
 import type { Context } from "hono";
+import type { Job, JobsPage } from "@summarizer/contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { jobCursorSchema, type JobStatus } from "../schema/jobs.schema";
 import { encodeCursor, decodeCursor } from "../utils/cursor";
@@ -39,7 +40,7 @@ export async function handleGetTranscribeJob(c: Context) {
     status: audioJob.status,
     transcript: transcriptResult.data?.get(audioUploadId) ?? null,
     error: audioJob.error,
-  });
+  } satisfies Job);
 }
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -74,7 +75,13 @@ export async function getUserJobs(c: Context) {
         })
       : null;
 
-  return c.json({ jobs: page, nextCursor });
+  return c.json({
+    jobs: page.map((job) => ({
+      ...job,
+      createdAt: job.createdAt.toISOString(),
+    })),
+    nextCursor,
+  } satisfies JobsPage);
 }
 
 export async function handleDeleteTranscribeJob(c: Context) {

@@ -3,6 +3,11 @@
 
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
+import type {
+  ChatMessage,
+  MessagesResponse,
+  ReplyStreamEvents,
+} from "@summarizer/contract";
 import { streamSSE } from "hono/streaming";
 import { SSEEventQueue } from "../utils/sse";
 import {
@@ -68,14 +73,14 @@ function toMessageJson(
   row: MessageRow,
   images: ResolvedImage[] = [],
   transcripts: StoredTranscriptAttachment[] = [],
-) {
+): ChatMessage {
   return {
     id: row.id,
     role: row.role,
     content: row.content,
     chosenModelId: row.chosenModelId,
     conversationId: row.conversationId,
-    createdAt: row.createdAt,
+    createdAt: row.createdAt.toISOString(),
     attachments: images,
     transcriptAttachments: transcripts.map(
       ({ charCount: _charCount, ...attachment }) => attachment,
@@ -180,7 +185,7 @@ export async function handleListMessages(c: Context) {
         transcriptsByMessageId.get(row.id),
       ),
     ),
-  });
+  } satisfies MessagesResponse);
 }
 
 async function unclaimConversationSafely(
@@ -447,7 +452,7 @@ function streamAndPersistMessageTurn(
           : Promise.resolve(undefined);
       const assistantContent = await chatAI(messageInput.chosenModelId, turns, {
         onDelta: async (delta) => {
-          events.push("delta", { delta });
+          events.push("delta", { delta } satisfies ReplyStreamEvents["delta"]);
         },
         maxOutputTokens: MAX_RESPONSE_TOKENS,
         sessionId: messageInput.conversationId,
@@ -469,7 +474,9 @@ function streamAndPersistMessageTurn(
         claimToken,
       });
 
-      events.push("done", { lastMessageId });
+      events.push("done", {
+        lastMessageId,
+      } satisfies ReplyStreamEvents["done"]);
       return streamResponse;
     } catch (error) {
       // Released before answering, so a client that retries at once doesn't
@@ -490,7 +497,9 @@ function streamAndPersistMessageTurn(
         throw error;
       }
 
-      events.push("error", { message: "Model response failed" });
+      events.push("error", {
+        message: "Model response failed",
+      } satisfies ReplyStreamEvents["error"]);
       return streamResponse;
     } finally {
       events.end();

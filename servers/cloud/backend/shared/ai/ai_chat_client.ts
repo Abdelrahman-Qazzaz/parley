@@ -4,6 +4,7 @@ import { OpenRouter } from "@openrouter/sdk";
 import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
 import type { ChatContentItems, ChatRequest } from "@openrouter/sdk/models";
 import { withTimeout } from "../withTimeout";
+import type { ChatModel } from "@summarizer/contract";
 
 const ai_client = new OpenRouter({
   apiKey: getBaseEnv().OPENROUTER_API_KEY,
@@ -150,16 +151,6 @@ export async function chatAI(
       : nonStreamChatAI(chatRequest, ctx.abortSignal),
   );
 }
-
-/** A chat model as this app describes it, whichever provider serves it. */
-export type ChatModel = {
-  id: string;
-  name: string;
-  /** The longest prompt it takes, in tokens, when the provider says. */
-  contextTokens: number | null;
-  /** Whether a turn may carry images. */
-  acceptsImages: boolean;
-};
 
 async function fetchChatModels(): Promise<ChatModel[]> {
   // Only models that answer in text: every one listed is a chat model.

@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
+import type { QueuedYoutube, UploadedAudio } from "@summarizer/contract";
 import { data } from "../../../shared/data";
 import {
   publishOrFail,
@@ -82,7 +83,7 @@ export async function handleAudioConfirm(c: Context) {
     size: upload.sizeBytes,
     mimeType: upload.contentType,
     source,
-  });
+  } satisfies UploadedAudio);
 }
 
 /** POST /upload/youtube — a YouTube URL fetched out of band by youtube-fetcher. */
@@ -120,7 +121,7 @@ export async function handleYoutubeUpload(c: Context) {
   );
   return c.json({
     audioUploadId,
-    source: "youtube" as const,
+    source: "youtube",
     url,
-  });
+  } satisfies QueuedYoutube);
 }

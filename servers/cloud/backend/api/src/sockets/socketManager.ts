@@ -1,5 +1,6 @@
 import type { ServerType } from "@hono/node-server";
 import { Server } from "socket.io";
+import type { ServerToClientEvents } from "@summarizer/contract";
 import { parse } from "hono/utils/cookie";
 import { COOKIE_KEYS } from "../../../shared/keys";
 import { getApiEnv } from "../../../shared/env";
@@ -18,7 +19,8 @@ const log = logger.child({ component: "socket" });
  * and the session cookie authenticating the handshake is already in scope.
  */
 export function startSocketServer(server: ServerType) {
-  const io = new Server(server, {
+  // Typed by what it emits, so an event the client doesn't expect fails here.
+  const io = new Server<Record<string, never>, ServerToClientEvents>(server, {
     cors: {
       origin: getApiEnv().CLIENT_URL,
       credentials: true,
