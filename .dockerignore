@@ -2,6 +2,14 @@
 **/node_modules
 **/.venv
 **/dist
+# Secrets stay out of every image. A client .env would also be read by Vite
+# and bake its development API URL into the production build.
+**/.env
+**/.env.*
+!**/.env.example
+# Not part of the cloud image, which is the only one built from the root.
+servers/local
+servers/cloud/youtube-fetcher
 output
 test_data
 senior_project

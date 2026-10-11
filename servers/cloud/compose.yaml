@@ -21,7 +21,9 @@ services:
   # DATABASE_URL, not the application's other secrets.
   migrate:
     build:
-      context: ./backend
+      # The repo root: the image carries the built client the API serves.
+      context: ../..
+      dockerfile: servers/cloud/backend/Dockerfile
     command: ["node", "dist/migrate.js"]
     environment:
       - DATABASE_URL
@@ -29,7 +31,9 @@ services:
 
   api:
     build:
-      context: ./backend
+      # The repo root: the image carries the built client the API serves.
+      context: ../..
+      dockerfile: servers/cloud/backend/Dockerfile
     command: ["node", "dist/api.js"]
     environment:
       - DATABASE_URL
@@ -70,7 +74,9 @@ services:
   # transcribe-worker=3` is the whole scaling story.
   transcribe-worker:
     build:
-      context: ./backend
+      # The repo root: the image carries the built client the API serves.
+      context: ../..
+      dockerfile: servers/cloud/backend/Dockerfile
     command: ["node", "dist/transcribe-worker.js"]
     environment:
       - DATABASE_URL
