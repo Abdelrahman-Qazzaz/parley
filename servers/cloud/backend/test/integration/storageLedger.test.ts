@@ -572,7 +572,7 @@ describe.skipIf(!testState.databaseUrl)("storage ledger in PostgreSQL", () => {
     const youtubeJob = () => ({
       audioUploadId: randomUUID() as never,
       userId,
-      source: "youtube",
+      source: "youtube" as const,
       youtubeSourceUrl: "https://youtu.be/x",
       fileName: "YouTube audio",
       mimeType: null,

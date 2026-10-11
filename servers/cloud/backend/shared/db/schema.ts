@@ -17,6 +17,11 @@ export const jobStatusEnum = pgEnum("job_status", [
   "completed",
   "failed",
 ] as const);
+/**
+ * What a job's audio came from. Unlike status, it isn't a Postgres enum; this
+ * only types the text column.
+ */
+const jobSources = ["audio", "video", "youtube"] as const;
 export const attachmentKindEnum = pgEnum("attachment_kind", [
   "image",
   "audio",
@@ -85,7 +90,7 @@ export const AudioTranscriptionJobs = pgTable("audio_transcription_jobs", {
     .references(() => Attachments.attachmentId, {
       onDelete: "cascade",
     }),
-  source: text("source").notNull(), // 'video' | 'audio' | 'youtube'
+  source: text("source", { enum: jobSources }).notNull(),
   // Origin URL for 'youtube' jobs; null for direct uploads. Stored for history
   // display and to enable transcript caching by video id later.
   YT_sourceUrl: text("YT_source_url"),

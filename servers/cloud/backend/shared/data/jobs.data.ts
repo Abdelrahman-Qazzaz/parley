@@ -54,7 +54,7 @@ type JobCursor = { createdAt: string; audioUploadId: string };
 type JobSummary = {
   audioUploadId: string;
   fileName: string;
-  source: string;
+  source: AudioJobRow["source"];
   status: JobStatus;
   error: string | null;
   createdAt: Date;
