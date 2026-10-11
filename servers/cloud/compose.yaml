@@ -2,11 +2,11 @@
 # whichever platform this is deployed to: one migrate one-shot that must finish
 # first, then the API, the worker (scale this one), and the YouTube fetcher.
 #
-#   doppler run -- docker compose -f servers/cloud/compose.yaml up --build
+#   npm run stack   (from the repo root: doppler run -- docker compose up)
 #
 # Secrets are passed through from the environment rather than read from a file:
-# the .env files only carry DOPPLER_TOKEN, and this keeps plaintext secrets off
-# disk. Each service lists exactly what it needs, which is also the list to
+# servers/cloud/.env only carries DOPPLER_TOKEN, and this keeps plaintext
+# secrets off disk. Each service lists exactly what it needs, which is also the list to
 # paste into whichever host you deploy to.
 #
 # Postgres, Redis and object storage are managed services (Supabase, Upstash)

@@ -20,7 +20,7 @@
     "storage:push": "npm run --silent doppler -- tsx scripts/pushStorage.ts",
     "test": "npm run --silent doppler -- vitest run",
     "test:watch": "npm run --silent doppler -- vitest",
-    "doppler": "set -a; [ -f .env ] && . ./.env; set +a; exec mise exec -- doppler run --"
+    "doppler": "set -a; [ -f ../.env ] && . ../.env; set +a; exec mise exec -- doppler run --"
   },
   "dependencies": {
     "@deepgram/sdk": "^5.7.0",
