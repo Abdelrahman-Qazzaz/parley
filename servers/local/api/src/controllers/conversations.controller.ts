@@ -1,14 +1,15 @@
 import type { Context } from "hono";
+import type { Conversation, ConversationsResponse } from "@summarizer/contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { files } from "../../../shared/files";
 import { data, type ConversationRow } from "../../../shared/data";
 
-function toConversationJson(row: ConversationRow) {
+function toConversationJson(row: ConversationRow): Conversation {
   return {
     id: row.id,
     title: row.title,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
+    createdAt: row.createdAt.toISOString(),
+    updatedAt: row.updatedAt.toISOString(),
   };
 }
 
@@ -16,7 +17,9 @@ function toConversationJson(row: ConversationRow) {
 export async function handleListConversations(c: Context) {
   const rows = await data.conversations.findConversations();
 
-  return c.json({ conversations: rows.map(toConversationJson) });
+  return c.json({
+    conversations: rows.map(toConversationJson),
+  } satisfies ConversationsResponse);
 }
 
 /** GET /conversations/:conversationId */

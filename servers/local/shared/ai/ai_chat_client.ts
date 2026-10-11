@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
+import type { ChatModel } from "@summarizer/contract";
 import { getBaseEnv } from "../env";
 import { withTimeout } from "../withTimeout";
 
@@ -319,16 +320,6 @@ export async function chatAI(
     }),
   );
 }
-
-/** A chat model as this app describes it, whichever provider serves it. */
-type ChatModel = {
-  id: string;
-  name: string;
-  /** The longest prompt it takes, in tokens, when the provider says. */
-  contextTokens: number | null;
-  /** Whether a turn may carry images. */
-  acceptsImages: boolean;
-};
 
 /**
  * The models Claude Code runs, by the aliases it resolves to the newest of

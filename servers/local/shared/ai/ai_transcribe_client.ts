@@ -2,6 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
+import type { TranscribeModel } from "@summarizer/contract";
 import { getBaseEnv } from "../env";
 import { withTimeout } from "../withTimeout";
 
@@ -161,9 +162,6 @@ export async function transcribeAI(
 
   return paragraphs.join("\n\n");
 }
-
-/** A transcription model as this app describes it. */
-type TranscribeModel = { id: string; name: string };
 
 /**
  * The Whisper models faster-whisper downloads by name, smallest and fastest

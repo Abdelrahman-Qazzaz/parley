@@ -180,6 +180,11 @@ const assistantRow = {
   createdAt,
 };
 
+/** A message as the database hands it over, where the JSON has a string. */
+function rowOf<Message extends { createdAt: string }>(message: Message) {
+  return { ...message, createdAt: new Date(message.createdAt) };
+}
+
 const resolvedImage = {
   imageUploadId,
   fileName: "diagram.png",
@@ -280,7 +285,10 @@ beforeEach(() => {
 
 describe("GET /conversations/:conversationId/messages", () => {
   it("lists the conversation's messages oldest-first", async () => {
-    mockFindConversationMessages.mockResolvedValueOnce([userRow, assistantRow]);
+    mockFindConversationMessages.mockResolvedValueOnce([
+      rowOf(userRow),
+      rowOf(assistantRow),
+    ]);
     const res = await (
       await createApp()
     ).request(`http://localhost/conversations/${conversationId}/messages`, {
@@ -297,7 +305,10 @@ describe("GET /conversations/:conversationId/messages", () => {
   });
 
   it("revalidates unchanged message history with an ETag", async () => {
-    mockFindConversationMessages.mockResolvedValue([userRow, assistantRow]);
+    mockFindConversationMessages.mockResolvedValue([
+      rowOf(userRow),
+      rowOf(assistantRow),
+    ]);
     const app = await createApp();
     const url = `http://localhost/conversations/${conversationId}/messages`;
 
@@ -318,7 +329,10 @@ describe("GET /conversations/:conversationId/messages", () => {
   });
 
   it("returns each user turn's attachments", async () => {
-    mockFindConversationMessages.mockResolvedValueOnce([userRow, assistantRow]);
+    mockFindConversationMessages.mockResolvedValueOnce([
+      rowOf(userRow),
+      rowOf(assistantRow),
+    ]);
     mockResolveMessageImages.mockResolvedValueOnce(
       new Map([[messageId, [resolvedImage]]]),
     );

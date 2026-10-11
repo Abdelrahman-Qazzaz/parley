@@ -1,5 +1,6 @@
 import type { ServerType } from "@hono/node-server";
 import { Server } from "socket.io";
+import type { ServerToClientEvents } from "@summarizer/contract";
 import { logger } from "../../../shared/logger";
 import { isAllowedHostname, isAllowedOrigin } from "../allowedHosts";
 
@@ -18,7 +19,8 @@ const log = logger.child({ component: "socket" });
  * page served from it. A connection with no Origin isn't a browser's.
  */
 export function startSocketServer(server: ServerType) {
-  const io = new Server(server, {
+  // Typed by what it emits, so an event the client doesn't expect fails here.
+  const io = new Server<Record<string, never>, ServerToClientEvents>(server, {
     allowRequest: ({ headers }, callback) => {
       const hostname = new URL(`http://${headers.host ?? ""}`).hostname;
       callback(
