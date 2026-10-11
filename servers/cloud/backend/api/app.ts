@@ -1,3 +1,6 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
+import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
@@ -53,5 +56,18 @@ export async function createApp() {
   app.route("/jobs", jobsRouter);
   app.route("/models", modelsRouter);
   app.route("/conversations", conversationsRouter);
+
+  // The built client, on the API's own origin, so the session cookie is
+  // first-party. Under `npm run dev:cloud` it isn't built and Vite serves it.
+  const clientDir = path.resolve(env.CLIENT_DIR);
+  if (existsSync(path.join(clientDir, "index.html"))) {
+    app.use("*", serveStatic({ root: clientDir }));
+    // The client's own routes are pages rather than files. Only those: any
+    // other path is the API's, and one it doesn't have is a 404.
+    const page = serveStatic({ root: clientDir, path: "index.html" });
+    app.get("/", page);
+    app.get("/chat", page);
+    app.get("/chat/*", page);
+  }
   return app;
 }

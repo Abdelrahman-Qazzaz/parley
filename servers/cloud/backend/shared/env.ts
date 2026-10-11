@@ -65,6 +65,11 @@ export const apiEnvSchema = baseEnvSchema.extend({
   CLIENT_URL: z.string().url(),
   API_BASE_URL: z.string().url(),
   PORT: z.coerce.number().int().positive().default(3001),
+  /**
+   * The built client, which the API serves when it's there. Relative to the
+   * working directory, like the migrations; the image sets its own.
+   */
+  CLIENT_DIR: z.string().min(1).default("../../../client/dist"),
   UPSTASH_REDIS_REST_URL: z
     .string()
     .url()
