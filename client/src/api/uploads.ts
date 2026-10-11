@@ -58,7 +58,7 @@ export type UploadedImage = {
   fileName: string;
   mimeType: string;
   size: number;
-  signedUrl: string;
+  url: string;
 };
 
 /** Stored immediately on drop; the signed URL is what previews the image. */

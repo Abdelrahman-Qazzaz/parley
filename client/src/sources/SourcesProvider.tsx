@@ -159,7 +159,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
           patch({
             status: "ready",
             sourceUploadId: uploaded.imageUploadId,
-            previewUrl: uploaded.signedUrl,
+            previewUrl: uploaded.url,
           });
           if (withBlobPreview) releasePreview(withBlobPreview);
           return;

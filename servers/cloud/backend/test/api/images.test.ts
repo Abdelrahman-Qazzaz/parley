@@ -356,7 +356,7 @@ describe("POST /upload/image/confirm", () => {
       size: 4096,
       mimeType: "image/png",
       mode: "image",
-      signedUrl: "https://storage.test/read",
+      url: "https://storage.test/read",
     });
     expect(mockInspectUploadedObject).toHaveBeenCalledWith("user_01", {
       kind: "image",

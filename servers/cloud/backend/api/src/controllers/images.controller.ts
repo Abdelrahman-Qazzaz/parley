@@ -85,7 +85,7 @@ export async function handleImageConfirm(c: Context) {
     size: upload.sizeBytes,
     mimeType: upload.contentType,
     mode: "image" as const,
-    signedUrl,
+    url: signedUrl,
   });
 }
 
