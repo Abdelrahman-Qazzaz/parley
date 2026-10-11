@@ -26,6 +26,7 @@ import {
   DEFAULT_TRANSCRIBE_MODEL,
   getTranscribeModelData,
   isValidTranscribeModel,
+  listTranscribeModels,
 } from "../../shared/ai/ai_transcribe_client";
 
 const sttResponse = {
@@ -76,6 +77,21 @@ describe("getTranscribeModelData", () => {
       canonicalName: "nova-3-general",
       formattedOutput: true,
     });
+  });
+});
+
+describe("listTranscribeModels", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetOrSetCache.mockImplementation(runFetch);
+    mockModelsList.mockResolvedValue(sttResponse);
+  });
+
+  it("lists each model by its canonical name", async () => {
+    expect(await listTranscribeModels()).toEqual([
+      { id: "nova-3-general", name: "nova-3-general" },
+      { id: "nova-2-general", name: "nova-2-general" },
+    ]);
   });
 });
 

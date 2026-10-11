@@ -98,6 +98,19 @@ export function getTranscribeModelData(): Promise<TranscribeModelData> {
   );
 }
 
+/** A transcription model as this app describes it, whichever provider serves it. */
+type TranscribeModel = { id: string; name: string };
+
+/**
+ * Deepgram's speech-to-text models, by the id a job is created with. Its own
+ * names repeat across generations ("general" is both nova-2 and nova-3), so
+ * the canonical name is what a person picks from too.
+ */
+export async function listTranscribeModels(): Promise<TranscribeModel[]> {
+  const modelData = await getTranscribeModelData();
+  return Object.keys(modelData).map((id) => ({ id, name: id }));
+}
+
 /**
  * Whether a model id can be used for transcription. Deepgram STT models are
  * single-modality, so presence in the catalog is the whole check, as it is

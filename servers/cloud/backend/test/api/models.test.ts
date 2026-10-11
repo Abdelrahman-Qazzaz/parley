@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Only hoist the mock function factory — no async work here
-const { mockListChatModels, mockGetTranscribeModelData } = vi.hoisted(() => ({
+const { mockListChatModels, mockListTranscribeModels } = vi.hoisted(() => ({
   mockListChatModels: vi.fn(),
-  mockGetTranscribeModelData: vi.fn(),
+  mockListTranscribeModels: vi.fn(),
 }));
 
 vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
@@ -21,7 +21,7 @@ vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_transcribe_client")>();
   return {
     ...actual,
-    getTranscribeModelData: mockGetTranscribeModelData,
+    listTranscribeModels: mockListTranscribeModels,
   };
 });
 
@@ -30,7 +30,7 @@ vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_transcribe_client")>();
   return {
     ...actual,
-    getTranscribeModelData: mockGetTranscribeModelData,
+    listTranscribeModels: mockListTranscribeModels,
   };
 });
 
@@ -130,24 +130,12 @@ describe("GET /models/chat", () => {
   });
 });
 
-const sampleTranscribeModelData = {
-  "nova-3": {
-    name: "nova-3",
-    canonicalName: "nova-3-general",
-    architecture: "nova-3",
-    languages: ["en"],
-    version: "2024-01-01",
-    uuid: "abc-123",
-    batch: true,
-    streaming: true,
-    formattedOutput: true,
-  },
-};
+const sampleTranscribeModel = { id: "nova-3-general", name: "nova-3-general" };
 
 describe("GET /models/transcription", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetTranscribeModelData.mockResolvedValue(sampleTranscribeModelData);
+    mockListTranscribeModels.mockResolvedValue([sampleTranscribeModel]);
   });
 
   it("returns 401 without a session cookie", async () => {
@@ -155,19 +143,17 @@ describe("GET /models/transcription", () => {
       await createApp()
     ).request("http://localhost/models/transcription");
     expect(res.status).toBe(401);
-    expect(mockGetTranscribeModelData).not.toHaveBeenCalled();
+    expect(mockListTranscribeModels).not.toHaveBeenCalled();
   });
 
-  it("returns transcriptionModelData for a valid session", async () => {
+  it("returns the transcription models for a valid session", async () => {
     const res = await (
       await createApp()
     ).request("http://localhost/models/transcription", {
       headers: { Cookie: await sessionCookieHeader("user_01") },
     });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({
-      transcriptionModelData: sampleTranscribeModelData,
-    });
-    expect(mockGetTranscribeModelData).toHaveBeenCalledTimes(1);
+    expect(await res.json()).toEqual({ models: [sampleTranscribeModel] });
+    expect(mockListTranscribeModels).toHaveBeenCalledTimes(1);
   });
 });
