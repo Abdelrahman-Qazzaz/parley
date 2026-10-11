@@ -48,7 +48,7 @@ export async function transcribeAI(
   return alternative?.paragraphs?.transcript ?? alternative?.transcript ?? "";
 }
 
-type TranscribeModel = {
+type DeepgramModel = {
   name: string;
   canonicalName: string;
   architecture: string | undefined;
@@ -61,7 +61,7 @@ type TranscribeModel = {
 };
 
 type TranscribeModelData = {
-  [modelId: string]: TranscribeModel;
+  [modelId: string]: DeepgramModel;
 };
 
 async function fetchTranscribeModelData(): Promise<TranscribeModelData> {
