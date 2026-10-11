@@ -1,10 +1,12 @@
 import { useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
+import { useServerReachable } from "../../hooks/server/useServerReachable";
 import { useServerReady } from "../../hooks/server/useServerReady";
 import { useJobUpdatesBridge } from "../../hooks/socket/useJobUpdatesBridge";
 import { SourcesProvider } from "../../sources/SourcesProvider";
 import { SourceDialog } from "../sources/SourceDialog";
 import { SourcesDrawer } from "../sources/SourcesDrawer";
+import { ServerUnreachable } from "./ServerUnreachable";
 import { Sidebar } from "./Sidebar";
 import { TopBar } from "./TopBar";
 import { ShellContext, type OpenSource } from "./shellContext";
@@ -16,6 +18,7 @@ import { ShellContext, type OpenSource } from "./shellContext";
  */
 export function AppShell() {
   const ready = useServerReady();
+  const reachable = useServerReachable();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [openSource, setOpenSource] = useState<OpenSource | null>(null);
@@ -43,7 +46,7 @@ export function AppShell() {
           <Sidebar />
           <div className="flex min-w-0 flex-1 flex-col">
             <TopBar />
-            <Outlet />
+            {reachable ? <Outlet /> : <ServerUnreachable />}
           </div>
           {sourcesOpen && <SourcesDrawer />}
           <SourceDialog />
