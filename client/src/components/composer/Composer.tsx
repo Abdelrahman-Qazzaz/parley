@@ -5,14 +5,14 @@ import {
   type ClipboardEvent,
   type KeyboardEvent,
 } from "react";
-import type { MessageRequirements } from "../../api/models";
+import type { ChatModel, MessageRequirements } from "../../api/models";
 import { useShell } from "../app/shellContext";
 import { findYoutubeUrl } from "../../media/youtube";
 import { useSources } from "../../sources/useSources";
 import { Icon } from "../ui/Icon";
 import { Meter } from "../ui/Meter";
 import { AttachMenu } from "./AttachMenu";
-import { ModelPicker, type ModelOption } from "./ModelPicker";
+import { ModelPicker } from "./ModelPicker";
 import { SourceChip } from "./SourceChip";
 import { YoutubeOffer } from "./YoutubeOffer";
 
@@ -23,7 +23,7 @@ type ComposerProps = {
   draftKey: string;
   text: string;
   onTextChange: (text: string) => void;
-  models: ModelOption[];
+  models: ChatModel[];
   modelId: string | null;
   onModelChange: (modelId: string) => void;
   modelsLoading: boolean;

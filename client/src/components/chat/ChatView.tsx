@@ -22,7 +22,8 @@ const NEW_CHAT_KEY = "new";
 
 function blockedReasonFor(sources: StagedSource[]): string | null {
   const failed = sources.find((source) => source.status === "failed");
-  if (failed) return `${failed.name} didn't upload. Retry or remove it to send.`;
+  if (failed)
+    return `${failed.name} didn't upload. Retry or remove it to send.`;
 
   const waiting = sources.find(isSourceInFlight);
   if (!waiting) return null;
@@ -89,18 +90,13 @@ export function ChatView() {
     };
   }, [history, sources, text]);
 
-  const models = useMemo(
-    () => chatModels.entries.map(([modelId, info]) => ({ id: modelId, info })),
-    [chatModels.entries],
-  );
-
   // Requirements narrow the list, so a pick made earlier can fall out of it.
   const eligibleIds = useMemo(
     () =>
-      models
-        .filter((model) => meetsRequirements(model.info, requirements))
+      chatModels.models
+        .filter((model) => meetsRequirements(model, requirements))
         .map((model) => model.id),
-    [models, requirements],
+    [chatModels.models, requirements],
   );
   const modelId =
     modelPick && eligibleIds.includes(modelPick)
@@ -174,7 +170,9 @@ export function ChatView() {
       ) : (
         <MessageList
           messages={messagesQuery.data?.messages ?? []}
-          pending={conversationId ? (pendingTurns[conversationId] ?? null) : null}
+          pending={
+            conversationId ? (pendingTurns[conversationId] ?? null) : null
+          }
           loading={!!conversationId && messagesQuery.isLoading}
         />
       )}
@@ -183,7 +181,7 @@ export function ChatView() {
         draftKey={draftKey}
         text={text}
         onTextChange={setText}
-        models={models}
+        models={chatModels.models}
         modelId={modelId}
         onModelChange={setModelPick}
         modelsLoading={chatModels.loading}

@@ -67,7 +67,7 @@ function releasePreview(source: StagedSource) {
 export function SourcesProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
   const { user } = useAuth();
-  const { entries: transcriptionEntries } = useTranscriptionModelsQuery(!!user);
+  const { models: transcriptionModels } = useTranscriptionModelsQuery(!!user);
   const [drafts, setDrafts] = useState<Drafts>({});
   const [transcriptModelPick, setTranscriptModelPick] = useState<string | null>(
     null,
@@ -76,7 +76,7 @@ export function SourcesProvider({ children }: { children: ReactNode }) {
   const transcriptModelId =
     transcriptModelPick ??
     resolveDefaultModel(
-      transcriptionEntries.map(([modelId]) => modelId),
+      transcriptionModels.map((model) => model.id),
       DEFAULT_TRANSCRIPTION_MODEL,
     );
 

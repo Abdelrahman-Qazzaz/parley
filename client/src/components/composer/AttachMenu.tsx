@@ -19,7 +19,7 @@ export function AttachMenu({
   onTranscriptModelChange,
 }: AttachMenuProps) {
   const { user } = useAuth();
-  const { entries: transcriptionModels } = useTranscriptionModelsQuery(!!user);
+  const { models: transcriptionModels } = useTranscriptionModelsQuery(!!user);
   const [open, setOpen] = useState(false);
   const menuRef = useDismissable<HTMLDivElement>(open, () => setOpen(false));
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -111,9 +111,9 @@ export function AttachMenu({
               {transcriptionModels.length === 0 ? (
                 <option value="">Loading…</option>
               ) : (
-                transcriptionModels.map(([modelId, info]) => (
-                  <option key={modelId} value={modelId}>
-                    {info.name || modelId}
+                transcriptionModels.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
                   </option>
                 ))
               )}

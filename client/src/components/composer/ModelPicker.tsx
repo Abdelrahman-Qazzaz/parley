@@ -1,26 +1,17 @@
 import { useMemo, useState } from "react";
 import {
-  contextLength,
   describeModel,
   meetsRequirements,
-  modelCapabilities,
-  priceTier,
   providerSlug,
+  type ChatModel,
   type MessageRequirements,
-  type ModelCapability,
-  type ModelInfo,
 } from "../../api/models";
 import { fuzzyScoreAny } from "../../lib/fuzzy";
-import { Icon, type IconName } from "../ui/Icon";
+import { Icon } from "../ui/Icon";
 import { useDismissable } from "../ui/useDismissable";
 
-export type ModelOption = {
-  id: string;
-  info: ModelInfo;
-};
-
 type ModelPickerProps = {
-  models: ModelOption[];
+  models: ChatModel[];
   value: string | null;
   onChange: (modelId: string) => void;
   /** What the message being written needs; models that can't serve it are hidden. */
@@ -29,17 +20,9 @@ type ModelPickerProps = {
   error: string | null;
 };
 
-const CAPABILITY_ICONS: Record<ModelCapability, { icon: IconName; title: string }> =
-  {
-    image: { icon: "eye", title: "Reads images" },
-    file: { icon: "file", title: "Reads files" },
-    audio: { icon: "waveform", title: "Reads audio" },
-    reasoning: { icon: "spark", title: "Reasoning model" },
-  };
-
 type Entry = {
   id: string;
-  info: ModelInfo;
+  model: ChatModel;
   provider: string;
   name: string;
   slug: string;
@@ -50,21 +33,6 @@ function formatContext(tokens: number | null): string | null {
   if (!tokens) return null;
   if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
   return `${Math.round(tokens / 1000)}K`;
-}
-
-function PriceTier({ tier }: { tier: number | null }) {
-  if (tier === null) return null;
-  if (tier === 0) {
-    return <span className="font-mono text-[10px] text-signal">free</span>;
-  }
-  return (
-    <span
-      className="font-mono text-[10px] text-faint"
-      title={`Relative prompt price: ${tier} of 4`}
-    >
-      {"$".repeat(tier)}
-    </span>
-  );
 }
 
 export function ModelPicker({
@@ -85,12 +53,12 @@ export function ModelPicker({
   const eligible = useMemo(
     () =>
       models
-        .filter((model) => meetsRequirements(model.info, requirements))
+        .filter((model) => meetsRequirements(model, requirements))
         .map((model) => {
-          const { provider: label, name } = describeModel(model.id, model.info);
+          const { provider: label, name } = describeModel(model);
           return {
             id: model.id,
-            info: model.info,
+            model,
             provider: label,
             name,
             slug: providerSlug(model.id),
@@ -118,7 +86,10 @@ export function ModelPicker({
     const query = search.trim();
     const scored = eligible.flatMap((entry) => {
       if (provider && entry.slug !== provider) return [];
-      const score = fuzzyScoreAny([entry.name, entry.id, entry.provider], query);
+      const score = fuzzyScoreAny(
+        [entry.name, entry.id, entry.provider],
+        query,
+      );
       return score === null ? [] : [{ ...entry, score }];
     });
     scored.sort(
@@ -162,8 +133,7 @@ export function ModelPicker({
   }
 
   const row = (entry: Entry) => {
-    const capabilities = modelCapabilities(entry.info);
-    const limit = formatContext(contextLength(entry.info));
+    const limit = formatContext(entry.model.contextTokens);
     return (
       <button
         key={entry.id}
@@ -178,7 +148,6 @@ export function ModelPicker({
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate text-sm text-ink">{entry.name}</span>
-            <PriceTier tier={priceTier(entry.info)} />
           </span>
           <span className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-faint">
             <span className="truncate">{entry.id}</span>
@@ -187,13 +156,9 @@ export function ModelPicker({
         </span>
 
         <span className="mt-0.5 flex shrink-0 items-center gap-1.5">
-          {capabilities.map((capability) => (
-            <Icon
-              key={capability}
-              name={CAPABILITY_ICONS[capability].icon}
-              className="h-3.5 w-3.5 text-faint"
-            />
-          ))}
+          {entry.model.acceptsImages && (
+            <Icon name="eye" className="h-3.5 w-3.5 text-faint" />
+          )}
           {entry.id === value && (
             <Icon name="check" className="h-4 w-4 text-signal" />
           )}

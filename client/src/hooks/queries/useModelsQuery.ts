@@ -1,23 +1,16 @@
-import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchChatModels,
   fetchTranscriptionModels,
-  type ModelInfo,
-  type TranscriptionModelInfo,
+  type ChatModel,
+  type TranscriptionModel,
 } from "../../api/models";
 import { queryKeys } from "../../lib/queryClient";
 
-/**
- * The catalog changes about daily and the API now serves it with an ETag,
- * so a stale check costs a 304 with no body rather than ~40KB.
- */
+/** The catalogs only change when the app does. */
 const MODEL_CATALOG_STALE_MS = 60 * 60_000;
 
-export type ChatModelEntry = [id: string, info: ModelInfo];
-export type TranscriptionModelEntry = [id: string, info: TranscriptionModelInfo];
-
-/** The available models as sorted [id, info] entries, stable across renders. */
+/** The chat models, in the order the API lists them. */
 export function useChatModelsQuery(enabled: boolean) {
   const query = useQuery({
     queryKey: queryKeys.chatModels,
@@ -26,23 +19,14 @@ export function useChatModelsQuery(enabled: boolean) {
     staleTime: MODEL_CATALOG_STALE_MS,
   });
 
-  const entries = useMemo<ChatModelEntry[]>(
-    () =>
-      query.data
-        ? Object.entries(query.data).sort(([first], [second]) =>
-            first.localeCompare(second),
-          )
-        : [],
-    [query.data],
-  );
-
   return {
-    entries,
+    models: query.data ?? NO_CHAT_MODELS,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : null,
   };
 }
 
+/** The transcription models, in the order the API lists them. */
 export function useTranscriptionModelsQuery(enabled: boolean) {
   const query = useQuery({
     queryKey: queryKeys.transcriptionModels,
@@ -51,19 +35,13 @@ export function useTranscriptionModelsQuery(enabled: boolean) {
     staleTime: MODEL_CATALOG_STALE_MS,
   });
 
-  const entries = useMemo<TranscriptionModelEntry[]>(
-    () =>
-      query.data
-        ? Object.entries(query.data).sort(([first], [second]) =>
-            first.localeCompare(second),
-          )
-        : [],
-    [query.data],
-  );
-
   return {
-    entries,
+    models: query.data ?? NO_TRANSCRIPTION_MODELS,
     loading: query.isLoading,
     error: query.error instanceof Error ? query.error.message : null,
   };
 }
+
+// Stable empty lists, so callers' memos don't rerun while loading.
+const NO_CHAT_MODELS: ChatModel[] = [];
+const NO_TRANSCRIPTION_MODELS: TranscriptionModel[] = [];

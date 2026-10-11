@@ -1,67 +1,33 @@
 import { chatModelsEndpoint, transcriptionModelsEndpoint } from "../config";
 import { apiJson } from "./http";
 
-export type ModelPricing = {
-  prompt?: string;
-  completion?: string;
-  audio?: string;
-  image?: string;
-  request?: string;
-  webSearch?: string;
-};
-
-export type ModelInfo = {
-  id?: string;
-  name?: string;
-  knowledgeCutoff?: string | null;
-  topProvider?: {
-    contextLength?: number | null;
-    isModerated?: boolean;
-    maxCompletionTokens?: number | null;
-  };
-  pricing?: ModelPricing;
-  supportedParameters?: string[];
-  inputModalities?: string[];
-  outputModalities?: string[];
-};
-
-export type TranscriptionModelInfo = {
+/** A chat model as the API describes it. */
+export type ChatModel = {
+  id: string;
   name: string;
-  canonicalName: string;
-  architecture?: string;
-  languages?: string[];
-  version?: string;
-  batch?: boolean;
-  streaming?: boolean;
-  formattedOutput?: boolean;
+  /** The longest prompt it takes, in tokens, when known. */
+  contextTokens: number | null;
+  acceptsImages: boolean;
 };
+
+/** A transcription model as the API describes it. */
+export type TranscriptionModel = { id: string; name: string };
 
 export const DEFAULT_TEXT_MODEL = "openai/gpt-4o-mini";
 export const DEFAULT_TRANSCRIPTION_MODEL = "nova-3-general";
 
-export async function fetchChatModels(): Promise<Record<string, ModelInfo>> {
-  const data = await apiJson<{ modelData: Record<string, ModelInfo> }>(
-    chatModelsEndpoint(),
-  );
-  if (!data?.modelData || typeof data.modelData !== "object") {
-    throw new Error("Invalid chat models response");
-  }
-  return data.modelData;
+async function fetchModels<T>(endpoint: string): Promise<T[]> {
+  const data = await apiJson<{ models: T[] }>(endpoint);
+  if (!Array.isArray(data?.models)) throw new Error("Invalid models response");
+  return data.models;
 }
 
-export async function fetchTranscriptionModels(): Promise<
-  Record<string, TranscriptionModelInfo>
-> {
-  const data = await apiJson<{
-    transcriptionModelData: Record<string, TranscriptionModelInfo>;
-  }>(transcriptionModelsEndpoint());
-  if (
-    !data?.transcriptionModelData ||
-    typeof data.transcriptionModelData !== "object"
-  ) {
-    throw new Error("Invalid transcription models response");
-  }
-  return data.transcriptionModelData;
+export function fetchChatModels(): Promise<ChatModel[]> {
+  return fetchModels<ChatModel>(chatModelsEndpoint());
+}
+
+export function fetchTranscriptionModels(): Promise<TranscriptionModel[]> {
+  return fetchModels<TranscriptionModel>(transcriptionModelsEndpoint());
 }
 
 /** Fall back to the first available model when the preferred one isn't offered. */
@@ -71,17 +37,6 @@ export function resolveDefaultModel(
 ): string | null {
   if (modelIds.includes(preferredModelId)) return preferredModelId;
   return modelIds[0] ?? null;
-}
-
-export function canChatWithText(modelInfo: ModelInfo): boolean {
-  return modelInfo.outputModalities?.includes("text") ?? false;
-}
-
-export function canChatWithImages(modelInfo: ModelInfo): boolean {
-  return (
-    canChatWithText(modelInfo) &&
-    (modelInfo.inputModalities?.includes("image") ?? false)
-  );
 }
 
 /* ------------------------------------------------------------------ naming */
@@ -121,11 +76,11 @@ function labelForSlug(slug: string): string {
 }
 
 /** "Anthropic: Claude Sonnet 4.5" becomes { provider, name } for display. */
-export function describeModel(
-  modelId: string,
-  info: ModelInfo,
-): { provider: string; name: string } {
-  const raw = (info.name ?? "").trim() || modelId;
+export function describeModel(model: ChatModel): {
+  provider: string;
+  name: string;
+} {
+  const raw = model.name.trim() || model.id;
   const separator = raw.indexOf(": ");
   if (separator > 0) {
     return {
@@ -133,46 +88,7 @@ export function describeModel(
       name: raw.slice(separator + 2).trim(),
     };
   }
-  return { provider: labelForSlug(providerSlug(modelId)), name: raw };
-}
-
-/* ----------------------------------------------------------- capabilities */
-
-export type ModelCapability = "image" | "file" | "audio" | "reasoning";
-
-export function modelCapabilities(info: ModelInfo): ModelCapability[] {
-  const inputs = info.inputModalities ?? [];
-  const parameters = info.supportedParameters ?? [];
-  const capabilities: ModelCapability[] = [];
-  if (inputs.includes("image")) capabilities.push("image");
-  if (inputs.includes("file")) capabilities.push("file");
-  if (inputs.includes("audio")) capabilities.push("audio");
-  if (
-    parameters.includes("reasoning") ||
-    parameters.includes("include_reasoning")
-  ) {
-    capabilities.push("reasoning");
-  }
-  return capabilities;
-}
-
-export function contextLength(info: ModelInfo): number | null {
-  return info.topProvider?.contextLength ?? null;
-}
-
-/**
- * A rough price band from the prompt price (USD per token), so the list can
- * show cost at a glance the way it shows capability. Null when unpriced.
- */
-export function priceTier(info: ModelInfo): number | null {
-  const perToken = Number(info.pricing?.prompt);
-  if (!Number.isFinite(perToken)) return null;
-  const perMillion = perToken * 1_000_000;
-  if (perMillion <= 0) return 0;
-  if (perMillion < 1) return 1;
-  if (perMillion < 5) return 2;
-  if (perMillion < 20) return 3;
-  return 4;
+  return { provider: labelForSlug(providerSlug(model.id)), name: raw };
 }
 
 /* ---------------------------------------------------- message requirements */
@@ -181,7 +97,7 @@ export function priceTier(info: ModelInfo): number | null {
  * What the message being written needs from a model. Derived from what the
  * composer is actually carrying, so the picker can hide models that would be
  * rejected — the API refuses a turn whose model can't read an attached image,
- * and a transcript longer than the context window is wasted spend.
+ * and a transcript longer than the context window can't be answered.
  */
 export type MessageRequirements = {
   image: boolean;
@@ -193,13 +109,12 @@ export type MessageRequirements = {
 export const CHARS_PER_TOKEN = 4;
 
 export function meetsRequirements(
-  info: ModelInfo,
+  model: ChatModel,
   requirements: MessageRequirements,
 ): boolean {
-  if (!canChatWithText(info)) return false;
-  if (requirements.image && !canChatWithImages(info)) return false;
-  const limit = contextLength(info);
+  if (requirements.image && !model.acceptsImages) return false;
   // An unknown context length is not evidence the model is too small.
-  if (limit !== null && requirements.tokens > limit) return false;
+  if (model.contextTokens !== null && requirements.tokens > model.contextTokens)
+    return false;
   return true;
 }
