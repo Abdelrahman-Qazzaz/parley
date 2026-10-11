@@ -7,6 +7,7 @@ import {
 } from "../config";
 import type {
   QueuedYoutube,
+  QueueYoutubeBody,
   UploadedAudio,
   UploadedImage,
 } from "@summarizer/contract";
@@ -114,6 +115,6 @@ export async function requestYoutubeTranscript(
     jsonRequest("POST", {
       youtubeUrl,
       [FORM_KEYS.transcriptModelId]: transcriptModelId,
-    }),
+    } satisfies QueueYoutubeBody),
   );
 }

@@ -7,8 +7,10 @@
  * Types only, imported with `import type`: nothing here exists at runtime, so
  * no build has to reach this folder. Timestamps are ISO 8601 strings.
  *
- * Sign-in and the way a file gets uploaded differ between the servers on
- * purpose, so neither is here; what an upload answers with is.
+ * Request bodies are here too, and each server's validator is checked to take
+ * every body the contract allows. Sign-in and the way a file gets uploaded
+ * differ between the servers on purpose, so neither is here; what an upload
+ * answers with is.
  */
 
 /* ------------------------------------------------------------------ errors */
@@ -27,6 +29,9 @@ export type Conversation = {
 
 /** GET /conversations, most recently active first. */
 export type ConversationsResponse = { conversations: Conversation[] };
+
+/** POST /conversations. Without a title, the server picks one. */
+export type CreateConversationBody = { conversationTitle?: string };
 
 /** PATCH /conversations/:conversationId */
 export type RenameConversationBody = { conversationTitle: string };
@@ -60,7 +65,7 @@ export type ChatMessage = {
   chosenModelId: string | null;
   conversationId: string;
   createdAt: string;
-  attachments: MessageImage[];
+  attachments: MessageImage[]; // rename to imageAttachments
   transcriptAttachments: MessageTranscript[];
 };
 
@@ -161,7 +166,16 @@ export type UploadedAudio = {
   source: "audio" | "video";
 };
 
-/** POST /upload/youtube, once the fetch is queued. */
+/** POST /upload/youtube */
+export type QueueYoutubeBody = {
+  youtubeUrl: string;
+  /** The server's default when absent. */
+  transcriptModelId?: string;
+  /** Use the video's own captions instead of transcribing, when it has them. */
+  useCaptionsIfAvailable?: boolean;
+};
+
+/** What POST /upload/youtube answers with, once the fetch is queued. */
 export type QueuedYoutube = {
   audioUploadId: string;
   source: "youtube";
