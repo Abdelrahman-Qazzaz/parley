@@ -1,4 +1,6 @@
 import { z } from "zod";
+import type { QueueYoutubeBody } from "@summarizer/contract";
+import { takesBody } from "./contract";
 import { CTX_KEYS, FORM_KEYS } from "../../../shared/keys";
 import {
   DEFAULT_TRANSCRIBE_MODEL,
@@ -116,24 +118,26 @@ export const audioUploadSchema = z
  * after the request, so the job is created with placeholder file metadata
  * (real title/size are unknown until the fetch completes).
  */
-export const youtubeUploadSchema = z
-  .object({
-    [CTX_KEYS.youtubeUrl]: z.string().url(),
-    [FORM_KEYS.transcriptModelId]: transcriptionModelField,
-    [CTX_KEYS.useCaptionsIfAvailable]: z.boolean().optional().default(false),
-  })
-  .superRefine(async (data, ctx) => {
-    if (!isYoutubeUrl(data[CTX_KEYS.youtubeUrl])) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Not a valid YouTube URL",
-        path: [CTX_KEYS.youtubeUrl],
-      });
-    }
-    await refineTranscriptionModel(data[FORM_KEYS.transcriptModelId], ctx);
-  })
-  .transform((data) => ({
-    [CTX_KEYS.youtubeUrl]: data[CTX_KEYS.youtubeUrl],
-    [CTX_KEYS.transcriptModelId]: data[FORM_KEYS.transcriptModelId],
-    [CTX_KEYS.useCaptionsIfAvailable]: data[CTX_KEYS.useCaptionsIfAvailable],
-  }));
+export const youtubeUploadSchema = takesBody<QueueYoutubeBody>()(
+  z
+    .object({
+      [CTX_KEYS.youtubeUrl]: z.string().url(),
+      [FORM_KEYS.transcriptModelId]: transcriptionModelField,
+      [CTX_KEYS.useCaptionsIfAvailable]: z.boolean().optional().default(false),
+    })
+    .superRefine(async (data, ctx) => {
+      if (!isYoutubeUrl(data[CTX_KEYS.youtubeUrl])) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Not a valid YouTube URL",
+          path: [CTX_KEYS.youtubeUrl],
+        });
+      }
+      await refineTranscriptionModel(data[FORM_KEYS.transcriptModelId], ctx);
+    })
+    .transform((data) => ({
+      [CTX_KEYS.youtubeUrl]: data[CTX_KEYS.youtubeUrl],
+      [CTX_KEYS.transcriptModelId]: data[FORM_KEYS.transcriptModelId],
+      [CTX_KEYS.useCaptionsIfAvailable]: data[CTX_KEYS.useCaptionsIfAvailable],
+    })),
+);
