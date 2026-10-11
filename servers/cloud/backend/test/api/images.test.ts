@@ -391,12 +391,10 @@ describe("POST /upload/image/confirm", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      message: "File uploaded",
       imageUploadId,
       fileName: "shot.png",
       size: 4096,
       mimeType: "image/png",
-      mode: "image",
       url: "https://storage.test/read",
     });
     expect(mockInspectUploadedObject).toHaveBeenCalledWith("user_01", {

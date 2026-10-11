@@ -33,7 +33,6 @@ export async function handleAudioUpload(c: Context) {
   });
 
   return c.json({
-    message: "File uploaded",
     audioUploadId,
     fileName,
     size: file.size,
@@ -70,7 +69,6 @@ export async function handleYoutubeUpload(c: Context) {
     useCaptionsIfAvailable,
   });
   return c.json({
-    message: "Queued",
     audioUploadId,
     source: "youtube" as const,
     url,

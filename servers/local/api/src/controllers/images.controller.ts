@@ -28,12 +28,10 @@ export async function handleImageUpload(c: Context) {
   });
 
   return c.json({
-    message: "File uploaded",
     imageUploadId,
     fileName,
     size: file.size,
     mimeType: file.type,
-    mode: "image" as const,
     url: data.images.imageUrl(imageUploadId),
   });
 }

@@ -65,12 +65,10 @@ describe("POST /upload/image", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { imageUploadId: string };
     expect(body).toEqual({
-      message: "File uploaded",
       imageUploadId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       fileName: "diagram.png",
       size: PIXELS.length,
       mimeType: "image/png",
-      mode: "image",
       url: `/upload/image/${body.imageUploadId}`,
     });
     expect(

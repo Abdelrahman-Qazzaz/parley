@@ -423,7 +423,6 @@ describe("POST /upload/audio/confirm", () => {
 
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({
-      message: "File uploaded",
       audioUploadId: UPLOAD_ID,
       fileName: "talk.webm",
       size: 2048,

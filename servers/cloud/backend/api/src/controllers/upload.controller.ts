@@ -77,7 +77,6 @@ export async function handleAudioConfirm(c: Context) {
   }
 
   return c.json({
-    message: "File uploaded",
     audioUploadId,
     fileName,
     size: upload.sizeBytes,
@@ -120,7 +119,6 @@ export async function handleYoutubeUpload(c: Context) {
     }),
   );
   return c.json({
-    message: "Queued",
     audioUploadId,
     source: "youtube" as const,
     url,

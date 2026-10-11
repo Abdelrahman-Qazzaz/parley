@@ -79,12 +79,10 @@ export async function handleImageConfirm(c: Context) {
   }
 
   return c.json({
-    message: "File uploaded",
     imageUploadId,
     fileName,
     size: upload.sizeBytes,
     mimeType: upload.contentType,
-    mode: "image" as const,
     url: signedUrl,
   });
 }

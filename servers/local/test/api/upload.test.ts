@@ -88,7 +88,6 @@ describe("POST /upload/audio", () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as { audioUploadId: string };
     expect(body).toEqual({
-      message: "File uploaded",
       audioUploadId: expect.stringMatching(/^[0-9a-f-]{36}$/),
       fileName: "talk.mp3",
       size: SOUND.length,
