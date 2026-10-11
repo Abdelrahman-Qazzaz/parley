@@ -6,7 +6,7 @@ import {
   resolveDefaultModel,
   type MessageRequirements,
 } from "../../api/models";
-import { useAuth } from "../../hooks/auth/useAuth";
+import { useServerReady } from "../../hooks/server/useServerReady";
 import { useChatModelsQuery } from "../../hooks/queries/useModelsQuery";
 import { useServer } from "../../hooks/server/useServer";
 import { MAX_CONTEXT_MESSAGES } from "../../api/messages";
@@ -36,7 +36,7 @@ export function ChatView() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
   const server = useServer();
-  const { user } = useAuth();
+  const ready = useServerReady();
   const draftKey = conversationId ?? NEW_CHAT_KEY;
 
   // Drafts are per chat: switching away and back keeps what you were writing,
@@ -49,7 +49,7 @@ export function ChatView() {
   const { sources, takeSources, restoreSourcesFor, addFiles } =
     useSources(draftKey);
   const messagesQuery = useMessagesQuery(conversationId);
-  const chatModels = useChatModelsQuery(!!user);
+  const chatModels = useChatModelsQuery(ready);
   const [modelPick, setModelPick] = useState<string | null>(null);
   const { pendingTurns, sendingKeys, send } = useChatSend();
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { JobSource, JobStatus } from "../../api/jobs";
-import { useAuth } from "../../hooks/auth/useAuth";
+import { useServerReady } from "../../hooks/server/useServerReady";
 import {
   useDeleteJobMutation,
   useJobsQuery,
@@ -27,7 +27,7 @@ const SEARCH_DEBOUNCE_MS = 250;
  */
 export function SourcesDrawer() {
   const { setSourcesOpen, openSource, setOpenSource } = useShell();
-  const { user } = useAuth();
+  const ready = useServerReady();
   const toast = useToast();
   const draftKey = useDraftKey();
   const { attachExisting } = useSources(draftKey);
@@ -40,7 +40,7 @@ export function SourcesDrawer() {
     fileName: string;
   } | null>(null);
 
-  const jobsQuery = useJobsQuery(!!user, {
+  const jobsQuery = useJobsQuery(ready, {
     status,
     q: debouncedSearch || null,
   });

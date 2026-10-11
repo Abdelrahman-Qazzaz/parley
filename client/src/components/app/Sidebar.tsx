@@ -6,6 +6,7 @@ import {
   useRenameConversationMutation,
 } from "../../hooks/queries/useConversationQueries";
 import { useAuth } from "../../hooks/auth/useAuth";
+import { useServerReady } from "../../hooks/server/useServerReady";
 import { useTheme } from "../../hooks/theme/useTheme";
 import { Icon } from "../ui/Icon";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
@@ -35,7 +36,8 @@ export function Sidebar() {
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { sidebarOpen, setSidebarOpen, setSourcesOpen } = useShell();
-  const conversationsQuery = useConversationsQuery(!!user);
+  const ready = useServerReady();
+  const conversationsQuery = useConversationsQuery(ready);
   const renameConversation = useRenameConversationMutation();
   const deleteConversation = useDeleteConversationMutation();
   const [pendingDelete, setPendingDelete] = useState<{
@@ -53,7 +55,8 @@ export function Sidebar() {
       { conversationId: deletedId },
       {
         onSuccess: () => {
-          if (deletedId === conversationId) navigate("/chat", { replace: true });
+          if (deletedId === conversationId)
+            navigate("/chat", { replace: true });
         },
       },
     );
@@ -170,7 +173,10 @@ export function Sidebar() {
             }
             className="rounded-lg p-2 text-muted transition-colors hover:bg-surface hover:text-ink"
           >
-            <Icon name={theme === "dark" ? "sun" : "moon"} className="h-4 w-4" />
+            <Icon
+              name={theme === "dark" ? "sun" : "moon"}
+              className="h-4 w-4"
+            />
           </button>
         </div>
       </aside>

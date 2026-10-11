@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from "react";
-import { useAuth } from "../../hooks/auth/useAuth";
+import { useServerReady } from "../../hooks/server/useServerReady";
 import { useTranscriptionModelsQuery } from "../../hooks/queries/useModelsQuery";
 import { IMAGE_ACCEPT, MEDIA_ACCEPT } from "../../media/fileKind";
 import { Icon } from "../ui/Icon";
@@ -18,8 +18,8 @@ export function AttachMenu({
   transcriptModelId,
   onTranscriptModelChange,
 }: AttachMenuProps) {
-  const { user } = useAuth();
-  const { models: transcriptionModels } = useTranscriptionModelsQuery(!!user);
+  const ready = useServerReady();
+  const { models: transcriptionModels } = useTranscriptionModelsQuery(ready);
   const [open, setOpen] = useState(false);
   const menuRef = useDismissable<HTMLDivElement>(open, () => setOpen(false));
   const imageInputRef = useRef<HTMLInputElement>(null);

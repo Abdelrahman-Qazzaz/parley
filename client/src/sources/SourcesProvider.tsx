@@ -28,7 +28,7 @@ import { youtubeLabel } from "../media/youtube";
 import { useServer } from "../hooks/server/useServer";
 import { useToast } from "../hooks/toast/useToast";
 import { useTranscriptionModelsQuery } from "../hooks/queries/useModelsQuery";
-import { useAuth } from "../hooks/auth/useAuth";
+import { useServerReady } from "../hooks/server/useServerReady";
 import { SourcesContext, type ExistingSource } from "./context";
 import type { StagedSource } from "./types";
 import { useTranscriptWatcher } from "./useTranscriptWatcher";
@@ -65,8 +65,8 @@ function releasePreview(source: StagedSource) {
 export function SourcesProvider({ children }: { children: ReactNode }) {
   const toast = useToast();
   const server = useServer();
-  const { user } = useAuth();
-  const { models: transcriptionModels } = useTranscriptionModelsQuery(!!user);
+  const ready = useServerReady();
+  const { models: transcriptionModels } = useTranscriptionModelsQuery(ready);
   const [drafts, setDrafts] = useState<Drafts>({});
   const [transcriptModelPick, setTranscriptModelPick] = useState<string | null>(
     null,

@@ -1,14 +1,14 @@
 import { useParams } from "react-router-dom";
 import { useConversationsQuery } from "../../hooks/queries/useConversationQueries";
-import { useAuth } from "../../hooks/auth/useAuth";
+import { useServerReady } from "../../hooks/server/useServerReady";
 import { Icon } from "../ui/Icon";
 import { useShell } from "./shellContext";
 
 export function TopBar() {
   const { conversationId } = useParams<{ conversationId: string }>();
-  const { user } = useAuth();
+  const ready = useServerReady();
   const { setSidebarOpen, setSourcesOpen } = useShell();
-  const conversationsQuery = useConversationsQuery(!!user);
+  const conversationsQuery = useConversationsQuery(ready);
 
   const title = conversationId
     ? (conversationsQuery.data?.find(
