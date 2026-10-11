@@ -90,8 +90,9 @@ export async function handleImageConfirm(c: Context) {
 }
 
 /**
- * GET /upload/image/:imageUploadId — the URL for a previously uploaded image.
- * Served from the cached signature; only re-signs once that nears expiry.
+ * GET /upload/image/:imageUploadId — the image itself, by a redirect to its
+ * signed URL, as the local server serves the file at the same path. The
+ * signature is cached; it's only re-signed once that nears expiry.
  */
 export async function handleGetImage(c: Context) {
   const userId = c.get(CTX_KEYS.userId);
@@ -101,7 +102,7 @@ export async function handleGetImage(c: Context) {
 
   if (!image) return c.json({ message: "Image not found" }, 404);
 
-  return c.json(image);
+  return c.redirect(image.url, 302);
 }
 
 /** DELETE /upload/image/:imageUploadId — delete an unlinked, unreserved image attachment. */

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
   mockDeleteOwnedUnlinkedUnreservedImageAttachment,
+  mockResolveImages,
   mockInsert,
   mockValues,
   mockCreateUploadUrl,
@@ -11,6 +12,7 @@ const {
   ledger,
 } = vi.hoisted(() => ({
   mockDeleteOwnedUnlinkedUnreservedImageAttachment: vi.fn(),
+  mockResolveImages: vi.fn(),
   mockInsert: vi.fn(),
   mockValues: vi.fn(),
   mockCreateUploadUrl: vi.fn(),
@@ -77,6 +79,7 @@ vi.mock("../../shared/data/images.data", async (importActual) => {
       ...actual.images,
       deleteOwnedUnlinkedUnreservedImageAttachment:
         mockDeleteOwnedUnlinkedUnreservedImageAttachment,
+      resolveImages: mockResolveImages,
     },
   };
 });
@@ -101,6 +104,44 @@ async function deleteImage(userId = "user_01OWNER") {
 beforeEach(() => {
   vi.clearAllMocks();
   mockDeleteOwnedUnlinkedUnreservedImageAttachment.mockResolvedValue(null);
+});
+
+describe("GET /upload/image/:imageUploadId", () => {
+  async function getImage() {
+    return (await createApp()).request(
+      `http://localhost/upload/image/${imageUploadId}`,
+      { headers: { Cookie: await sessionCookieHeader("user_01OWNER") } },
+    );
+  }
+
+  it("redirects to the image's signed URL", async () => {
+    mockResolveImages.mockResolvedValue([
+      {
+        imageUploadId,
+        fileName: "shot.png",
+        mimeType: "image/png",
+        size: 4096,
+        url: "https://storage.test/read",
+      },
+    ]);
+
+    const res = await getImage();
+
+    expect(res.status).toBe(302);
+    expect(res.headers.get("Location")).toBe("https://storage.test/read");
+    expect(mockResolveImages).toHaveBeenCalledWith("user_01OWNER", [
+      imageUploadId,
+    ]);
+  });
+
+  it("returns 404 for an image the user doesn't have", async () => {
+    mockResolveImages.mockResolvedValue([]);
+
+    const res = await getImage();
+
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ message: "Image not found" });
+  });
 });
 
 describe("DELETE /upload/image/:imageUploadId", () => {
