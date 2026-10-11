@@ -1,4 +1,9 @@
 import { z } from "zod";
+import type {
+  CreateConversationBody,
+  RenameConversationBody,
+} from "@summarizer/contract";
+import { takesBody } from "./contract";
 import { CTX_KEYS } from "../../../shared/keys";
 
 const MAX_TITLE_LENGTH = 200;
@@ -17,14 +22,18 @@ const titleSchema = z
  * Body for POST /conversations. Title is optional (the DB default applies), and
  * an empty/absent body parses as `null` in validateReqBody, so coerce it to {}.
  */
-export const conversationCreateBodySchema = z.preprocess(
-  (body) => body ?? {},
-  z.object({
-    [CTX_KEYS.conversationTitle]: titleSchema.optional(),
-  }),
+export const conversationCreateBodySchema = takesBody<CreateConversationBody>()(
+  z.preprocess(
+    (body) => body ?? {},
+    z.object({
+      [CTX_KEYS.conversationTitle]: titleSchema.optional(),
+    }),
+  ),
 );
 
 /** Body for PATCH /conversations/:id — renaming requires a title. */
-export const conversationPatchBodySchema = z.object({
-  [CTX_KEYS.conversationTitle]: titleSchema,
-});
+export const conversationPatchBodySchema = takesBody<RenameConversationBody>()(
+  z.object({
+    [CTX_KEYS.conversationTitle]: titleSchema,
+  }),
+);
