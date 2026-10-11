@@ -26,34 +26,26 @@ vi.mock("@openrouter/sdk", () => ({
 import {
   buildUserTurn,
   chatAI,
+  findChatModel,
   generateTitle,
-  getChatModelData,
-  validateChatModelInput,
-  validateChatModelOutput,
+  listChatModels,
 } from "../../shared/ai/ai_chat_client";
 
 const MODEL_ID = "openai/gpt-4o-mini";
 
-// The projection deliberately drops `description` — it is ~172KB of the
-// catalog and nothing reads it. The OpenRouter fixture below still carries it,
-// so this asserts the field is stripped rather than never supplied.
-const sampleModelData = {
-  [MODEL_ID]: {
-    id: MODEL_ID,
-    name: "GPT-4o Mini",
-    knowledgeCutoff: null,
-    topProvider: { contextLength: 128000, isModerated: true },
-    pricing: { prompt: "0.00000015", completion: "0.0000006" },
-    supportedParameters: ["temperature", "max_tokens"],
-    outputModalities: ["text"],
-    inputModalities: ["text", "image"],
-  },
+// How the app describes the OpenRouter model below: only what it uses.
+const sampleModel = {
+  id: MODEL_ID,
+  name: "GPT-4o Mini",
+  contextTokens: 128000,
+  acceptsImages: true,
 };
 
 const openRouterListModel = {
   id: MODEL_ID,
   name: "GPT-4o Mini",
   description: "Fast chat model",
+  contextLength: 128000,
   knowledgeCutoff: null,
   topProvider: { contextLength: 128000, isModerated: true },
   pricing: { prompt: "0.00000015", completion: "0.0000006" },
@@ -65,17 +57,15 @@ const openRouterListModel = {
   },
 };
 
-describe("getChatModelData", () => {
+describe("listChatModels", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("serves the catalog through its cache entry", async () => {
-    mockGetOrSetCache.mockResolvedValueOnce(sampleModelData);
+    mockGetOrSetCache.mockResolvedValueOnce([sampleModel]);
 
-    const result = await getChatModelData();
-
-    expect(result).toEqual(sampleModelData);
+    expect(await listChatModels()).toEqual([sampleModel]);
     expect(mockGetOrSetCache).toHaveBeenCalledWith(
       CACHE_KEYS.openRouterModels,
       expect.any(Function),
@@ -84,45 +74,52 @@ describe("getChatModelData", () => {
     expect(mockModelsList).not.toHaveBeenCalled();
   });
 
-  it("normalizes the catalog it fetches from OpenRouter", async () => {
+  it("describes what OpenRouter lists in the app's own terms", async () => {
     mockGetOrSetCache.mockImplementationOnce(runFetch);
     mockModelsList.mockResolvedValueOnce({
-      result: { data: [openRouterListModel] },
+      result: {
+        data: [
+          openRouterListModel,
+          {
+            ...openRouterListModel,
+            id: "vendor/text-only",
+            name: "Text only",
+            contextLength: null,
+            architecture: {
+              ...openRouterListModel.architecture,
+              inputModalities: ["text"],
+            },
+          },
+        ],
+      },
     });
 
-    const result = await getChatModelData();
-
-    expect(result).toEqual(sampleModelData);
-    expect(mockModelsList).toHaveBeenCalledTimes(1);
+    expect(await listChatModels()).toEqual([
+      sampleModel,
+      {
+        id: "vendor/text-only",
+        name: "Text only",
+        contextTokens: null,
+        acceptsImages: false,
+      },
+    ]);
     // Only text-output models are relevant here; transcription is Deepgram's.
     expect(mockModelsList).toHaveBeenCalledWith({ outputModalities: "text" });
   });
 });
 
-describe("validateChatModelInput", () => {
+describe("findChatModel", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetOrSetCache.mockResolvedValue([sampleModel]);
   });
 
-  it("returns true for a modality the model accepts", async () => {
-    mockGetOrSetCache.mockResolvedValueOnce(sampleModelData);
-
-    expect(await validateChatModelInput(MODEL_ID, "image")).toBe(true);
+  it("finds a listed model by id", async () => {
+    expect(await findChatModel(MODEL_ID)).toEqual(sampleModel);
   });
 
-  it("returns false for a modality the model does not accept", async () => {
-    mockGetOrSetCache.mockResolvedValueOnce(sampleModelData);
-
-    expect(await validateChatModelInput(MODEL_ID, "audio")).toBe(false);
-  });
-
-  it("returns false for an unknown model id", async () => {
-    mockGetOrSetCache.mockImplementation(runFetch);
-    mockModelsList.mockResolvedValue({
-      result: { data: [openRouterListModel] },
-    });
-
-    expect(await validateChatModelInput("unknown/model", "image")).toBe(false);
+  it("finds nothing for an id that isn't listed", async () => {
+    expect(await findChatModel("unknown/model")).toBeUndefined();
   });
 });
 
@@ -147,53 +144,6 @@ describe("buildUserTurn", () => {
         },
       ],
     });
-  });
-});
-
-describe("validateChatModelOutput", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
-  it("returns true for a known model id from cache", async () => {
-    mockGetOrSetCache.mockResolvedValueOnce(sampleModelData);
-
-    const result = await validateChatModelOutput(MODEL_ID, "text");
-
-    expect(result).toBe(true);
-    expect(mockModelsList).not.toHaveBeenCalled();
-  });
-
-  it("returns false for an unknown model id after fetch", async () => {
-    mockGetOrSetCache.mockImplementation(runFetch);
-    mockModelsList.mockResolvedValue({
-      result: { data: [openRouterListModel] },
-    });
-
-    const result = await validateChatModelOutput("unknown/model", "text");
-
-    expect(result).toBe(false);
-    expect(mockModelsList).toHaveBeenCalled();
-  });
-
-  it("returns true for a known model id after fetch", async () => {
-    mockGetOrSetCache.mockImplementation(runFetch);
-    mockModelsList.mockResolvedValue({
-      result: { data: [openRouterListModel] },
-    });
-
-    const result = await validateChatModelOutput(MODEL_ID, "text");
-
-    expect(result).toBe(true);
-    expect(mockModelsList).toHaveBeenCalled();
-  });
-
-  it("returns false for a modality the model does not produce", async () => {
-    mockGetOrSetCache.mockResolvedValueOnce(sampleModelData);
-
-    expect(await validateChatModelOutput(MODEL_ID, "transcription")).toBe(
-      false,
-    );
   });
 });
 

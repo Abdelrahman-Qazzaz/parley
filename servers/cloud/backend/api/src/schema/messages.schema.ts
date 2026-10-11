@@ -1,9 +1,6 @@
 import { z } from "zod";
 import { CTX_KEYS } from "../../../shared/keys";
-import {
-  validateChatModelInput,
-  validateChatModelOutput,
-} from "../../../shared/ai/ai_chat_client";
+import { findChatModel } from "../../../shared/ai/ai_chat_client";
 
 const MAX_MESSAGE_LENGTH = 50_000;
 
@@ -74,11 +71,11 @@ export const messageCreateBodySchema = z
     [CTX_KEYS.lastMessageId]: z.string().uuid().nullable(),
   })
   .superRefine(async (data, ctx) => {
-    const modelId = data[CTX_KEYS.chosenModelId];
-    if (!(await validateChatModelOutput(modelId, "text"))) {
+    const model = await findChatModel(data[CTX_KEYS.chosenModelId]);
+    if (!model) {
       ctx.addIssue({
         code: "custom",
-        message: "Invalid model: must be a text model",
+        message: "Invalid model: not a chat model",
         path: [CTX_KEYS.chosenModelId],
       });
       return;
@@ -103,7 +100,7 @@ export const messageCreateBodySchema = z
         path: [CTX_KEYS.messageAttachmentsIds],
       });
     }
-    if (imageCount > 0 && !(await validateChatModelInput(modelId, "image"))) {
+    if (imageCount > 0 && !model.acceptsImages) {
       ctx.addIssue({
         code: "custom",
         message: "Invalid model: must accept image input",

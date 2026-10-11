@@ -1,10 +1,9 @@
 import type { Context } from "hono";
-import { getChatModelData } from "../../../shared/ai/ai_chat_client";
+import { listChatModels } from "../../../shared/ai/ai_chat_client";
 import { getTranscribeModelData } from "../../../shared/ai/ai_transcribe_client";
 
 export async function handleGetModels(c: Context) {
-  const modelData = await getChatModelData();
-  return c.json({ modelData });
+  return c.json({ models: await listChatModels() });
 }
 
 export async function handleGetTranscribeModels(c: Context) {

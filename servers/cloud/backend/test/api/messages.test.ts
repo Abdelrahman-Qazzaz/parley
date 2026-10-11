@@ -14,8 +14,7 @@ const {
   mockFindMessageTranscriptAttachments,
   mockFindTranscripts,
   mockDeleteObjects,
-  mockValidateModel,
-  mockValidateModelInput,
+  mockFindChatModel,
   mockChatAI,
   mockGenerateTitle,
   mockClaimAttachments,
@@ -34,8 +33,7 @@ const {
   mockFindMessageTranscriptAttachments: vi.fn(),
   mockFindTranscripts: vi.fn(),
   mockDeleteObjects: vi.fn(),
-  mockValidateModel: vi.fn(),
-  mockValidateModelInput: vi.fn(),
+  mockFindChatModel: vi.fn(),
   mockChatAI: vi.fn(),
   mockGenerateTitle: vi.fn(),
   mockClaimAttachments: vi.fn(),
@@ -147,9 +145,7 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_chat_client")>();
   return {
     ...actual,
-    getChatModelData: vi.fn(),
-    validateChatModelOutput: mockValidateModel,
-    validateChatModelInput: mockValidateModelInput,
+    findChatModel: mockFindChatModel,
     chatAI: mockChatAI,
     generateTitle: mockGenerateTitle,
   };
@@ -280,8 +276,12 @@ beforeEach(() => {
     imageUploadIds: [],
     lastMessageId: null,
   });
-  mockValidateModel.mockResolvedValue(true);
-  mockValidateModelInput.mockResolvedValue(true);
+  mockFindChatModel.mockResolvedValue({
+    id: modelId,
+    name: "Test model",
+    contextTokens: null,
+    acceptsImages: true,
+  });
   mockGenerateTitle.mockResolvedValue("Friendly greeting");
   mockDeleteObjects.mockResolvedValue([]);
 });
@@ -1072,7 +1072,12 @@ describe("POST /conversations/:conversationId/messages", () => {
         imageUrls: [resolvedImage.url],
       }),
     ]);
-    mockValidateModelInput.mockResolvedValueOnce(false);
+    mockFindChatModel.mockResolvedValue({
+      id: modelId,
+      name: "Text only",
+      contextTokens: null,
+      acceptsImages: false,
+    });
 
     const response = await postMessage({
       messageContent: "Hi there",
@@ -1412,7 +1417,12 @@ describe("POST /conversations/:conversationId/messages", () => {
   });
 
   it("rejects attachments on a model that can't read images with 400", async () => {
-    mockValidateModelInput.mockResolvedValueOnce(false);
+    mockFindChatModel.mockResolvedValue({
+      id: modelId,
+      name: "Text only",
+      contextTokens: null,
+      acceptsImages: false,
+    });
 
     const res = await postMessage({
       messageContent: "Hi there",
@@ -1439,7 +1449,7 @@ describe("POST /conversations/:conversationId/messages", () => {
   it("rejects an invalid model with 400 before touching the db", async () => {
     // Model validation runs in the body-schema middleware, ahead of the
     // handler's ownership check.
-    mockValidateModel.mockResolvedValueOnce(false);
+    mockFindChatModel.mockResolvedValueOnce(undefined);
     const res = await postMessage({
       messageContent: "Hi there",
       chosenModelId: "nope",
@@ -1703,7 +1713,12 @@ describe("PATCH /conversations/:conversationId/messages/:messageId", () => {
         imageUrls: [resolvedImage.url],
       }),
     ]);
-    mockValidateModelInput.mockResolvedValueOnce(false);
+    mockFindChatModel.mockResolvedValue({
+      id: modelId,
+      name: "Text only",
+      contextTokens: null,
+      acceptsImages: false,
+    });
 
     const response = await patchMessage(edit);
 

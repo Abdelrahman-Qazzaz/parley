@@ -17,7 +17,7 @@ import {
   buildUserTurn,
   chatAI,
   generateTitle,
-  validateChatModelInput,
+  findChatModel,
 } from "../../../shared/ai/ai_chat_client";
 import type { ChatTurn } from "../../../shared/ai/ai_chat_client";
 import { logger, messageOf } from "../../../shared/logger";
@@ -357,7 +357,7 @@ async function prepareMessageTurn(
   );
   if (
     containsImageInput(turns) &&
-    !(await validateChatModelInput(messageInput.chosenModelId, "image"))
+    !(await findChatModel(messageInput.chosenModelId))?.acceptsImages
   ) {
     throw new MessageRequestError(400, {
       message: "Invalid model: must accept image input",

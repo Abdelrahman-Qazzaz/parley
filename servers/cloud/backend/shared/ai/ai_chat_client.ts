@@ -2,15 +2,7 @@ import { getBaseEnv } from "../env";
 import { OpenRouter } from "@openrouter/sdk";
 
 import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
-import type {
-  ChatContentItems,
-  ChatRequest,
-  InputModality,
-  OutputModality,
-  Parameter,
-  PublicPricing,
-  TopProviderInfo,
-} from "@openrouter/sdk/models";
+import type { ChatContentItems, ChatRequest } from "@openrouter/sdk/models";
 import { withTimeout } from "../withTimeout";
 
 const ai_client = new OpenRouter({
@@ -159,84 +151,49 @@ export async function chatAI(
   );
 }
 
-type ChatModelData = {
-  [k: string]: {
-    id: string;
-    name: string;
-    knowledgeCutoff: string | null | undefined;
-    topProvider: TopProviderInfo;
-    pricing: PublicPricing;
-    supportedParameters: Parameter[];
-    outputModalities: OutputModality[];
-    inputModalities: InputModality[];
-  };
+/** A chat model as this app describes it, whichever provider serves it. */
+export type ChatModel = {
+  id: string;
+  name: string;
+  /** The longest prompt it takes, in tokens, when the provider says. */
+  contextTokens: number | null;
+  /** Whether a turn may carry images. */
+  acceptsImages: boolean;
 };
 
-async function fetchChatModelData(): Promise<ChatModelData> {
-  // Only text-output models are ever chosen here (summary/chat); transcription
-  // is served by Deepgram. "text" is the SDK default — passed explicitly for
-  // clarity — and keeps the fetched + cached catalog small.
+async function fetchChatModels(): Promise<ChatModel[]> {
+  // Only models that answer in text: every one listed is a chat model.
+  // Transcription is served by Deepgram.
   const models = (await ai_client.models.list({ outputModalities: "text" }))
     .result.data;
 
-  return Object.fromEntries(
-    models.map((model) => [
-      model.id,
-      {
-        id: model.id,
-        name: model.name,
-        knowledgeCutoff: model.knowledgeCutoff,
-        topProvider: model.topProvider,
-        pricing: model.pricing,
-        supportedParameters: model.supportedParameters,
-        outputModalities: model.architecture.outputModalities,
-        inputModalities: model.architecture.inputModalities,
-      },
-    ]),
-  );
+  return models.map((model) => ({
+    id: model.id,
+    name: model.name,
+    contextTokens: model.contextLength,
+    acceptsImages: model.architecture.inputModalities.includes("image"),
+  }));
 }
 
-// Every send validates the chosen model against this catalog, so the cache
-// keeps that check off the network. Serving it stale while it refreshes means
-// no send waits on the catalog once a process has loaded it.
-export function getChatModelData(): Promise<ChatModelData> {
-  return getOrSetCache(CACHE_KEYS.openRouterModels, fetchChatModelData, {
+// Every send looks up the chosen model here, so the cache keeps that lookup
+// off the network. Serving it stale while it refreshes means no send waits on
+// the catalog once a process has loaded it.
+export function listChatModels(): Promise<ChatModel[]> {
+  return getOrSetCache(CACHE_KEYS.openRouterModels, fetchChatModels, {
     serveStale: true,
   });
 }
 
 /**
- * Validates that a model exists and, when `requiredModality` is given, that the
- * model can actually produce that output (e.g. a summary model must output
- * "text"; a transcription model must output "transcription"). Without this, a
- * transcription-only model passes as a summary model and only fails deep in the
- * worker when the provider rejects the chat-completion request.
+ * The model with this id, or undefined when it isn't one the app can chat
+ * with. Checked up front, so an unknown model or images for a text-only one
+ * is a 400 on the request rather than a provider rejection mid-stream, where
+ * the only channel left is an SSE error event.
  */
-async function findChatModel(modelId: string) {
-  const modelData = await getChatModelData();
-  return modelData[modelId];
-}
-
-export async function validateChatModelOutput(
-  modelId: string,
-  requiredModality: OutputModality,
-): Promise<boolean> {
-  const model = await findChatModel(modelId);
-  return Boolean(model?.outputModalities.includes(requiredModality));
-}
-
-/**
- * The input counterpart: whether the model can be *given* this modality, e.g. a
- * chat turn carrying image attachments needs one that accepts "image". Checked
- * up front so a text-only model is a 400 on the request rather than a provider
- * rejection mid-stream, where the only channel left is an SSE error event.
- */
-export async function validateChatModelInput(
-  modelId: string,
-  requiredModality: InputModality,
-): Promise<boolean> {
-  const model = await findChatModel(modelId);
-  return Boolean(model?.inputModalities.includes(requiredModality));
+export async function findChatModel(
+  id: string,
+): Promise<ChatModel | undefined> {
+  return (await listChatModels()).find((model) => model.id === id);
 }
 
 const MAX_TITLE_INPUT_CHARS = 12_000;

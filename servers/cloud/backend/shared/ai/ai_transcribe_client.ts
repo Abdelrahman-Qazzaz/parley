@@ -100,8 +100,8 @@ export function getTranscribeModelData(): Promise<TranscribeModelData> {
 
 /**
  * Whether a model id can be used for transcription. Deepgram STT models are
- * single-modality, so presence in the catalog is the whole check — the analog
- * of validateModelOutput(id, "transcription") on the chat side. A model id can
+ * single-modality, so presence in the catalog is the whole check, as it is
+ * for findChatModel on the chat side. A model id can
  * arrive as either the display `name` or the `canonical_name`, so both are
  * matched.
  */

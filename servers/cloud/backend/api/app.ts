@@ -23,8 +23,8 @@ export async function createApp() {
   // /upload are sent without a preflight and any site could forge one. This
   // rejects the form-style content types unless the Origin is the client.
   app.use("*", csrf({ origin: env.CLIENT_URL }));
-  // The model catalog is ~335KB of JSON and every client downloads it; gzip
-  // takes that to ~40KB. Streamed chat replies are left alone: hono skips
+  // The chat model catalog is ~50KB of JSON and every client downloads it;
+  // gzip takes that to ~7KB. Streamed chat replies are left alone: hono skips
   // text/event-stream by content type, and streamSSE sets Transfer-Encoding,
   // which this middleware also treats as already-encoded. Both guarantees are
   // covered by tests, because buffering the reply stream would be invisible

@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Only hoist the mock function factory — no async work here
-const { mockgetChatModelData, mockGetTranscribeModelData } = vi.hoisted(() => ({
-  mockgetChatModelData: vi.fn(),
+const { mockListChatModels, mockGetTranscribeModelData } = vi.hoisted(() => ({
+  mockListChatModels: vi.fn(),
   mockGetTranscribeModelData: vi.fn(),
 }));
 
@@ -12,7 +12,7 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_chat_client")>();
   return {
     ...actual, // preserves DEFAULT_MODELS and anything else
-    getChatModelData: mockgetChatModelData, // override only what needs mocking
+    listChatModels: mockListChatModels, // override only what needs mocking
   };
 });
 
@@ -41,23 +41,17 @@ import { sessionCookieHeader } from "../helpers/session";
 
 const MODEL_ID = "openai/gpt-4o-mini";
 
-const sampleModelData = {
-  [MODEL_ID]: {
-    id: MODEL_ID,
-    name: "GPT-4o Mini",
-    description: "Fast chat model",
-    knowledgeCutoff: null,
-    topProvider: { contextLength: 128000, isModerated: true },
-    pricing: { prompt: "0.00000015", completion: "0.0000006" },
-    supportedParameters: ["temperature", "max_tokens"],
-    outputModalities: ["text"],
-  },
+const sampleModel = {
+  id: MODEL_ID,
+  name: "GPT-4o Mini",
+  contextTokens: 128000,
+  acceptsImages: true,
 };
 
 describe("GET /models/chat", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockgetChatModelData.mockResolvedValue(sampleModelData);
+    mockListChatModels.mockResolvedValue([sampleModel]);
   });
 
   it("returns 401 without a session cookie", async () => {
@@ -65,30 +59,28 @@ describe("GET /models/chat", () => {
       await createApp()
     ).request("http://localhost/models/chat");
     expect(res.status).toBe(401);
-    expect(mockgetChatModelData).not.toHaveBeenCalled();
+    expect(mockListChatModels).not.toHaveBeenCalled();
   });
 
-  it("returns modelData for a valid session", async () => {
+  it("returns the chat models for a valid session", async () => {
     const res = await (
       await createApp()
     ).request("http://localhost/models/chat", {
       headers: { Cookie: await sessionCookieHeader("user_01") },
     });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ modelData: sampleModelData });
-    expect(mockgetChatModelData).toHaveBeenCalledTimes(1);
+    expect(await res.json()).toEqual({ models: [sampleModel] });
+    expect(mockListChatModels).toHaveBeenCalledTimes(1);
   });
 
   it("gzips the catalog when the client accepts it", async () => {
-    // The real catalog is ~335KB of JSON sent to every client; the sample here
+    // The real catalog is ~50KB of JSON sent to every client; the sample here
     // only has to clear the middleware's 1KB threshold.
-    mockgetChatModelData.mockResolvedValue(
-      Object.fromEntries(
-        Array.from({ length: 40 }, (_, index) => [
-          `vendor/model-${index}`,
-          sampleModelData[MODEL_ID],
-        ]),
-      ),
+    mockListChatModels.mockResolvedValue(
+      Array.from({ length: 40 }, (_, index) => ({
+        ...sampleModel,
+        id: `vendor/model-${index}`,
+      })),
     );
 
     const res = await (

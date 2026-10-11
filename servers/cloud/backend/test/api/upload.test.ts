@@ -28,8 +28,8 @@ const {
   },
 }));
 
-const { mockgetChatModelData } = vi.hoisted(() => ({
-  mockgetChatModelData: vi.fn(),
+const { mockListChatModels } = vi.hoisted(() => ({
+  mockListChatModels: vi.fn(),
 }));
 vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
   // importActual is the correct way to get real values inside vi.mock
@@ -37,7 +37,7 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_chat_client")>();
   return {
     ...actual, // preserves DEFAULT_MODELS and anything else
-    getChatModelData: mockgetChatModelData, // override only what needs mocking
+    listChatModels: mockListChatModels, // override only what needs mocking
   };
 });
 
