@@ -71,6 +71,7 @@ describe("POST /upload/image", () => {
       size: PIXELS.length,
       mimeType: "image/png",
       mode: "image",
+      url: `/upload/image/${body.imageUploadId}`,
     });
     expect(
       await files.read({ kind: "image", uploadId: body.imageUploadId }),

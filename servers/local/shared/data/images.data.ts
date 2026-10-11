@@ -25,14 +25,20 @@ type ImageAttachmentRow = {
 };
 
 /**
- * One image as the client receives it. Its bytes are at
- * GET /upload/image/:imageUploadId.
+ * Where an image's bytes are served. Relative to this server, which may be
+ * reached by more than one name (this machine's, or its Tailscale one).
  */
+function imageUrl(imageUploadId: string) {
+  return `/upload/image/${imageUploadId}`;
+}
+
+/** One image as the client receives it. */
 export type ResolvedImage = {
   imageUploadId: string;
   fileName: string;
   mimeType: string;
   size: number;
+  url: string;
 };
 
 /** The row for an image whose file is already written. */
@@ -77,6 +83,7 @@ function toResolvedImage(row: ImageAttachmentRow): ResolvedImage {
     fileName: row.fileName,
     mimeType: row.mimeType ?? "application/octet-stream",
     size: row.sizeBytes,
+    url: imageUrl(row.imageUploadId),
   };
 }
 
@@ -199,6 +206,7 @@ async function deleteUnlinkedUnreservedImageAttachments(
 }
 
 export const images = {
+  imageUrl,
   createImageAttachment,
   resolveImages,
   resolveMessageImages,

@@ -185,6 +185,7 @@ const resolvedImage = {
   fileName: "diagram.png",
   mimeType: "image/png",
   size: 1234,
+  url: `/upload/image/${imageUploadId}`,
 };
 
 /** What the model is handed for the image, inline. */

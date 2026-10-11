@@ -34,6 +34,7 @@ export async function handleImageUpload(c: Context) {
     size: file.size,
     mimeType: file.type,
     mode: "image" as const,
+    url: data.images.imageUrl(imageUploadId),
   });
 }
 
