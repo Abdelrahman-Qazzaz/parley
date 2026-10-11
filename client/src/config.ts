@@ -1,9 +1,15 @@
 /** Dev host — keep API + WebSocket on the same hostname so session cookies are sent. */
 const DEV_HOST = "localhost";
 
-/** API origin without trailing slash (session cookies are set on this host). */
+/**
+ * API origin without trailing slash (session cookies are set on this host).
+ * A production build is served by the API itself, so by default it calls its
+ * own origin: the empty string. In development Vite serves the client, and
+ * the API is on its own port.
+ */
 export const apiBase = (
-  import.meta.env.VITE_API_URL ?? `http://${DEV_HOST}:3001`
+  import.meta.env.VITE_API_URL ??
+  (import.meta.env.DEV ? `http://${DEV_HOST}:3001` : "")
 ).replace(/\/$/, "");
 
 export function authLoginUrl(): string {
@@ -75,6 +81,7 @@ export function uploadYoutubeEndpoint(): string {
  * HTTP server, so there is no second URL to configure and the session cookie
  * that authenticates the handshake is already in scope.
  */
-export function socketIoUrl(): string {
-  return apiBase;
+export function socketIoUrl(): string | undefined {
+  // Socket.IO reads an empty string as a host; undefined means this page's.
+  return apiBase || undefined;
 }
