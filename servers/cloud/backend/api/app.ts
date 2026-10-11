@@ -20,11 +20,12 @@ export async function createApp() {
   const env = getApiEnv();
   const app = new Hono();
   app.use("*", cors({ origin: env.CLIENT_URL, credentials: true }));
-  // The session cookie is SameSite=None in production (see cookies/session.ts),
-  // so the browser sends it with cross-site requests too. CORS alone does not
-  // cover that: multipart/form-data is a safelisted content type, so POSTs to
-  // /upload are sent without a preflight and any site could forge one. This
-  // rejects the form-style content types unless the Origin is the client.
+  // CORS only matters in development, where Vite serves the client from its
+  // own port; in production the API serves it. A form post skips CORS
+  // entirely (multipart/form-data is a safelisted content type), and the
+  // SameSite=Lax session cookie already stays off another site's POST. This
+  // rejects the form-style content types unless the Origin is the client, in
+  // case a browser sends it anyway.
   app.use("*", csrf({ origin: env.CLIENT_URL }));
   // The chat model catalog is ~50KB of JSON and every client downloads it;
   // gzip takes that to ~7KB. Streamed chat replies are left alone: hono skips

@@ -3,9 +3,8 @@ import { Hono } from "hono";
 import { COOKIE_KEYS } from "../../shared/keys";
 
 /**
- * The session cookie's attributes are the whole reason login works across the
- * client and API origins in production, and they are invisible until a browser
- * silently drops the cookie. Pin them here.
+ * The session cookie's attributes decide whether login works at all, and they
+ * are invisible until a browser silently drops the cookie. Pin them here.
  *
  * NODE_ENV is read through getApiEnv(), which caches on first call, so each
  * case resets the module graph and re-imports rather than mutating the env of
@@ -34,13 +33,12 @@ describe("session cookie attributes", () => {
     vi.resetModules();
   });
 
-  it("is SameSite=None and Secure in production", async () => {
-    // The client and API are on different registrable domains there, so a Lax
-    // cookie would never be sent with the client's requests. None is only
-    // honoured together with Secure.
+  it("is SameSite=Lax and Secure in production", async () => {
+    // The API serves the client there, so the cookie is first-party. Never
+    // None: Safari drops third-party cookies.
     const header = (await setCookieHeaderFor("production")).toLowerCase();
     expect(header).toContain(`${COOKIE_KEYS.session.toLowerCase()}=`);
-    expect(header).toContain("samesite=none");
+    expect(header).toContain("samesite=lax");
     expect(header).toContain("secure");
     expect(header).toContain("httponly");
   });
@@ -69,7 +67,7 @@ describe("session cookie attributes", () => {
     const header = (
       (await app.request("http://localhost/")).headers.get("Set-Cookie") ?? ""
     ).toLowerCase();
-    expect(header).toContain("samesite=none");
+    expect(header).toContain("samesite=lax");
     expect(header).toContain("secure");
     expect(header).toMatch(/max-age=0|expires=/);
   });

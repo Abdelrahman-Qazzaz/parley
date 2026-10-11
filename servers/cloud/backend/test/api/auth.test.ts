@@ -169,8 +169,8 @@ describe("POST /auth/refresh", () => {
       },
     });
 
-  // The cookies are SameSite=None in production, so another site could
-  // otherwise make the browser spend its refresh token.
+  // SameSite=Lax already keeps the cookie off another site's POST; this is
+  // the check that holds even if a browser sends it anyway.
   it("refuses a refresh from another site", async () => {
     const res = await (
       await createApp()

@@ -4,25 +4,19 @@ import { COOKIE_KEYS } from "../../../shared/keys";
 import { getApiEnv } from "../../../shared/env";
 
 /**
- * In production the client and the API sit on different registrable domains —
- * each Railway service gets its own `*.up.railway.app` host, and `railway.app`
- * is a public suffix — so the browser treats every client → API call as
- * cross-site and refuses to send a `Lax` cookie. `None` is the only value
- * that survives that, and browsers only honour it alongside `Secure`, which is
- * why both derive from one flag rather than being set independently.
+ * The API serves the client in production, so the cookie only ever travels
+ * to its own site and `Lax` is enough. A browser won't send it with another
+ * site's POST at all, which a third-party (`None`) cookie needed `csrf()` in
+ * app.ts to make up for. Safari refuses third-party cookies outright.
  *
- * Locally the two share `localhost`, where `Lax` applies and `Secure` would
- * stop the cookie being stored at all over plain HTTP.
- *
- * Cross-site cookies are forgeable by design, so `csrf()` in app.ts guards the
- * mutating routes this opens up.
+ * `Secure` in production only: locally the client and the API share
+ * `localhost` over plain HTTP, where it would stop the cookie being stored.
  */
 function sessionCookieOptions(path = "/") {
-  const crossSite = getApiEnv().NODE_ENV === "production";
   return {
     httpOnly: true,
-    secure: crossSite,
-    sameSite: crossSite ? ("None" as const) : ("Lax" as const),
+    secure: getApiEnv().NODE_ENV === "production",
+    sameSite: "Lax" as const,
     path,
   };
 }
