@@ -5,7 +5,9 @@ single npm package (`summarizer-server`) built from one codebase and one
 `shared/` module. It runs as multiple process types that talk through a
 RabbitMQ message queue and a shared Postgres database:
 
-- `api` — the HTTP + WebSocket service clients talk to.
+- `api` — the HTTP + WebSocket service clients talk to. In production it also
+  serves the built client (`CLIENT_DIR`) on `/`, `/chat` and `/chat/*`, so the
+  page and the API share one origin and the session cookie is first-party.
 - `transcribe-worker` — the background queue worker that runs transcription.
 
 They are the same artifact started at different entrypoints, not independently
