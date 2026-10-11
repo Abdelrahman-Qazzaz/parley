@@ -6,12 +6,15 @@ import {
   useRenameConversationMutation,
 } from "../../hooks/queries/useConversationQueries";
 import { useAuth } from "../../hooks/auth/useAuth";
+import { useServer } from "../../hooks/server/useServer";
 import { useServerReady } from "../../hooks/server/useServerReady";
+import { cloudServer, localServer, servedByLocalServer } from "../../config";
 import { useTheme } from "../../hooks/theme/useTheme";
 import { Icon } from "../ui/Icon";
 import { ConfirmDialog } from "../ui/ConfirmDialog";
 import { ConversationRow } from "./ConversationRow";
 import { groupConversations } from "./conversationGroups";
+import { sectionPath } from "./sections";
 import { useShell } from "./shellContext";
 
 function Wordmark() {
@@ -30,9 +33,54 @@ function Wordmark() {
   );
 }
 
+const SECTIONS = [
+  { server: cloudServer, label: "Cloud" },
+  { server: localServer, label: "This computer" },
+];
+
+/**
+ * Cloud or this computer: where the chats below run. Each keeps its own
+ * conversations, so switching changes the whole list.
+ */
+function SectionSwitch() {
+  const server = useServer();
+  const { setSidebarOpen } = useShell();
+  // A page the local server served can't reach the cloud: one section only.
+  if (servedByLocalServer) return null;
+
+  return (
+    <div
+      role="tablist"
+      aria-label="Where chats run"
+      className="mx-3 mb-3 grid grid-cols-2 rounded-lg border border-line bg-surface p-0.5"
+    >
+      {SECTIONS.map(({ server: target, label }) => {
+        const active = target.id === server.id;
+        return (
+          <Link
+            key={target.id}
+            to={sectionPath(target)}
+            role="tab"
+            aria-selected={active}
+            onClick={() => setSidebarOpen(false)}
+            className={`rounded-md px-2 py-1.5 text-center text-[12px] font-medium transition-colors ${
+              active
+                ? "bg-signal-tint text-signal-strong"
+                : "text-muted hover:text-ink"
+            }`}
+          >
+            {label}
+          </Link>
+        );
+      })}
+    </div>
+  );
+}
+
 export function Sidebar() {
   const { conversationId } = useParams<{ conversationId: string }>();
   const navigate = useNavigate();
+  const server = useServer();
   const { user, signOut } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const { sidebarOpen, setSidebarOpen, setSourcesOpen } = useShell();
@@ -56,7 +104,7 @@ export function Sidebar() {
       {
         onSuccess: () => {
           if (deletedId === conversationId)
-            navigate("/chat", { replace: true });
+            navigate(sectionPath(server), { replace: true });
         },
       },
     );
@@ -90,9 +138,11 @@ export function Sidebar() {
           </button>
         </div>
 
+        <SectionSwitch />
+
         <div className="space-y-1 px-3 pb-3">
           <Link
-            to="/chat"
+            to={sectionPath(server)}
             onClick={() => setSidebarOpen(false)}
             className="flex items-center gap-2 rounded-lg border border-line bg-surface px-3 py-2.5 text-sm font-medium text-ink transition-colors hover:border-signal"
           >
@@ -155,16 +205,24 @@ export function Sidebar() {
         </nav>
 
         <div className="flex items-center gap-2 border-t border-line px-3 py-3">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold text-muted">
-            {user?.userId.slice(0, 2).toUpperCase()}
-          </span>
-          <button
-            type="button"
-            onClick={() => void signOut()}
-            className="flex-1 rounded-lg px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
-          >
-            Sign out
-          </button>
+          {server.signIn === "session" ? (
+            <>
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-surface text-xs font-semibold text-muted">
+                {user?.userId.slice(0, 2).toUpperCase()}
+              </span>
+              <button
+                type="button"
+                onClick={() => void signOut()}
+                className="flex-1 rounded-lg px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-surface hover:text-ink"
+              >
+                Sign out
+              </button>
+            </>
+          ) : (
+            <span className="flex-1 px-2 text-sm text-faint">
+              Runs on this computer
+            </span>
+          )}
           <button
             type="button"
             onClick={toggleTheme}

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { authLoginUrl } from "../../config";
 import { useTheme } from "../../hooks/theme/useTheme";
 import { Icon } from "../ui/Icon";
@@ -86,12 +87,21 @@ export function LandingPage() {
             Drop audio, video or a YouTube link. Each becomes a transcript, and
             one message carries as many as the question needs.
           </p>
-          <a
-            href={authLoginUrl()}
-            className="mt-8 inline-flex items-center rounded-lg bg-signal px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          >
-            Sign in
-          </a>
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a
+              href={authLoginUrl()}
+              className="inline-flex items-center rounded-lg bg-signal px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+            >
+              Sign in
+            </a>
+            {/* No account needed: the local server runs on the user's machine. */}
+            <Link
+              to="/local"
+              className="inline-flex items-center rounded-lg border border-line px-5 py-2.5 text-sm font-medium text-muted transition-colors hover:border-signal hover:text-ink"
+            >
+              Use this computer
+            </Link>
+          </div>
         </div>
 
         <ComposerPreview />

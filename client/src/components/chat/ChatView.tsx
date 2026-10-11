@@ -9,6 +9,7 @@ import {
 import { useServerReady } from "../../hooks/server/useServerReady";
 import { useChatModelsQuery } from "../../hooks/queries/useModelsQuery";
 import { useServer } from "../../hooks/server/useServer";
+import { sectionPath } from "../app/sections";
 import { MAX_CONTEXT_MESSAGES } from "../../api/messages";
 import { useMessagesQuery } from "../../hooks/queries/useMessagesQuery";
 import { isSourceInFlight, type StagedSource } from "../../sources/types";
@@ -126,7 +127,7 @@ export function ChatView() {
         ? (messagesQuery.data?.lastMessageId ?? null)
         : null,
       onConversation: (createdId) =>
-        navigate(`/chat/${createdId}`, { replace: true }),
+        navigate(sectionPath(server, createdId), { replace: true }),
       onRestore: (restoredContent, restoredSources, restoreKey) => {
         setTexts((current) => ({ ...current, [restoreKey]: restoredContent }));
         restoreSourcesFor(restoreKey, restoredSources);

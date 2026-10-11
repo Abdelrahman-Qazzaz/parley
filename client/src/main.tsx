@@ -9,7 +9,6 @@ import "./index.css";
 import App from "./App.tsx";
 import { persistOptions, queryClient } from "./lib/queryClient";
 import { AuthProvider } from "./hooks/auth/AuthProvider";
-import { SocketProvider } from "./hooks/socket/SocketProvider";
 import { ThemeProvider } from "./hooks/theme/ThemeProvider";
 import { ToastProvider } from "./hooks/toast/ToastProvider";
 import { Toaster } from "./components/feedback/Toaster";
@@ -22,14 +21,12 @@ createRoot(document.getElementById("root")!).render(
     >
       <ThemeProvider>
         <AuthProvider>
-          <SocketProvider>
-            <ToastProvider>
-              <BrowserRouter>
-                <App />
-              </BrowserRouter>
-              <Toaster />
-            </ToastProvider>
-          </SocketProvider>
+          <ToastProvider>
+            <BrowserRouter>
+              <App />
+            </BrowserRouter>
+            <Toaster />
+          </ToastProvider>
         </AuthProvider>
       </ThemeProvider>
     </PersistQueryClientProvider>

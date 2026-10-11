@@ -1,8 +1,10 @@
 import { useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import type { Conversation } from "../../api/conversations";
+import { useServer } from "../../hooks/server/useServer";
 import { Icon } from "../ui/Icon";
 import { useDismissable } from "../ui/useDismissable";
+import { sectionPath } from "./sections";
 
 type ConversationRowProps = {
   conversation: Conversation;
@@ -20,6 +22,7 @@ export function ConversationRow({
   onRename,
   onDelete,
 }: ConversationRowProps) {
+  const server = useServer();
   const [menuOpen, setMenuOpen] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(conversation.title);
@@ -58,7 +61,7 @@ export function ConversationRow({
   return (
     <div className="group/row relative">
       <Link
-        to={`/chat/${conversation.id}`}
+        to={sectionPath(server, conversation.id)}
         onClick={onOpen}
         title={conversation.title}
         className={`block truncate rounded-lg py-2 pl-3 pr-9 text-sm transition-colors ${

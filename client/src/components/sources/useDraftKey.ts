@@ -1,4 +1,6 @@
 import { useMatch } from "react-router-dom";
+import { useServer } from "../../hooks/server/useServer";
+import { sectionPath } from "../app/sections";
 
 /**
  * Which draft a source would be attached to. The sources surfaces render
@@ -6,6 +8,6 @@ import { useMatch } from "react-router-dom";
  * than from route params.
  */
 export function useDraftKey(): string {
-  const chatMatch = useMatch("/chat/:conversationId");
+  const chatMatch = useMatch(`${sectionPath(useServer())}/:conversationId`);
   return chatMatch?.params.conversationId ?? "new";
 }
