@@ -1,14 +1,10 @@
 import { useContext, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { SocketContext } from "./context";
+import { EventsContext } from "./context";
 import { queryKeys } from "../../lib/queryClient";
 import { useToast } from "../toast/useToast";
 import type { Job } from "../../api/jobs";
 import { useServer } from "../server/useServer";
-
-type JobUpdatedPayload = {
-  audioUploadId: string;
-};
 
 /**
  * The fast path for transcript progress: a job update refreshes that job, which
@@ -17,14 +13,14 @@ type JobUpdatedPayload = {
  */
 export function useJobUpdatesBridge(enabled: boolean) {
   const server = useServer();
-  const socket = useContext(SocketContext);
+  const events = useContext(EventsContext);
   const queryClient = useQueryClient();
   const toast = useToast();
 
   useEffect(() => {
-    if (!enabled || !socket) return;
+    if (!enabled || !events) return;
 
-    const handler = async ({ audioUploadId }: JobUpdatedPayload) => {
+    return events.subscribe("jobUpdated", async ({ audioUploadId }) => {
       if (!audioUploadId) return;
       await queryClient.invalidateQueries({
         queryKey: queryKeys.job(server.id, audioUploadId),
@@ -42,24 +38,17 @@ export function useJobUpdatesBridge(enabled: boolean) {
           message: `${job.fileName} failed${job.error ? `: ${job.error}` : "."}`,
         });
       }
-    };
+    });
+  }, [enabled, server, events, queryClient, toast]);
 
-    // Updates published while the socket was down were delivered to nobody, so
-    // reconnecting has to re-read rather than wait for the next push.
-    const onReconnect = () => {
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.allJobs(server.id),
-      });
-      void queryClient.invalidateQueries({
-        queryKey: queryKeys.jobs(server.id),
-      });
-    };
-
-    socket.on("jobUpdated", handler);
-    socket.on("connect", onReconnect);
-    return () => {
-      socket.off("jobUpdated", handler);
-      socket.off("connect", onReconnect);
-    };
-  }, [enabled, server, socket, queryClient, toast]);
+  // Updates pushed while the stream was down reached nobody, so each time it
+  // opens, what it may have missed is read again rather than waited for.
+  const connected = events?.connected ?? false;
+  useEffect(() => {
+    if (!enabled || !connected) return;
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.allJobs(server.id),
+    });
+    void queryClient.invalidateQueries({ queryKey: queryKeys.jobs(server.id) });
+  }, [enabled, connected, server, queryClient]);
 }

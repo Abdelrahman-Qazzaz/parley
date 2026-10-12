@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { useServerReachable } from "../../hooks/server/useServerReachable";
 import { useServerReady } from "../../hooks/server/useServerReady";
-import { useJobUpdatesBridge } from "../../hooks/socket/useJobUpdatesBridge";
+import { useJobUpdatesBridge } from "../../hooks/events/useJobUpdatesBridge";
 import { SourcesProvider } from "../../sources/SourcesProvider";
 import { SourceDialog } from "../sources/SourceDialog";
 import { SourcesDrawer } from "../sources/SourcesDrawer";

@@ -2,12 +2,12 @@ import { useEffect, useMemo, useRef } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { fetchJob, type Job } from "../api/jobs";
 import { useServer } from "../hooks/server/useServer";
-import { useSocketConnected } from "../hooks/socket/useSocketConnected";
+import { useEventsConnected } from "../hooks/events/useEventsConnected";
 import { queryKeys } from "../lib/queryClient";
 import type { StagedSource } from "./types";
 
 /**
- * Only used while the socket is down. /jobs allows 100 requests per 15 minutes
+ * Only used while the event stream is down. /jobs allows 100 requests per 15 minutes
  * per user, shared with the sources drawer, so this stays slow on purpose —
  * push is the real mechanism and a reconnect refetches everything anyway.
  */
@@ -26,7 +26,7 @@ export function useTranscriptWatcher(
   ) => void,
 ) {
   const server = useServer();
-  const socketConnected = useSocketConnected();
+  const eventsConnected = useEventsConnected();
 
   const pendingAudioUploadIds = useMemo(() => {
     const audioUploadIds = new Set<string>();
@@ -44,7 +44,7 @@ export function useTranscriptWatcher(
     queries: pendingAudioUploadIds.map((audioUploadId) => ({
       queryKey: queryKeys.job(server.id, audioUploadId),
       queryFn: () => fetchJob(server, audioUploadId),
-      refetchInterval: socketConnected ? (false as const) : OFFLINE_POLL_MS,
+      refetchInterval: eventsConnected ? (false as const) : OFFLINE_POLL_MS,
       staleTime: 0,
     })),
   });

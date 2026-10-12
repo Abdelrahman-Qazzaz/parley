@@ -7,6 +7,10 @@ import type {
   ReplyStreamEvents,
   SendMessageBody,
 } from "@summarizer/shared/contract";
+import {
+  readServerSentEvents,
+  type ServerSentEvent,
+} from "@summarizer/shared/sseReader";
 import { apiFetch, apiJson, jsonRequest } from "./http";
 import { serverUrl, type Server } from "./server";
 
@@ -56,18 +60,13 @@ type StreamCallbacks = {
   onDone: (lastMessageId: string) => void;
 };
 
-function dispatchSseEvent(rawEvent: string, callbacks: StreamCallbacks): void {
-  let eventName = "message";
-  const dataLines: string[] = [];
-  for (const line of rawEvent.split("\n")) {
-    if (line.startsWith("event:")) eventName = line.slice(6).trim();
-    if (line.startsWith("data:")) dataLines.push(line.slice(5).trimStart());
-  }
-  if (dataLines.length === 0) return;
-
+function dispatchReplyEvent(
+  { event: eventName, data: rawData }: ServerSentEvent,
+  callbacks: StreamCallbacks,
+): void {
   // Checked field by field rather than trusted, since a stream can be cut off
   // or come from a proxy's error page.
-  const data = JSON.parse(dataLines.join("\n")) as Partial<
+  const data = JSON.parse(rawData) as Partial<
     ReplyStreamEvents["delta"] &
       ReplyStreamEvents["done"] &
       ReplyStreamEvents["error"]
@@ -106,29 +105,15 @@ export async function streamMessage(
 
   if (!response.body) throw new Error("The response stream was empty");
 
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
   let completed = false;
-
-  const dispatch = (rawEvent: string) =>
-    dispatchSseEvent(rawEvent, {
+  await readServerSentEvents(response.body, (event) =>
+    dispatchReplyEvent(event, {
       onDelta: callbacks.onDelta,
       onDone: (lastMessageId) => {
         completed = true;
         callbacks.onDone(lastMessageId);
       },
-    });
-
-  while (true) {
-    const { value, done } = await reader.read();
-    buffer += decoder.decode(value, { stream: !done }).replaceAll("\r\n", "\n");
-    const events = buffer.split("\n\n");
-    buffer = events.pop() ?? "";
-    for (const event of events) dispatch(event);
-    if (done) break;
-  }
-
-  if (buffer.trim()) dispatch(buffer);
+    }),
+  );
   if (!completed) throw new Error("The response stream ended unexpectedly");
 }
