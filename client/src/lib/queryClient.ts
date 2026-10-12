@@ -23,7 +23,7 @@ export const queryKeys = {
   chatModels: (server: ServerId) => [server, "models", "chat"] as const,
   transcriptionModels: (server: ServerId) =>
     [server, "models", "transcription"] as const,
-  jobs: (server: ServerId) => [server, "jobs"] as const,
+  jobLists: (server: ServerId) => [server, "jobs"] as const,
   allJobs: (server: ServerId) => [server, "job"] as const,
   job: (server: ServerId, audioUploadId: string) =>
     [server, "job", audioUploadId] as const,

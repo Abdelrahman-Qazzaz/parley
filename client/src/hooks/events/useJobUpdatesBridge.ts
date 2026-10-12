@@ -26,7 +26,7 @@ export function useJobUpdatesBridge(enabled: boolean) {
         queryKey: queryKeys.job(server.id, audioUploadId),
       });
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.jobs(server.id),
+        queryKey: queryKeys.jobLists(server.id),
       });
 
       const job = queryClient.getQueryData<Job>(
@@ -49,6 +49,8 @@ export function useJobUpdatesBridge(enabled: boolean) {
     void queryClient.invalidateQueries({
       queryKey: queryKeys.allJobs(server.id),
     });
-    void queryClient.invalidateQueries({ queryKey: queryKeys.jobs(server.id) });
+    void queryClient.invalidateQueries({
+      queryKey: queryKeys.jobLists(server.id),
+    });
   }, [enabled, connected, server, queryClient]);
 }

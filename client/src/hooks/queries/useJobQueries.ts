@@ -21,7 +21,7 @@ const PAGE_SIZE = 20;
 export function useJobsQuery(enabled: boolean, filters: JobsFilters = {}) {
   const server = useServer();
   return useInfiniteQuery({
-    queryKey: [...queryKeys.jobs(server.id), filters],
+    queryKey: [...queryKeys.jobLists(server.id), filters],
     enabled,
     initialPageParam: null as string | null,
     queryFn: ({ pageParam }) =>
@@ -53,7 +53,7 @@ export function useDeleteJobMutation() {
         queryKey: queryKeys.job(server.id, audioUploadId),
       });
       void queryClient.invalidateQueries({
-        queryKey: queryKeys.jobs(server.id),
+        queryKey: queryKeys.jobLists(server.id),
       });
       toast.show({ kind: "success", message: "Source deleted." });
     },
