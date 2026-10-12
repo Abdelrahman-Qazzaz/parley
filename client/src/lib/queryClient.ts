@@ -24,7 +24,7 @@ export const queryKeys = {
   transcriptionModels: (server: ServerId) =>
     [server, "models", "transcription"] as const,
   jobLists: (server: ServerId) => [server, "jobs"] as const,
-  allJobs: (server: ServerId) => [server, "job"] as const,
+  everyJob: (server: ServerId) => [server, "job"] as const,
   job: (server: ServerId, audioUploadId: string) =>
     [server, "job", audioUploadId] as const,
   conversations: (server: ServerId) => [server, "conversations"] as const,

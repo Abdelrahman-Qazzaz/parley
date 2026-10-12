@@ -47,7 +47,7 @@ export function useJobUpdatesBridge(enabled: boolean) {
   useEffect(() => {
     if (!enabled || !connected) return;
     void queryClient.invalidateQueries({
-      queryKey: queryKeys.allJobs(server.id),
+      queryKey: queryKeys.everyJob(server.id),
     });
     void queryClient.invalidateQueries({
       queryKey: queryKeys.jobLists(server.id),
