@@ -1,8 +1,3 @@
-import { mkdir, writeFile } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
-import { fileURLToPath } from "node:url";
-import { dirname, isAbsolute, join } from "node:path";
-
 type LogLevel = "debug" | "info" | "warn" | "error";
 type LogContext = Record<string, unknown>;
 
@@ -20,9 +15,6 @@ const LEVEL_PRIORITY: Record<LogLevel, number> = {
   warn: 30,
   error: 40,
 };
-
-/** Directory where `createJsonFile` writes when given no absolute path. */
-const LOGS_DIR = fileURLToPath(new URL("./logs", import.meta.url));
 
 /**
  * Minimum level to emit. Controlled by `LOG_LEVEL`; defaults to `info` in
@@ -76,12 +68,6 @@ interface Logger {
   warn(message: string, context?: LogContext): void;
   /** Logs an error. Pass the caught value as `error` to capture name/stack. */
   error(message: string, error?: unknown, context?: LogContext): void;
-  /**
-   * Writes `data` as formatted JSON. Relative paths (or no path) resolve into
-   * the logger's `logs/` directory; absolute paths are written as given.
-   * Defaults to `<guid>.json`. Returns the path written.
-   */
-  createJsonFile(data: unknown, filePath?: string): Promise<string>;
   /** Returns a logger that merges `context` into every record it emits. */
   child(context: LogContext): Logger;
 }
@@ -98,17 +84,6 @@ function createLogger(baseContext: LogContext = {}): Logger {
     };
     LEVEL_SINK[level](format(level, record));
   }
-  async function createJsonFile(
-    data: unknown,
-    filePath?: string,
-  ): Promise<string> {
-    const name = filePath ?? `${randomUUID()}.json`;
-    const path = isAbsolute(name) ? name : join(LOGS_DIR, name);
-    await mkdir(dirname(path), { recursive: true });
-    await writeFile(path, JSON.stringify(data, null, 2), "utf8");
-    logger.warn(`Wrote to: ${path}`);
-    return path;
-  }
   return {
     debug: (message, context) => emit("debug", message, context),
     info: (message, context) => emit("info", message, context),
@@ -118,7 +93,6 @@ function createLogger(baseContext: LogContext = {}): Logger {
         ...context,
         ...(error !== undefined ? { error: normalizeError(error) } : {}),
       }),
-    createJsonFile: createJsonFile,
     child: (context) => createLogger({ ...baseContext, ...context }),
   };
 }

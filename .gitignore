@@ -21,9 +21,6 @@ bun.lock
 bun.lockb
 servers/cloud/backend/erl_crash.dump
 
-# Logger JSON output
-packages/shared/src/logs/
-
 
 **/.claude
 .aliases.sh
