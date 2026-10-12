@@ -1,5 +1,5 @@
 {
-  "name": "summarizer-server",
+  "name": "@summarizer/cloud",
   "private": true,
   "type": "module",
   "packageManager": "npm@11.14.1",
