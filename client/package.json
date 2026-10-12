@@ -26,7 +26,6 @@
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.18.0",
     "remark-gfm": "^4.0.1",
-    "socket.io-client": "4.8.3",
     "tailwindcss": "^4.2.4"
   },
   "devDependencies": {
