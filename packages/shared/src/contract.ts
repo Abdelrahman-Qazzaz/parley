@@ -55,7 +55,7 @@ export type MessageImage = {
 export type MessageTranscript = {
   audioUploadId: string;
   fileName: string;
-  source: string;
+  source: JobSource;
 };
 
 export type ChatMessage = {

@@ -1,11 +1,12 @@
 import { createContext } from "react";
+import type { JobSource } from "../api/jobs";
 import type { StagedSource } from "./types";
 
 /** A completed job being attached from the library rather than uploaded again. */
 export type ExistingSource = {
   audioUploadId: string;
   fileName: string;
-  source: string;
+  source: JobSource;
 };
 
 export type SourcesContextValue = {

@@ -107,13 +107,17 @@ function toStoredTurns(
         size: source.file?.size ?? 0,
         url: source.previewUrl ?? "",
       })),
-    transcriptAttachments: input.sources
-      .filter((source) => source.kind !== "image" && source.sourceUploadId)
-      .map((source) => ({
-        audioUploadId: source.sourceUploadId as string,
-        fileName: source.name,
-        source: source.kind,
-      })),
+    transcriptAttachments: input.sources.flatMap((source) =>
+      source.kind !== "image" && source.sourceUploadId
+        ? [
+            {
+              audioUploadId: source.sourceUploadId,
+              fileName: source.name,
+              source: source.kind,
+            },
+          ]
+        : [],
+    ),
   };
   const assistant: ChatMessage = {
     id: assistantId,
@@ -138,13 +142,17 @@ function toPendingTurn(content: string, sources: StagedSource[]): PendingTurn {
         fileName: source.name,
         url: source.previewUrl ?? "",
       })),
-    transcripts: sources
-      .filter((source) => source.kind !== "image")
-      .map((source) => ({
-        audioUploadId: source.sourceUploadId ?? source.localId,
-        fileName: source.name,
-        source: source.kind,
-      })),
+    transcripts: sources.flatMap((source) =>
+      source.kind !== "image"
+        ? [
+            {
+              audioUploadId: source.sourceUploadId ?? source.localId,
+              fileName: source.name,
+              source: source.kind,
+            },
+          ]
+        : [],
+    ),
     assistantContent: "",
   };
 }

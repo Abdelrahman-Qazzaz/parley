@@ -9,6 +9,7 @@ import {
 } from "../db";
 
 import { jobs } from "./jobs.data";
+import type { JobSource } from "@summarizer/shared/contract";
 import type { UploadId } from "@summarizer/shared/types";
 import { attachments } from "./attachments.data";
 
@@ -80,7 +81,7 @@ async function findTranscripts(
 export type StoredTranscriptAttachment = {
   audioUploadId: string;
   fileName: string;
-  source: string;
+  source: JobSource;
   charCount: number | null;
 };
 
