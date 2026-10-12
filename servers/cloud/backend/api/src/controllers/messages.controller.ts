@@ -9,7 +9,7 @@ import type {
   ReplyStreamEvents,
 } from "@summarizer/shared/contract";
 import { streamSSE } from "hono/streaming";
-import { SSEEventQueue } from "../utils/sse";
+import { SSEEventQueue } from "@summarizer/shared/sse";
 import {
   data,
   type CreateMessageHistory,

@@ -9,7 +9,7 @@ import type {
   MessagesResponse,
   ReplyStreamEvents,
 } from "@summarizer/shared/contract";
-import { SSEEventQueue } from "../utils/sse";
+import { SSEEventQueue } from "@summarizer/shared/sse";
 import {
   data,
   type CreateMessageHistory,

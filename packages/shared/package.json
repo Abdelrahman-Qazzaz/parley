@@ -6,6 +6,7 @@
   "exports": {
     "./contract": "./src/contract.ts",
     "./logger": "./src/logger.ts",
+    "./sse": "./src/sse.ts",
     "./try-catch": "./src/try-catch.ts",
     "./withTimeout": "./src/withTimeout.ts"
   },
