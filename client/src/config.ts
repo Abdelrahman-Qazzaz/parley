@@ -16,6 +16,8 @@ export const cloudServer: Server = {
     (import.meta.env.DEV ? `http://${DEV_HOST}:3001` : "")
   ).replace(/\/$/, ""),
   signIn: "session",
+  appPath: "/chat",
+  alwaysOn: true,
   uploads: "signed",
   defaultChatModelId: "openai/gpt-4o-mini",
   defaultTranscribeModelId: "nova-3-general",
@@ -41,6 +43,8 @@ export const localServer: Server = {
         import.meta.env.VITE_LOCAL_API_URL ?? `http://${DEV_HOST}:${LOCAL_PORT}`
       ).replace(/\/$/, ""),
   signIn: "none",
+  appPath: "/local",
+  alwaysOn: false,
   uploads: "direct",
   defaultChatModelId: "sonnet",
   defaultTranscribeModelId: "small",

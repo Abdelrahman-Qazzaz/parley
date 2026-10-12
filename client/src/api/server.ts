@@ -9,6 +9,14 @@ export type Server = {
   /** Where its API answers, without a trailing slash; empty for this page's own origin. */
   baseUrl: string;
   signIn: "session" | "none";
+  /** Where its section of the app lives in the client's own routes. */
+  appPath: "/chat" | "/local";
+  /**
+   * Whether it's up whenever the client is. The cloud is, so its failures
+   * surface on the requests themselves; the local server only runs while the
+   * user has it running, so the client checks for it.
+   */
+  alwaysOn: boolean;
   /**
    * How a file reaches it. "signed": the API mints a storage URL, the file
    * goes there, and the API confirms it (cloud). "direct": one multipart
