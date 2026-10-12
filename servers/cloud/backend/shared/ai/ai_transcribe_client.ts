@@ -110,21 +110,15 @@ export async function listTranscribeModels(): Promise<TranscribeModel[]> {
 }
 
 /**
- * Whether a model id can be used for transcription. Deepgram STT models are
- * single-modality, so presence in the catalog is the whole check, as it is
- * for findChatModel on the chat side. A model id can
- * arrive as either the display `name` or the `canonical_name`, so both are
- * matched.
+ * Whether a model id can be used for transcription: one listTranscribeModels
+ * lists. Deepgram STT models are single-modality, so presence in the catalog
+ * is the whole check, as it is for findChatModel on the chat side.
  */
 export async function isValidTranscribeModel(
   modelId: string,
 ): Promise<boolean> {
   const modelData = await getTranscribeModelData();
-
-  if (modelData[modelId]) return true;
-  return Object.values(modelData).some(
-    (model) => model.name === modelId || model.canonicalName === modelId,
-  );
+  return Object.hasOwn(modelData, modelId);
 }
 
 export const DEFAULT_TRANSCRIBE_MODEL = "nova-3-general";

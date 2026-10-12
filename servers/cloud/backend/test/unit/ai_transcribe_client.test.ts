@@ -106,8 +106,8 @@ describe("isValidTranscribeModel", () => {
     expect(await isValidTranscribeModel("nova-3-general")).toBe(true);
   });
 
-  it("accepts a model by its display name", async () => {
-    expect(await isValidTranscribeModel("general")).toBe(true);
+  it("rejects a display name, which repeats across generations", async () => {
+    expect(await isValidTranscribeModel("general")).toBe(false);
   });
 
   it("accepts the default when display names differ from model IDs", async () => {
