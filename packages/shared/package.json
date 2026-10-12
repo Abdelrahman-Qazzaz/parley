@@ -11,6 +11,7 @@
     "./sse": "./src/sse.ts",
     "./takesBody": "./src/takesBody.ts",
     "./try-catch": "./src/try-catch.ts",
+    "./types": "./src/types.ts",
     "./withTimeout": "./src/withTimeout.ts"
   },
   "scripts": {

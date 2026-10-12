@@ -10,7 +10,7 @@ import { checkUpload, startUpload } from "../../../shared/uploads";
 import { mq } from "../../../shared/message-queue/messageQueue";
 import { CTX_KEYS } from "../../../shared/keys";
 import { ALREADY_CONFIRMED, uploadRejection } from "../utils/uploadRejection";
-import type { UploadId } from "../../../shared/types";
+import type { UploadId } from "@summarizer/shared/types";
 
 /**
  * POST /upload/audio — a URL the browser PUTs speech audio to, straight into

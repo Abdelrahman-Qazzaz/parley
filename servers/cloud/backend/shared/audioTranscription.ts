@@ -1,6 +1,6 @@
 import { data } from "./data";
 import { mq } from "./message-queue/messageQueue";
-import type { UploadId } from "./types";
+import type { UploadId } from "@summarizer/shared/types";
 import { confirmCheckedUpload } from "./uploads";
 
 /**

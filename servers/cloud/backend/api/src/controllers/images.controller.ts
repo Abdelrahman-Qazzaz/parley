@@ -11,7 +11,7 @@ import {
 import { data } from "../../../shared/data";
 import { CTX_KEYS } from "../../../shared/keys";
 import { ALREADY_CONFIRMED, uploadRejection } from "../utils/uploadRejection";
-import type { UploadId } from "../../../shared/types";
+import type { UploadId } from "@summarizer/shared/types";
 
 /**
  * POST /upload/image — a URL the browser PUTs an image to (dropped into the

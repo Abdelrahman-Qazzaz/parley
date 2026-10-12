@@ -10,7 +10,7 @@ import {
   mq,
   type DeliveryMetadata,
 } from "../../shared/message-queue/messageQueue";
-import type { UploadId } from "../../shared/types";
+import type { UploadId } from "@summarizer/shared/types";
 
 const log = logger.child({ component: "transcribe" });
 

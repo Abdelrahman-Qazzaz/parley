@@ -6,7 +6,7 @@ import { queueAudioTranscription } from "../../../shared/audioTranscription";
 import { files } from "../../../shared/files";
 import { mq } from "../../../shared/message-queue/messageQueue";
 import { CTX_KEYS } from "../../../shared/keys";
-import type { UploadId } from "../../../shared/types";
+import type { UploadId } from "@summarizer/shared/types";
 
 /**
  * POST /upload/audio — speech audio, stored under an id minted here and queued

@@ -1,4 +1,4 @@
-import type { UploadId } from "../types";
+import type { UploadId } from "@summarizer/shared/types";
 
 export const QUEUES = {
   TRANSCRIBE: "transcribe",

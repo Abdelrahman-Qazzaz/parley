@@ -9,7 +9,7 @@ import {
 } from "../db";
 
 import { jobs } from "./jobs.data";
-import type { UploadId } from "../types";
+import type { UploadId } from "@summarizer/shared/types";
 import { attachments } from "./attachments.data";
 
 /**

@@ -4,7 +4,7 @@ import type { UploadedImage } from "@summarizer/shared/contract";
 import { data } from "../../../shared/data";
 import { files } from "../../../shared/files";
 import { CTX_KEYS } from "../../../shared/keys";
-import type { UploadId } from "../../../shared/types";
+import type { UploadId } from "@summarizer/shared/types";
 
 /**
  * POST /upload/image — an image, dropped into the chat or uploaded from the
