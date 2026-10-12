@@ -9,6 +9,7 @@
     "./cursor": "./src/cursor.ts",
     "./logger": "./src/logger.ts",
     "./sse": "./src/sse.ts",
+    "./takesBody": "./src/takesBody.ts",
     "./try-catch": "./src/try-catch.ts",
     "./withTimeout": "./src/withTimeout.ts"
   },

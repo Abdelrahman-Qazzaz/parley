@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { QueueYoutubeBody } from "@summarizer/shared/contract";
-import { takesBody } from "./contract";
+import { takesBody } from "@summarizer/shared/takesBody";
 import { CTX_KEYS, FORM_KEYS } from "../../../shared/keys";
 import {
   DEFAULT_TRANSCRIBE_MODEL,

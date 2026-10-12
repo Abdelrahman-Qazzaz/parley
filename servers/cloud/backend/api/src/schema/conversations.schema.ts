@@ -3,7 +3,7 @@ import type {
   CreateConversationBody,
   RenameConversationBody,
 } from "@summarizer/shared/contract";
-import { takesBody } from "./contract";
+import { takesBody } from "@summarizer/shared/takesBody";
 import { CTX_KEYS } from "../../../shared/keys";
 
 const MAX_TITLE_LENGTH = 200;
