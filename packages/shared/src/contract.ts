@@ -189,3 +189,13 @@ export type ServerToClientEvents = {
   /** A job changed; refetch it. */
   jobUpdated: (event: { audioUploadId: string }) => void;
 };
+
+/**
+ * GET /events: what the servers push on the stream the browser holds open,
+ * by event name. The cloud sends a user their own jobs' events; the local
+ * server sends everyone everything.
+ */
+export type ServerEvents = {
+  /** A job changed; refetch it. */
+  jobUpdated: { audioUploadId: string };
+};
