@@ -9,10 +9,11 @@ const log = logger.child({ component: "shutdown" });
  * hangs must not be the thing that decides how long a deploy takes: the hard
  * exit is a backstop, not a fallback path.
  *
- * Both processes are safe to kill outright — an unacked message is redelivered
- * and reclaimed under its fencing token, and a chat turn completes server-side
- * independently of the response stream. Draining is about not wasting work
- * that was nearly finished, not about correctness.
+ * Both servers are safe to kill outright: the cloud's broker redelivers an
+ * unacked message, reclaimed under its fencing token, and the local server
+ * queues every unfinished job again at startup. A chat turn completes
+ * server-side independently of the response stream. Draining is about not
+ * wasting work that was nearly finished, not about correctness.
  */
 export function onShutdown(
   drain: () => Promise<void>,
