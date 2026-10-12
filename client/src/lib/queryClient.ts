@@ -30,6 +30,7 @@ export const queryKeys = {
   conversations: (server: ServerId) => [server, "conversations"] as const,
   messages: (server: ServerId, conversationId: string) =>
     [server, "conversations", conversationId, "messages"] as const,
+  health: (server: ServerId) => [server, "health"] as const,
 };
 
 /**

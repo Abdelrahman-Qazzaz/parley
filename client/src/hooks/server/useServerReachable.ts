@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { apiJson } from "../../api/http";
+import { queryKeys } from "../../lib/queryClient";
 import { useServer } from "./useServer";
 
 /** How often an unreachable server is tried again. */
@@ -12,7 +13,7 @@ const RETRY_MS = 5_000;
 export function useServerReachable(): boolean {
   const server = useServer();
   const health = useQuery({
-    queryKey: [server.id, "health"],
+    queryKey: queryKeys.health(server.id),
     queryFn: () => apiJson<{ ok: boolean }>(server, "/health"),
     enabled: !server.alwaysOn,
     retry: false,
