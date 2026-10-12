@@ -41,7 +41,7 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 
 ## Naming and small things
 
-- `getRiderctUrl` is misspelled (`api/src/auth/auth.ts:20`). So is "rhobust" in `ai_chat_client.ts`.
+- "rhobust" is misspelled in `ai_chat_client.ts`.
 - `DELETE /upload/image/:id` spends the image _read_ budget (`api/src/routes/images.router.ts:52`).
 - File and identifier casing is mixed: `ai_chat_client.ts`, `ai_client` and `try-catch.ts` sit next to camelCase everywhere else, and the column is `YT_sourceUrl`.
 - `AudioTranscriptionJobs.source` is free `text`, with the allowed values listed only in a comment (`shared/db/schema.ts:89`). The other status-like columns are `pgEnum`s.

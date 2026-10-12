@@ -5,13 +5,13 @@ const userId = "user_01CALLBACK";
 const sessionId = "session_01CALLBACK";
 
 const {
-  mockGetRiderctUrl,
+  mockGetRedirectUrl,
   mockGetAuthSessionFromCode,
   mockRevokeAuthSession,
   mockRefreshAuthSession,
   mockInsert,
 } = vi.hoisted(() => ({
-  mockGetRiderctUrl: vi.fn(),
+  mockGetRedirectUrl: vi.fn(),
   mockGetAuthSessionFromCode: vi.fn(),
   mockRevokeAuthSession: vi.fn(),
   mockRefreshAuthSession: vi.fn(),
@@ -23,7 +23,7 @@ vi.mock("../../api/src/auth/auth", async (importOriginal) => {
     await importOriginal<typeof import("../../api/src/auth/auth")>();
   return {
     ...actual,
-    getRiderctUrl: mockGetRiderctUrl,
+    getRedirectUrl: mockGetRedirectUrl,
     getAuthSessionFromCode: mockGetAuthSessionFromCode,
     revokeAuthSession: mockRevokeAuthSession,
     refreshAuthSession: mockRefreshAuthSession,
@@ -88,7 +88,7 @@ describe("OAuth callback URL", () => {
 
 describe("GET /auth/login", () => {
   beforeEach(() => {
-    mockGetRiderctUrl.mockReturnValue(MOCK_WORKOS_URL);
+    mockGetRedirectUrl.mockReturnValue(MOCK_WORKOS_URL);
   });
 
   it("redirects to the WorkOS authorization URL", async () => {
@@ -99,7 +99,7 @@ describe("GET /auth/login", () => {
     });
     expect(res.status).toBe(302);
     expect(res.headers.get("Location")).toBe(MOCK_WORKOS_URL);
-    expect(mockGetRiderctUrl).toHaveBeenCalledTimes(1);
+    expect(mockGetRedirectUrl).toHaveBeenCalledTimes(1);
   });
 });
 

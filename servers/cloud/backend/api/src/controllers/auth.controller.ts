@@ -4,7 +4,7 @@ import { getCookie } from "hono/cookie";
 import { getApiEnv } from "../../../shared/env";
 import {
   getAuthSessionFromCode,
-  getRiderctUrl,
+  getRedirectUrl,
   revokeAuthSession,
 } from "../auth/auth";
 import { verifyAccessToken } from "../auth/accessToken";
@@ -23,7 +23,7 @@ import { logger } from "@summarizer/shared/logger";
 const log = logger.child({ controller: "auth" });
 
 export async function handleLogin(c: Context) {
-  return c.redirect(getRiderctUrl());
+  return c.redirect(getRedirectUrl());
 }
 
 /** When an access token expires, as the auth responses report it. */

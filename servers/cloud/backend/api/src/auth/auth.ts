@@ -21,7 +21,7 @@ export function getJwksUrl() {
   return workos.userManagement.getJwksUrl(getApiEnv().WORKOS_CLIENT_ID);
 }
 
-export function getRiderctUrl() {
+export function getRedirectUrl() {
   return workos.userManagement.getAuthorizationUrl({
     // Specify that we'd like AuthKit to handle the authentication flow
     provider: "authkit",
