@@ -1,5 +1,5 @@
 import { data } from "./data";
-import { logger } from "./logger";
+import { logger } from "@summarizer/shared/logger";
 import { mq } from "./message-queue/messageQueue";
 import type { UploadId } from "./types";
 

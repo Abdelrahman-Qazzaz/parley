@@ -2,7 +2,7 @@ import { createMiddleware } from "hono/factory";
 import { getCookie } from "hono/cookie";
 
 import { COOKIE_KEYS, CTX_KEYS } from "../../../shared/keys";
-import { logger } from "../../../shared/logger";
+import { logger } from "@summarizer/shared/logger";
 import { verifyAccessToken } from "../auth/accessToken";
 
 export const requireAuth = createMiddleware(async (c, next) => {

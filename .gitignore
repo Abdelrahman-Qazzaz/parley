@@ -22,7 +22,7 @@ bun.lockb
 servers/cloud/backend/erl_crash.dump
 
 # Logger JSON output
-servers/cloud/backend/shared/logger/logs/
+packages/shared/src/logs/
 
 
 **/.claude

@@ -1,4 +1,4 @@
-import { logger, messageOf } from "../logger";
+import { logger, messageOf } from "@summarizer/shared/logger";
 import { QUEUES, type Queue, type QueuePayloads } from "./queues";
 export { QUEUES } from "./queues";
 export type { QueuePayloads } from "./queues";

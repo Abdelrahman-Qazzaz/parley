@@ -1,7 +1,7 @@
 import type { ServerType } from "@hono/node-server";
 import { Server } from "socket.io";
 import type { ServerToClientEvents } from "@summarizer/shared/contract";
-import { logger } from "../../../shared/logger";
+import { logger } from "@summarizer/shared/logger";
 import { isAllowedHostname, isAllowedOrigin } from "../allowedHosts";
 
 const log = logger.child({ component: "socket" });

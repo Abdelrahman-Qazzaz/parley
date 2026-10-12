@@ -4,7 +4,7 @@ import {
 } from "../../shared/ai/ai_transcribe_client";
 import { files } from "../../shared/files";
 import { data } from "../../shared/data";
-import { logger } from "../../shared/logger";
+import { logger } from "@summarizer/shared/logger";
 import {
   DeadLetterError,
   mq,

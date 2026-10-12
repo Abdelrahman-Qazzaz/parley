@@ -25,7 +25,7 @@ import {
   findChatModel,
 } from "../../../shared/ai/ai_chat_client";
 import type { ChatTurn } from "../../../shared/ai/ai_chat_client";
-import { logger, messageOf } from "../../../shared/logger";
+import { logger, messageOf } from "@summarizer/shared/logger";
 import { deleteObjects } from "../../../shared/uploads";
 import type { MessageAttachmentInput } from "../schema/messages.schema";
 

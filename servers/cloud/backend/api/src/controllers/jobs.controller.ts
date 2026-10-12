@@ -6,7 +6,7 @@ import { encodeCursor, decodeCursor } from "../utils/cursor";
 import { deleteObjects } from "../../../shared/uploads";
 import { data } from "../../../shared/data";
 import { tryCatch } from "@summarizer/shared/try-catch";
-import { logger } from "../../../shared/logger";
+import { logger } from "@summarizer/shared/logger";
 
 const log = logger.child({ controller: "jobs" });
 

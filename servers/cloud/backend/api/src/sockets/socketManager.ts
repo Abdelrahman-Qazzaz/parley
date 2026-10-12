@@ -4,7 +4,7 @@ import type { ServerToClientEvents } from "@summarizer/shared/contract";
 import { parse } from "hono/utils/cookie";
 import { COOKIE_KEYS } from "../../../shared/keys";
 import { getApiEnv } from "../../../shared/env";
-import { logger } from "../../../shared/logger";
+import { logger } from "@summarizer/shared/logger";
 import { verifyAccessToken } from "../auth/accessToken";
 
 const log = logger.child({ component: "socket" });

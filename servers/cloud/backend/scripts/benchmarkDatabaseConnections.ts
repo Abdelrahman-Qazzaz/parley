@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import postgres from "postgres";
 import { getBaseEnv } from "../shared/env";
 import { msSince } from "../shared/preparationMetrics";
-import { messageOf } from "../shared/logger";
+import { messageOf } from "@summarizer/shared/logger";
 
 type BenchmarkConfiguration = {
   fetch_types: boolean;
