@@ -6,13 +6,21 @@
  * "bundler"`, so the source uses extensionless imports Node's ESM loader will
  * not resolve. The code is written for a bundler, so it gets a bundler.
  *
- * `packages: "external"` keeps node_modules out of the bundle — only our own
- * source is inlined. Dependencies stay resolved at runtime from an ordinary
- * `npm ci --omit=dev`, which keeps the output small and avoids bundling
- * packages that do dynamic requires.
+ * Dependencies stay out of the bundle and are resolved at runtime from an
+ * ordinary `npm ci --omit=dev`, which keeps the output small and avoids
+ * bundling packages that do dynamic requires. The workspace's own packages are
+ * the exception: they ship as TypeScript, so they're bundled in like our own
+ * source.
  */
-import { copyFile } from "node:fs/promises";
+import { copyFile, readFile } from "node:fs/promises";
 import { build } from "esbuild";
+
+const { dependencies } = JSON.parse(await readFile("package.json", "utf8")) as {
+  dependencies: Record<string, string>;
+};
+const external = Object.keys(dependencies)
+  .filter((name) => !name.startsWith("@summarizer/"))
+  .flatMap((name) => [name, `${name}/*`]);
 
 const ENTRYPOINTS = {
   api: "api/index.ts",
@@ -27,7 +35,7 @@ const results = await Promise.all(
       platform: "node",
       format: "esm",
       target: "node22",
-      packages: "external",
+      external,
       sourcemap: true,
       logLevel: "info",
       // Reported by the bundle rather than inferred, so a build artifact can
