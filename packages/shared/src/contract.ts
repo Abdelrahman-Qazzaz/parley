@@ -4,8 +4,8 @@
  * in these shapes and the client reads them, so a change here fails the type
  * check of whichever side no longer matches.
  *
- * Types only, imported with `import type`: nothing here exists at runtime, so
- * no build has to reach this folder. Timestamps are ISO 8601 strings.
+ * Types only, imported with `import type`: nothing here exists at runtime.
+ * Timestamps are ISO 8601 strings.
  *
  * Request bodies are here too, and each server's validator is checked to take
  * every body the contract allows. Sign-in and the way a file gets uploaded

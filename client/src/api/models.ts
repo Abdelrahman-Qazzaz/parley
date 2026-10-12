@@ -2,7 +2,7 @@ import type {
   ChatModel,
   ModelsResponse,
   TranscribeModel,
-} from "@summarizer/contract";
+} from "@summarizer/shared/contract";
 import { apiJson } from "./http";
 import type { Server } from "./server";
 

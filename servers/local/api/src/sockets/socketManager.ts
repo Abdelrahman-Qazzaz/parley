@@ -1,6 +1,6 @@
 import type { ServerType } from "@hono/node-server";
 import { Server } from "socket.io";
-import type { ServerToClientEvents } from "@summarizer/contract";
+import type { ServerToClientEvents } from "@summarizer/shared/contract";
 import { logger } from "../../../shared/logger";
 import { isAllowedHostname, isAllowedOrigin } from "../allowedHosts";
 

@@ -1,5 +1,8 @@
 import type { Context } from "hono";
-import type { Conversation, ConversationsResponse } from "@summarizer/contract";
+import type {
+  Conversation,
+  ConversationsResponse,
+} from "@summarizer/shared/contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { deleteObjects } from "../../../shared/uploads";
 import { data, type ConversationRow } from "../../../shared/data";

@@ -5,7 +5,8 @@
   "workspaces": [
     "client",
     "servers/cloud/backend",
-    "servers/local"
+    "servers/local",
+    "packages/shared"
   ],
   "scripts": {
     "browser:auth": "npm run --silent browser:auth --prefix servers/cloud/backend",

@@ -11,7 +11,7 @@ railway.json
 doppler.yaml
 tsconfig*.json
 requirements*.txt
-packages/contract/*
+packages/shared/*
 
 # Backend foundations before API consumers
 servers/cloud/backend/shared/types.ts

@@ -1,5 +1,5 @@
 import { DeepgramClient } from "@deepgram/sdk";
-import type { TranscribeModel } from "@summarizer/contract";
+import type { TranscribeModel } from "@summarizer/shared/contract";
 import { getBaseEnv } from "../env";
 import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
 

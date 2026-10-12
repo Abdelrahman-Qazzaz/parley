@@ -8,7 +8,7 @@ import type {
   ChatMessage,
   MessagesResponse,
   ReplyStreamEvents,
-} from "@summarizer/contract";
+} from "@summarizer/shared/contract";
 import { SSEEventQueue } from "../utils/sse";
 import {
   data,

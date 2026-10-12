@@ -2,7 +2,7 @@ import { z } from "zod";
 import type {
   CreateConversationBody,
   RenameConversationBody,
-} from "@summarizer/contract";
+} from "@summarizer/shared/contract";
 import { takesBody } from "./contract";
 import { CTX_KEYS } from "../../../shared/keys";
 

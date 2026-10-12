@@ -1,0 +1,9 @@
+{
+  "name": "@summarizer/shared",
+  "private": true,
+  "type": "module",
+  "description": "What the client and both servers share: the wire contract, and code the two servers would otherwise each carry a copy of.",
+  "exports": {
+    "./contract": "./src/contract.ts"
+  }
+}

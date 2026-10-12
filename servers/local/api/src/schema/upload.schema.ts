@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { QueueYoutubeBody } from "@summarizer/contract";
+import type { QueueYoutubeBody } from "@summarizer/shared/contract";
 import { takesBody } from "./contract";
 import { CTX_KEYS, FORM_KEYS } from "../../../shared/keys";
 import {

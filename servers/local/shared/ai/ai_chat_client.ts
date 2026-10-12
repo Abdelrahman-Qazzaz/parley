@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
-import type { ChatModel } from "@summarizer/contract";
+import type { ChatModel } from "@summarizer/shared/contract";
 import { getBaseEnv } from "../env";
 import { withTimeout } from "../withTimeout";
 

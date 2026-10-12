@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
-import type { UploadedImage } from "@summarizer/contract";
+import type { UploadedImage } from "@summarizer/shared/contract";
 import { data } from "../../../shared/data";
 import { files } from "../../../shared/files";
 import { CTX_KEYS } from "../../../shared/keys";

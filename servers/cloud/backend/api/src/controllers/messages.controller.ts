@@ -7,7 +7,7 @@ import type {
   ChatMessage,
   MessagesResponse,
   ReplyStreamEvents,
-} from "@summarizer/contract";
+} from "@summarizer/shared/contract";
 import { streamSSE } from "hono/streaming";
 import { SSEEventQueue } from "../utils/sse";
 import {

@@ -1,5 +1,5 @@
 import type { Context } from "hono";
-import type { Job, JobsPage } from "@summarizer/contract";
+import type { Job, JobsPage } from "@summarizer/shared/contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { jobCursorSchema, type JobStatus } from "../schema/jobs.schema";
 import { encodeCursor, decodeCursor } from "../utils/cursor";

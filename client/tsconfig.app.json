@@ -22,9 +22,7 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true,
-
-    "paths": { "@summarizer/contract": ["../packages/contract/index.ts"] }
+    "noUncheckedSideEffectImports": true
   },
   "include": ["src"]
 }

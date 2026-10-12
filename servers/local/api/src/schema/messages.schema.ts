@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { SendMessageBody } from "@summarizer/contract";
+import type { SendMessageBody } from "@summarizer/shared/contract";
 import { takesBody } from "./contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { findChatModel } from "../../../shared/ai/ai_chat_client";

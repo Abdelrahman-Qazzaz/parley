@@ -6,7 +6,7 @@ import type {
   MessageTranscript,
   ReplyStreamEvents,
   SendMessageBody,
-} from "@summarizer/contract";
+} from "@summarizer/shared/contract";
 import { apiFetch, apiJson, jsonRequest } from "./http";
 import { serverUrl, type Server } from "./server";
 

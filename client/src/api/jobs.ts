@@ -4,7 +4,7 @@ import type {
   JobStatus,
   JobsPage,
   JobSummary,
-} from "@summarizer/contract";
+} from "@summarizer/shared/contract";
 import { apiFetch, apiJson } from "./http";
 import type { Server } from "./server";
 

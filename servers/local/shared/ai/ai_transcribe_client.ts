@@ -2,7 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import type { TranscribeModel } from "@summarizer/contract";
+import type { TranscribeModel } from "@summarizer/shared/contract";
 import { getBaseEnv } from "../env";
 import { withTimeout } from "../withTimeout";
 

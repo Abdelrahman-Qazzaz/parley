@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
-import type { QueuedYoutube, UploadedAudio } from "@summarizer/contract";
+import type { QueuedYoutube, UploadedAudio } from "@summarizer/shared/contract";
 import { data } from "../../../shared/data";
 import {
   publishOrFail,
