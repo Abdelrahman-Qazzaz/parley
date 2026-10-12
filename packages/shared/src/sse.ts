@@ -28,15 +28,18 @@ type QueuedEvent = { event: string; payload: unknown };
  * then blocks *forever*, which would strand the producer mid-run. Here a
  * departed client can only stall `pipeTo`, and `disconnectSignal` unblocks
  * that too.
+ *
+ * Typed by the events it carries, by name, so a payload that doesn't match its
+ * event fails the type check where it's pushed.
  */
-export class SSEEventQueue {
+export class SSEEventQueue<Events extends Record<string, unknown>> {
   private queue: QueuedEvent[] = [];
   private ended = false;
   /** Set once no reader can return: further events go nowhere, so drop them. */
   private detached = false;
   private wake: (() => void) | null = null;
 
-  push(event: string, payload: unknown) {
+  push<Name extends keyof Events & string>(event: Name, payload: Events[Name]) {
     if (this.detached) return;
     this.queue.push({ event, payload });
     this.signal();

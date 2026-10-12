@@ -453,7 +453,7 @@ function streamAndPersistMessageTurn(
 
   // The HTTP response can be ready before the task that owns the claims finishes.
   void (async () => {
-    const events = new SSEEventQueue();
+    const events = new SSEEventQueue<ReplyStreamEvents>();
     let streamResponse: Response | undefined;
 
     try {
@@ -471,7 +471,7 @@ function streamAndPersistMessageTurn(
           : Promise.resolve(undefined);
       const assistantContent = await chatAI(messageInput.chosenModelId, turns, {
         onDelta: async (delta) => {
-          events.push("delta", { delta } satisfies ReplyStreamEvents["delta"]);
+          events.push("delta", { delta });
         },
       });
       const contextWindowMessageCount = countMessagesInContextWindow([
@@ -490,9 +490,7 @@ function streamAndPersistMessageTurn(
         claimToken,
       });
 
-      events.push("done", {
-        lastMessageId,
-      } satisfies ReplyStreamEvents["done"]);
+      events.push("done", { lastMessageId });
       return streamResponse;
     } catch (error) {
       // Released before answering, so a client that retries at once doesn't
@@ -509,9 +507,7 @@ function streamAndPersistMessageTurn(
         throw error;
       }
 
-      events.push("error", {
-        message: "Model response failed",
-      } satisfies ReplyStreamEvents["error"]);
+      events.push("error", { message: "Model response failed" });
       return streamResponse;
     } finally {
       events.end();
