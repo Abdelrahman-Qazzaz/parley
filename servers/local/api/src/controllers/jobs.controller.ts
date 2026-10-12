@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import type { Job, JobsPage } from "@summarizer/shared/contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { jobCursorSchema, type JobStatus } from "../schema/jobs.schema";
-import { encodeCursor, decodeCursor } from "../utils/cursor";
+import { encodeCursor, decodeCursor } from "@summarizer/shared/cursor";
 import { files } from "../../../shared/files";
 import { data } from "../../../shared/data";
 import { tryCatch } from "@summarizer/shared/try-catch";
