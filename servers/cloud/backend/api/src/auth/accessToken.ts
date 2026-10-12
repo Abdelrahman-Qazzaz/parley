@@ -1,4 +1,4 @@
-import { jwtVerify } from "jose";
+import { decodeJwt, jwtVerify } from "jose";
 import { workosKeys } from "./workosKeys";
 
 /**
@@ -46,4 +46,18 @@ export async function verifyAccessToken(
     sessionId: payload.sid,
     expiresAtEpochSeconds: payload.exp,
   };
+}
+
+/**
+ * An access token's expiry, read without verifying it. Only for a token this
+ * server just got from WorkOS itself, where there's nothing to verify: a
+ * check that fetched WorkOS's keys could fail after WorkOS had already spent
+ * the refresh token that bought it.
+ */
+export function readAccessTokenExpiry(token: string): number {
+  const { exp } = decodeJwt(token);
+  if (typeof exp !== "number") {
+    throw new Error("Access token is missing an expiry");
+  }
+  return exp;
 }

@@ -7,7 +7,7 @@ import {
   getRedirectUrl,
   revokeAuthSession,
 } from "../auth/auth";
-import { verifyAccessToken } from "../auth/accessToken";
+import { readAccessTokenExpiry, verifyAccessToken } from "../auth/accessToken";
 import { refreshSession } from "../auth/refreshSession";
 import {
   clearRefreshToken,
@@ -62,6 +62,9 @@ function isRejectedByWorkos(error: unknown) {
  * the client can refresh again before it does. A refresh token WorkOS turns
  * down means the session is over: both cookies are cleared and the answer
  * is a 401, which the client reads as signed out.
+ *
+ * WorkOS spends the old refresh token as it answers, so the new cookies are
+ * set before anything else can fail: losing them would sign the user out.
  */
 export async function handleRefresh(c: Context) {
   const refreshToken = getCookie(c, COOKIE_KEYS.refresh);
@@ -78,12 +81,12 @@ export async function handleRefresh(c: Context) {
     return c.json({ message: "Unauthorized" }, 401);
   }
 
-  const { userId, expiresAtEpochSeconds } = await verifyAccessToken(
-    tokens.accessToken,
-  );
   setSessionToken(c, tokens.accessToken);
   setRefreshToken(c, tokens.refreshToken);
-  return c.json({ userId, expiresAt: expiresAt(expiresAtEpochSeconds) });
+  return c.json({
+    userId: tokens.userId,
+    expiresAt: expiresAt(readAccessTokenExpiry(tokens.accessToken)),
+  });
 }
 
 export async function handleLogout(c: Context) {

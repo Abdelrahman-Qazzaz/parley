@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { generateKeyPair, SignJWT } from "jose";
 
 const MOCK_WORKOS_URL = "https://workos.example/authorize";
 const userId = "user_01CALLBACK";
@@ -201,6 +202,7 @@ describe("POST /auth/refresh", () => {
       expiresAtEpochSeconds,
     });
     mockRefreshAuthSession.mockResolvedValue({
+      userId,
       accessToken,
       refreshToken: "refresh-after-success",
     });
@@ -226,6 +228,35 @@ describe("POST /auth/refresh", () => {
         new RegExp(
           `^${COOKIE_KEYS.refresh}=refresh-after-success;.*Path=/auth/refresh;`,
         ),
+      ),
+    );
+  });
+
+  it("sets the new tokens without fetching WorkOS's signing keys", async () => {
+    // Signed with a key the API doesn't know, so verifying it would fail as
+    // it would while WorkOS's keys can't be fetched.
+    const { privateKey } = await generateKeyPair("RS256");
+    const expiresAtEpochSeconds = Math.floor(Date.now() / 1000) + 300;
+    const accessToken = await new SignJWT({ sub: userId, sid: sessionId })
+      .setProtectedHeader({ alg: "RS256", kid: "unknown-key" })
+      .setExpirationTime(expiresAtEpochSeconds)
+      .sign(privateKey);
+    mockRefreshAuthSession.mockResolvedValue({
+      userId,
+      accessToken,
+      refreshToken: "refresh-after-unverified",
+    });
+
+    const res = await refresh("refresh-before-unverified");
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({
+      userId,
+      expiresAt: new Date(expiresAtEpochSeconds * 1000).toISOString(),
+    });
+    expect(res.headers.getSetCookie()).toContainEqual(
+      expect.stringMatching(
+        new RegExp(`^${COOKIE_KEYS.refresh}=refresh-after-unverified;`),
       ),
     );
   });
