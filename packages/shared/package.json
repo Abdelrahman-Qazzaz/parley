@@ -4,6 +4,7 @@
   "type": "module",
   "description": "What the client and both servers share: the wire contract, and code the two servers would otherwise each carry a copy of.",
   "exports": {
+    "./cache.middleware": "./src/cache.middleware.ts",
     "./contract": "./src/contract.ts",
     "./cursor": "./src/cursor.ts",
     "./logger": "./src/logger.ts",

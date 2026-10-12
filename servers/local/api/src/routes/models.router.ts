@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import * as modelsController from "../controllers/models.controller";
-import { httpCache } from "../middleware/cache.middleware";
+import { httpCache } from "@summarizer/shared/cache.middleware";
 
 export const modelsRouter = new Hono();
 
