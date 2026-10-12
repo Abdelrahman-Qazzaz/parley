@@ -4,40 +4,46 @@
 # started differently (see ARCHITECTURE.md); migrate and baseline are the
 # operational one-shots.
 #
-# Build context is the repo root, not this directory: the image carries the
-# built client, which the API serves, and the client's type check reads
-# packages/contract. The repo root's .dockerignore applies.
+# Build context is the repo root, not this directory: the repo is one npm
+# workspace with one lockfile, the image carries the built client, which the
+# API serves, and both read packages/. The repo root's .dockerignore applies.
 
-FROM node:22-alpine AS client
+# Every workspace's manifest, which npm checks the lockfile against even when
+# installing only one of them. Installs skip lifecycle scripts: the root's
+# prepare sets up git hooks, and no dependency needs one to work.
+FROM node:22-alpine AS manifests
 WORKDIR /repo
-COPY client/package.json client/package-lock.json client/
-RUN npm ci --prefix client
+COPY package.json package-lock.json ./
+COPY client/package.json client/
+COPY servers/cloud/backend/package.json servers/cloud/backend/
+COPY servers/local/package.json servers/local/
+
+FROM manifests AS client
+RUN npm ci --ignore-scripts --workspace @summarizer/client
 COPY packages packages
 COPY client client
-RUN npm run build --prefix client
+RUN npm run build --workspace @summarizer/client
 
-FROM node:22-alpine AS builder
-WORKDIR /app
-COPY servers/cloud/backend/package.json servers/cloud/backend/package-lock.json ./
-RUN npm ci
-COPY servers/cloud/backend ./
-RUN npm run build
+FROM manifests AS builder
+RUN npm ci --ignore-scripts --workspace @summarizer/cloud
+COPY packages packages
+COPY servers/cloud/backend servers/cloud/backend
+RUN npm run build --workspace @summarizer/cloud
 
-FROM node:22-alpine AS runtime
+FROM manifests AS runtime
 ENV NODE_ENV=production
 # Where the API finds the built client it serves.
-ENV CLIENT_DIR=/app/client
-WORKDIR /app
+ENV CLIENT_DIR=/repo/client-dist
 
 # Production dependencies only. Every one is pure JS, so there is nothing to
 # compile and no build toolchain in the final image.
-COPY servers/cloud/backend/package.json servers/cloud/backend/package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+RUN npm ci --ignore-scripts --omit=dev --workspace @summarizer/cloud && npm cache clean --force
 
-COPY --from=builder /app/dist ./dist
+WORKDIR /repo/servers/cloud/backend
+COPY --from=builder /repo/servers/cloud/backend/dist ./dist
 # Read by scripts/migrate.ts at runtime, relative to this working directory.
 COPY servers/cloud/backend/drizzle ./drizzle
-COPY --from=client /repo/client/dist ./client
+COPY --from=client /repo/client/dist /repo/client-dist
 
 USER node
 

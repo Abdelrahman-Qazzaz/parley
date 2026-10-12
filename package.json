@@ -2,6 +2,11 @@
   "name": "summarizer",
   "private": true,
   "packageManager": "npm@11.14.1",
+  "workspaces": [
+    "client",
+    "servers/cloud/backend",
+    "servers/local"
+  ],
   "scripts": {
     "browser:auth": "npm run --silent browser:auth --prefix servers/cloud/backend",
     "dev": "concurrently -n cloud,local -c blue,magenta \"npm run dev:cloud\" \"npm run dev:local\"",

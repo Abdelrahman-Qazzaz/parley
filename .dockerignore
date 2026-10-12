@@ -7,8 +7,11 @@
 **/.env
 **/.env.*
 !**/.env.example
-# Not part of the cloud image, which is the only one built from the root.
-servers/local
+# Not part of the cloud image, which is the only one built from the root,
+# except the local server's manifest: npm checks the workspace's lockfile
+# against every package's.
+servers/local/*
+!servers/local/package.json
 servers/cloud/youtube-fetcher
 output
 test_data
