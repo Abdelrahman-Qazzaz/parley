@@ -11,6 +11,8 @@ import { uploadRouter } from "./src/routes/upload.router";
 import { authRouter } from "./src/routes/auth.router";
 import { modelsRouter } from "./src/routes/models.router";
 import { conversationsRouter } from "./src/routes/conversations.router";
+import { handleEvents } from "./src/controllers/events.controller";
+import { requireAuth } from "./src/middleware/auth.middleware";
 
 import { AUDIO_BUCKET, MAX_AUDIO_BYTES } from "../shared/storage/bucket";
 import { verifyApiServices } from "./startup";
@@ -38,6 +40,7 @@ export async function createApp() {
   await verifyApiServices();
 
   app.get("/health", (c) => c.json({ ok: true }));
+  app.get("/events", requireAuth, handleEvents);
   // Cross-service contract: non-sensitive shared facts (queue names + bucket
   // name) the Python youtube-fetcher reads at boot so it never hand-mirrors
   // them. Public + unauthenticated on purpose — none of this is sensitive and
