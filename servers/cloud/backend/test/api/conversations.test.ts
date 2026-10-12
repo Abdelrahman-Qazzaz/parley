@@ -91,11 +91,12 @@ function rowOf(conversation: typeof row) {
 beforeEach(() => {
   vi.clearAllMocks();
   mockSelect.mockImplementation(() => ({ from: mockFrom }));
-  // Deleting a conversation reads its messages' image_uploads first, and that
-  // read is awaited at `.where()` rather than chaining on to `.limit()`.
+  // Deleting a conversation reads its messages' images first: the links
+  // joined to their attachments, awaited at `.where()` rather than chaining on
+  // to `.limit()`.
   mockFrom.mockImplementation((table: unknown) =>
     table === ChatMessageAttachmentLinks
-      ? { where: mockImageWhere }
+      ? { innerJoin: () => ({ where: mockImageWhere }) }
       : { where: mockWhere },
   );
   mockWhere.mockImplementation(() => ({
