@@ -7,7 +7,7 @@ import { mq } from "../shared/message-queue/messageQueue";
 import { resumeUnfinishedJobs } from "../shared/audioTranscription";
 import { data } from "../shared/data";
 import { closeDb, migrateDb } from "../shared/db";
-import { onShutdown } from "../shared/shutdown";
+import { onShutdown } from "@summarizer/shared/shutdown";
 import { files } from "../shared/files";
 import { logger } from "@summarizer/shared/logger";
 import { handleTranscribeJob } from "./src/transcribeJob";

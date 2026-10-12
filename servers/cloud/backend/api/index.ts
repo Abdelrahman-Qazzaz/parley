@@ -5,7 +5,7 @@ import { startSocketServer } from "./src/sockets/socketManager";
 
 import { mq } from "../shared/message-queue/messageQueue";
 import { data } from "../shared/data";
-import { onShutdown } from "../shared/shutdown";
+import { onShutdown } from "@summarizer/shared/shutdown";
 
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
