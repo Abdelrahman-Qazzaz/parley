@@ -1,6 +1,4 @@
-import { createServer, get } from "node:http";
-import type { AddressInfo } from "node:net";
-import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 vi.mock("../../shared/db", async () =>
   (await import("../helpers/inMemoryDb")).inMemoryDbModule(),
@@ -12,9 +10,7 @@ process.env.ALLOWED_HOSTS = "macbook.tail1234.ts.net";
 // The hosted client, which calls this machine from the browser.
 process.env.ALLOWED_ORIGINS = "https://summarizer.example.app/";
 
-import type { ServerType } from "@hono/node-server";
 import { createApp } from "../../api/app";
-import { startSocketServer } from "../../api/src/sockets/socketManager";
 
 async function request(url: string, init: RequestInit = {}) {
   return (await createApp()).request(url, init);
@@ -73,68 +69,6 @@ describe("requests from off this machine", () => {
     });
 
     expect(res.headers.get("Access-Control-Allow-Origin")).toBeNull();
-  });
-});
-
-describe("socket connections", () => {
-  let port: number;
-  const server = createServer();
-
-  beforeAll(async () => {
-    startSocketServer(server as unknown as ServerType);
-    await new Promise<void>((resolve) =>
-      server.listen(0, "127.0.0.1", resolve),
-    );
-    port = (server.address() as AddressInfo).port;
-  });
-  afterAll(() => {
-    server.close();
-  });
-
-  /**
-   * Opens a Socket.IO session the way the client's first request does, and
-   * answers its status. node:http rather than fetch, which won't send a Host.
-   */
-  function handshake(headers: Record<string, string>) {
-    return new Promise<number | undefined>((resolve, reject) => {
-      get(
-        {
-          host: "127.0.0.1",
-          port,
-          path: "/socket.io/?EIO=4&transport=polling",
-          headers,
-        },
-        (res) => {
-          res.resume();
-          resolve(res.statusCode);
-        },
-      ).on("error", reject);
-    });
-  }
-
-  it("are accepted from a page on this machine", async () => {
-    expect(await handshake({ Origin: "http://localhost:5173" })).toBe(200);
-  });
-
-  it("are accepted without an Origin, which no browser omits", async () => {
-    expect(await handshake({})).toBe(200);
-  });
-
-  it("are accepted from a page under a name in ALLOWED_HOSTS", async () => {
-    expect(
-      await handshake({
-        Host: "macbook.tail1234.ts.net",
-        Origin: "https://macbook.tail1234.ts.net",
-      }),
-    ).toBe(200);
-  });
-
-  it("are refused from another site", async () => {
-    expect(await handshake({ Origin: "https://evil.test" })).toBe(403);
-  });
-
-  it("are refused when addressed to another name", async () => {
-    expect(await handshake({ Host: `evil.test:${port}` })).toBe(403);
   });
 });
 

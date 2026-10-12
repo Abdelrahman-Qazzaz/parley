@@ -1,8 +1,9 @@
 # Backend architecture
 
 A monolith. Everything under `servers/local/` is a single npm package
-(`@summarizer/local`) that runs as one process, `api`: the HTTP + WebSocket
-service clients talk to, which also fetches YouTube videos and runs
+(`@summarizer/local`) that runs as one process, `api`: the HTTP service
+clients talk to, with job updates pushed over server-sent events (`GET
+/events`), which also fetches YouTube videos and runs
 transcription off in-memory queues. It keeps its data in SQLite, in one file under `DATA_DIR`. Migrations in `drizzle/` are
 applied at startup. Statements and transactions run one at a time, in order
 (`shared/db/connect.ts` says why), so work inside a transaction goes through
@@ -104,7 +105,7 @@ again, with the caption preference stored on its row; any other is transcribed.
     │                        save transcript and complete job in SQLite
     │◀── transcribe_done ────┘
     │
-    └── Socket.IO: jobUpdated to every connected browser
+    └── GET /events: jobUpdated to every connected browser
 ```
 
 A YouTube upload takes the same path one step earlier: the API publishes
@@ -135,9 +136,8 @@ writing a stale result if it later finishes.
 
 One process, `api`, on the user's machine, listening on `127.0.0.1:PORT`
 only. It serves the built client (`client/dist`, `CLIENT_DIR`) on its own
-origin, so the page, the API and Socket.IO share one origin and one port.
-Under `npm run dev` the client isn't built: Vite serves it and proxies the
-API's paths, the websocket included, to the API.
+origin, so the page, the API and its event stream share one origin and one
+port.
 
 With no sign-in, the browser is the way in, so the API answers only this
 machine (`api/src/allowedHosts.ts`):
@@ -147,7 +147,6 @@ machine (`api/src/allowedHosts.ts`):
 - no CORS: no other origin may read a response;
 - a form post, which a browser sends cross-site without asking, is refused
   unless it comes from a page served from this machine;
-- Socket.IO, which CORS never covered, gets the same two checks.
 
 Transcription runs inside it, one message per queue at a time, so there are no
 worker replicas to scale.

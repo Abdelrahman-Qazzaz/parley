@@ -1,7 +1,6 @@
 const env = getApiEnv();
 
 import { getApiEnv } from "../shared/env";
-import { startSocketServer } from "./src/sockets/socketManager";
 import { EVERYONE, events } from "./src/events";
 
 import { mq } from "../shared/message-queue/messageQueue";
@@ -33,19 +32,16 @@ const port = env.PORT;
 // Before the consumers start, so what the last run left unfinished goes first.
 await resumeUnfinishedJobs();
 
-// Listening starts here; the socket server then uses this same server,
-// so the API and the websocket share one port. Only on the loopback
-// interface: nothing on the network can reach it.
+// Listening starts here, on the loopback interface only: nothing on the
+// network can reach it.
 const hostname = "127.0.0.1";
 const server = serve({ fetch: app.fetch, port, hostname }, () => {
   logger.info(`Listening on http://${hostname}:${port}`);
 });
-const io = startSocketServer(server);
 
 mq.consume(
   mq.queues.TRANSCRIBE_DONE,
   ({ audioUploadId }) => {
-    io.emit("jobUpdated", { audioUploadId });
     events.send(EVERYONE, "jobUpdated", { audioUploadId });
   },
   { attempts: 1 },
@@ -61,7 +57,6 @@ mq.consume(
       audioUploadId,
       error ?? "Failed to fetch YouTube audio",
     );
-    io.emit("jobUpdated", { audioUploadId });
     events.send(EVERYONE, "jobUpdated", { audioUploadId });
   },
   { attempts: 2 },
@@ -99,10 +94,6 @@ onShutdown(
     await mq.stopConsuming();
     // An open event stream would hold the server open until it ended.
     await events.close();
-    // io owns its HTTP server, so closing it closes both.
-    // The second close is a belt-and-braces no-op and must not reject on
-    // "server is not running".
-    await new Promise<void>((resolve) => io.close(() => resolve()));
     await new Promise<void>((resolve) => server.close(() => resolve()));
     await closeDb();
   },
