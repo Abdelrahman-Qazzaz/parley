@@ -1,5 +1,5 @@
 {
-  "name": "summarizer-server",
+  "name": "@summarizer/local",
   "private": true,
   "type": "module",
   "packageManager": "npm@11.14.1",

@@ -1,7 +1,7 @@
 # Backend architecture
 
 A monolith. Everything under `servers/local/` is a single npm package
-(`summarizer-server`) that runs as one process, `api`: the HTTP + WebSocket
+(`@summarizer/local`) that runs as one process, `api`: the HTTP + WebSocket
 service clients talk to, which also fetches YouTube videos and runs
 transcription off in-memory queues. It keeps its data in SQLite, in one file under `DATA_DIR`. Migrations in `drizzle/` are
 applied at startup. Statements and transactions run one at a time, in order
