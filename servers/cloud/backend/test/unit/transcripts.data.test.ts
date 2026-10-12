@@ -25,9 +25,9 @@ const {
   };
 });
 
-vi.mock("../../shared/db", () => ({
+vi.mock("../../shared/db", async () => ({
   db: { transaction: mockTransaction, select: mockSelect },
-  TranscriptContents: { audioUploadId: "audio_upload_id" },
+  ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
 vi.mock("../../shared/data/jobs.data", () => ({
