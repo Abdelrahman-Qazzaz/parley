@@ -1,4 +1,4 @@
-import { logger } from "@summarizer/shared/logger";
+import { logger } from "./logger";
 
 const log = logger.child({ component: "shutdown" });
 
