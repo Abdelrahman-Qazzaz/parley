@@ -1,7 +1,6 @@
 const env = getApiEnv();
 
 import { getApiEnv } from "../shared/env";
-import { startSocketServer } from "./src/sockets/socketManager";
 import { events } from "./src/events";
 
 import { mq } from "../shared/message-queue/messageQueue";
@@ -16,15 +15,11 @@ import { createApp } from "./app";
 const app = await createApp();
 const port = env.PORT;
 
-// Listening starts here; the socket server then uses this same server,
-// so the API and the websocket share one port.
 const server = serve({ fetch: app.fetch, port });
-const io = startSocketServer(server);
 
 await mq.consume(
   mq.queues.TRANSCRIBE_DONE,
   ({ audioUploadId, userId }) => {
-    io.to(userId).emit("jobUpdated", { audioUploadId });
     events.send(userId, "jobUpdated", { audioUploadId });
   },
   { attempts: 1 },
@@ -38,7 +33,6 @@ await mq.consume(
       audioUploadId,
       error ?? "Failed to fetch YouTube audio",
     );
-    io.to(userId).emit("jobUpdated", { audioUploadId });
     events.send(userId, "jobUpdated", { audioUploadId });
   },
   { attempts: 2 },
@@ -57,10 +51,6 @@ onShutdown(async () => {
   await mq.stopConsuming();
   // An open event stream would hold the server open until it ended.
   await events.close();
-  // io owns its HTTP server, so closing it closes both.
-  // The second close is a belt-and-braces no-op and must not reject on
-  // "server is not running".
-  await new Promise<void>((resolve) => io.close(() => resolve()));
   await new Promise<void>((resolve) => server.close(() => resolve()));
   await mq.close();
 });

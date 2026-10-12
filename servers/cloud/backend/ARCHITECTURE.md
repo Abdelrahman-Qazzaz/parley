@@ -5,7 +5,8 @@ single npm package (`@summarizer/cloud`) built from one codebase and one
 `shared/` module. It runs as multiple process types that talk through a
 RabbitMQ message queue and a shared Postgres database:
 
-- `api` — the HTTP + WebSocket service clients talk to. In production it also
+- `api` — the HTTP service clients talk to, with job updates pushed over
+  server-sent events (`GET /events`). In production it also
   serves the built client (`CLIENT_DIR`) on `/`, `/chat` and `/chat/*`, so the
   page and the API share one origin and the session cookie is first-party.
 - `transcribe-worker` — the background queue worker that runs transcription.
@@ -73,7 +74,7 @@ reconnects in-process; the platform's restart policy brings it back.
     ▲                                                     │ claim job, sign audio URL,
     │                                                     │ call Deepgram, save transcript
     │◀───────────── transcribe_done ──────────────────────┤ and complete job in Postgres
-    └── Socket.IO: jobUpdated to the user's room ──▶ browser
+    └── GET /events: jobUpdated to the user's streams ──▶ browser
 ```
 
 A YouTube upload takes the same path one step earlier: the API publishes
@@ -105,8 +106,8 @@ it later finishes.
 One build artifact, run as different processes:
 
 - `api` — normally a single instance behind an ingress. Its port is
-  fixed and known (`PORT`, plus `WS_PORT` for Socket.IO) because clients
-  dial it. Do not randomize it.
+  fixed and known (`PORT`, which also carries its event stream) because
+  clients dial it. Do not randomize it.
 - `transcribe-worker` (`transcribe-worker/index.ts`) — run **N replicas** to
   scale throughput.
   Because the workers are RabbitMQ _competing consumers_, messages are

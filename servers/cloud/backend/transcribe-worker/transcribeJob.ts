@@ -153,7 +153,7 @@ export async function handleTranscribeJob(
  * is already saved, so a failed publish isn't a failed transcription, and
  * trying the message again wouldn't announce it: there's no queued job left
  * to claim. The client sees the result the next time it refetches the job,
- * on a reload or when its socket reconnects.
+ * on a reload or when its event stream opens again.
  */
 async function announceCompletion(audioUploadId: UploadId, userId: string) {
   try {
