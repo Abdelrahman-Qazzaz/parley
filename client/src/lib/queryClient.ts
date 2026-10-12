@@ -15,7 +15,7 @@ export const queryClient = new QueryClient({
 type ServerId = Server["id"];
 
 /**
- * Centralized query keys so the socket bridge and mutations stay in sync. Each
+ * Centralized query keys so the job-update bridge and mutations stay in sync. Each
  * starts with the server it was asked of, since the two servers' ids and
  * catalogs are unrelated.
  */

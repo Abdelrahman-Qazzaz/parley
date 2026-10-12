@@ -182,13 +182,7 @@ export type QueuedYoutube = {
   url: string;
 };
 
-/* ------------------------------------------------------------------ socket */
-
-/** What the servers emit over Socket.IO, by event name. */
-export type ServerToClientEvents = {
-  /** A job changed; refetch it. */
-  jobUpdated: (event: { audioUploadId: string }) => void;
-};
+/* ------------------------------------------------------------------ events */
 
 /**
  * GET /events: what the servers push on the stream the browser holds open,
