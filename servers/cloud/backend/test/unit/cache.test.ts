@@ -20,8 +20,8 @@ import {
   resetCacheMemo,
 } from "../../shared/cache/cache";
 
-// OpenRouter's catalog maps to Redis key "models:v9" with a 24h Redis TTL.
-const REDIS_KEY = "models:v9";
+// OpenRouter's catalog maps to Redis key "models:v10" with a 24h Redis TTL.
+const REDIS_KEY = "models:v10";
 const MEMO_TTL_MS = 5 * 60 * 1000;
 
 beforeEach(() => {

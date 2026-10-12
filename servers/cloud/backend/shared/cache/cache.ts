@@ -16,7 +16,7 @@ export type { CacheKey } from "./cacheKeys";
  */
 const CACHE_ENTRIES = {
   [CACHE_KEYS.openRouterModels]: {
-    redisKey: "models:v9",
+    redisKey: "models:v10",
     redisTtlSeconds: 24 * 60 * 60,
     memoTtlMs: 5 * 60 * 1000,
   },
