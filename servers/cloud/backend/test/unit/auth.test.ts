@@ -50,7 +50,7 @@ describe("WorkOS auth sessions", () => {
     });
   });
 
-  it("trades a refresh token for the new tokens WorkOS issues", async () => {
+  it("trades a refresh token for its user and the new tokens WorkOS issues", async () => {
     mockAuthenticateWithRefreshToken.mockResolvedValueOnce({
       user: { id: userId },
       accessToken: "access-2",
@@ -58,6 +58,7 @@ describe("WorkOS auth sessions", () => {
     });
 
     await expect(refreshAuthSession("refresh-1")).resolves.toEqual({
+      userId,
       accessToken: "access-2",
       refreshToken: "refresh-2",
     });

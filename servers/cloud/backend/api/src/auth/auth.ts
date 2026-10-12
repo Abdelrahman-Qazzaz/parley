@@ -47,19 +47,20 @@ export async function getAuthSessionFromCode(code: string) {
 }
 
 /**
- * Trades a refresh token for a new access token and a new refresh token.
- * WorkOS rotates refresh tokens, so the one passed in stops working once
- * this succeeds.
+ * Trades a refresh token for the user it belongs to, a new access token and
+ * a new refresh token. WorkOS rotates refresh tokens, so the one passed in
+ * stops working once this succeeds.
  */
 export async function refreshAuthSession(refreshToken: string) {
-  const tokens = await workos.userManagement.authenticateWithRefreshToken({
+  const {
+    user,
+    accessToken,
+    refreshToken: nextRefreshToken,
+  } = await workos.userManagement.authenticateWithRefreshToken({
     refreshToken,
     clientId: getApiEnv().WORKOS_CLIENT_ID,
   });
-  return {
-    accessToken: tokens.accessToken,
-    refreshToken: tokens.refreshToken,
-  };
+  return { userId: user.id, accessToken, refreshToken: nextRefreshToken };
 }
 
 export async function revokeAuthSession(sessionId: string): Promise<void> {
