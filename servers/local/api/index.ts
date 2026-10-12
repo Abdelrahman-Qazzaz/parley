@@ -2,6 +2,7 @@ const env = getApiEnv();
 
 import { getApiEnv } from "../shared/env";
 import { startSocketServer } from "./src/sockets/socketManager";
+import { EVERYONE, events } from "./src/events";
 
 import { mq } from "../shared/message-queue/messageQueue";
 import { resumeUnfinishedJobs } from "../shared/audioTranscription";
@@ -45,6 +46,7 @@ mq.consume(
   mq.queues.TRANSCRIBE_DONE,
   ({ audioUploadId }) => {
     io.emit("jobUpdated", { audioUploadId });
+    events.send(EVERYONE, "jobUpdated", { audioUploadId });
   },
   { attempts: 1 },
 );
@@ -60,6 +62,7 @@ mq.consume(
       error ?? "Failed to fetch YouTube audio",
     );
     io.emit("jobUpdated", { audioUploadId });
+    events.send(EVERYONE, "jobUpdated", { audioUploadId });
   },
   { attempts: 2 },
 );
@@ -94,6 +97,8 @@ mq.consume(mq.queues.CAPTION_TRANSCRIPT, handleTranscribeJob, {
 onShutdown(
   async () => {
     await mq.stopConsuming();
+    // An open event stream would hold the server open until it ended.
+    await events.close();
     // io owns its HTTP server, so closing it closes both.
     // The second close is a belt-and-braces no-op and must not reject on
     // "server is not running".
