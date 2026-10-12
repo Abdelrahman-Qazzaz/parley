@@ -5,7 +5,7 @@ import { jobCursorSchema, type JobStatus } from "../schema/jobs.schema";
 import { encodeCursor, decodeCursor } from "../utils/cursor";
 import { files } from "../../../shared/files";
 import { data } from "../../../shared/data";
-import { tryCatch } from "../../../shared/try-catch";
+import { tryCatch } from "@summarizer/shared/try-catch";
 import { logger } from "../../../shared/logger";
 
 const log = logger.child({ controller: "jobs" });
