@@ -1,4 +1,3 @@
-import { execFileSync } from "node:child_process";
 import { randomUUID } from "node:crypto";
 import { sql } from "drizzle-orm";
 import type { Sql } from "postgres";
@@ -11,6 +10,7 @@ import {
   it,
   vi,
 } from "vitest";
+import { exportSchemaSql } from "../helpers/schemaSql";
 
 const testState = vi.hoisted(() => ({
   databaseUrl: process.env.ATTACHMENT_TEST_DATABASE_URL,
@@ -110,18 +110,10 @@ function insertAttachment(uploadId: string) {
 describe.skipIf(!testState.databaseUrl)("storage ledger in PostgreSQL", () => {
   beforeAll(async () => {
     await db.execute(sql.raw(`create schema "${testState.schemaName}"`));
-    const schemaSql = execFileSync(
-      process.execPath,
-      [
-        "node_modules/drizzle-kit/bin.cjs",
-        "export",
-        "--dialect",
-        "postgresql",
-        "--schema",
-        "./shared/db/schema.ts",
-      ],
-      { encoding: "utf8" },
-    ).replaceAll('"public"', `"${testState.schemaName}"`);
+    const schemaSql = exportSchemaSql().replaceAll(
+      '"public"',
+      `"${testState.schemaName}"`,
+    );
     await testState.client!.unsafe(schemaSql);
   });
 
