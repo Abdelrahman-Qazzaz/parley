@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { withTimeout } from "../../shared/withTimeout";
+import { withTimeout } from "@summarizer/shared/withTimeout";
 
 describe("withTimeout", () => {
   beforeEach(() => {

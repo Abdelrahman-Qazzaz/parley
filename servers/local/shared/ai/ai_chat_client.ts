@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
 import type { ChatModel } from "@summarizer/shared/contract";
 import { getBaseEnv } from "../env";
-import { withTimeout } from "../withTimeout";
+import { withTimeout } from "@summarizer/shared/withTimeout";
 
 /**
  * Chat runs on the user's own Claude Code: each call is one `claude --print`

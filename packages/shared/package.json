@@ -4,7 +4,8 @@
   "type": "module",
   "description": "What the client and both servers share: the wire contract, and code the two servers would otherwise each carry a copy of.",
   "exports": {
-    "./contract": "./src/contract.ts"
+    "./contract": "./src/contract.ts",
+    "./withTimeout": "./src/withTimeout.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

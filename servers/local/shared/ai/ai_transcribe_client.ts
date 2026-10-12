@@ -4,7 +4,7 @@ import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import type { TranscribeModel } from "@summarizer/shared/contract";
 import { getBaseEnv } from "../env";
-import { withTimeout } from "../withTimeout";
+import { withTimeout } from "@summarizer/shared/withTimeout";
 
 /**
  * Transcription runs on this machine: faster-whisper, in whisper.py, which uv

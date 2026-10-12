@@ -3,7 +3,7 @@ import { OpenRouter } from "@openrouter/sdk";
 
 import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
 import type { ChatContentItems, ChatRequest } from "@openrouter/sdk/models";
-import { withTimeout } from "../withTimeout";
+import { withTimeout } from "@summarizer/shared/withTimeout";
 import type { ChatModel } from "@summarizer/shared/contract";
 
 const ai_client = new OpenRouter({
