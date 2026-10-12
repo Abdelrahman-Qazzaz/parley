@@ -14,6 +14,7 @@ const {
   mockUpdateWhere,
   mockLinkTranscriptions,
   mockCompleteConversationTurn,
+  mockDeleteImageAttachments,
 } = vi.hoisted(() => ({
   mockTransaction: vi.fn(),
   mockSelect: vi.fn(),
@@ -28,6 +29,7 @@ const {
   mockUpdateWhere: vi.fn(),
   mockLinkTranscriptions: vi.fn(),
   mockCompleteConversationTurn: vi.fn(),
+  mockDeleteImageAttachments: vi.fn(),
 }));
 
 const transaction = {
@@ -44,7 +46,9 @@ vi.mock("../../shared/db", async () => ({
 
 vi.mock("../../shared/data/images.data", () => ({
   linkImagesToMessage: vi.fn(),
-  images: {},
+  images: {
+    deleteOwnedUnlinkedUnreservedImageAttachments: mockDeleteImageAttachments,
+  },
 }));
 
 vi.mock("../../shared/data/conversations.data", () => ({
@@ -90,10 +94,13 @@ function returnTargetMessage(rows: unknown[]) {
   });
 }
 
+/** The images on the messages a delete removes: links joined to attachments and messages. */
 function returnImageRows(rows: unknown[]) {
   mockSelect.mockReturnValueOnce({
     from: () => ({
-      innerJoin: () => ({ where: vi.fn().mockResolvedValue(rows) }),
+      innerJoin: () => ({
+        innerJoin: () => ({ where: vi.fn().mockResolvedValue(rows) }),
+      }),
     }),
   });
 }
@@ -141,15 +148,24 @@ describe("deleteOwnedMessage", () => {
       { id: "message-2" },
       { id: "message-3" },
     ]);
+    // image-2 is still linked from an earlier message, so it stays.
+    mockDeleteImageAttachments.mockResolvedValueOnce(["image-1"]);
 
     await expect(
       messages.deleteOwnedMessage("user-1", "conversation-1", "message-2"),
     ).resolves.toEqual({
       status: "deleted",
       ids: ["message-2", "message-3"],
-      imageUploadIds: ["image-1", "image-2"],
+      imageUploadIds: ["image-1"],
       lastMessageId: "message-1",
     });
+    // Its images go too, in the same transaction, unless something still
+    // links or reserves them.
+    expect(mockDeleteImageAttachments).toHaveBeenCalledWith(
+      "user-1",
+      ["image-1", "image-2"],
+      transaction,
+    );
     expect(mockSet).toHaveBeenCalledWith({
       lastMessageId: "message-1",
       updatedAt: expect.any(Date),
