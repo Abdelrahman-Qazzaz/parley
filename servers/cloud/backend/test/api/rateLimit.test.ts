@@ -54,8 +54,9 @@ describe("rate limiting", () => {
     );
     mockgetChatModelData.mockResolvedValue({});
     mockWhere.mockImplementation(() => ({ limit: mockLimit }));
+    // The job read joins its attachment; the transcript read doesn't.
     mockFrom.mockImplementation(() => ({
-      leftJoin: () => ({ where: mockWhere }),
+      innerJoin: () => ({ where: mockWhere }),
       where: mockWhere,
     }));
     mockSelect.mockImplementation(() => ({ from: mockFrom }));
