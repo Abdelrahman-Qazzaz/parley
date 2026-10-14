@@ -10,8 +10,7 @@
   ],
   "scripts": {
     "browser:auth": "npm run --silent browser:auth --prefix servers/cloud/backend",
-    "dev": "concurrently -n cloud,local -c blue,magenta \"npm run dev:cloud\" \"npm run dev:local\"",
-    "dev:cloud": "concurrently -k -n backend,client,fetcher -c blue,green,yellow \"npm run dev --prefix servers/cloud/backend\" \"npm run dev --prefix client\" \"npm run dev:fetcher\"",
+    "dev": "concurrently -k -n backend,client,fetcher -c blue,green,yellow \"npm run dev --prefix servers/cloud/backend\" \"npm run dev --prefix client\" \"npm run dev:fetcher\"",
     "stack": "npm run --silent doppler -- docker compose -f servers/cloud/compose.yaml up --build",
     "doppler": "set -a; [ -f servers/cloud/.env ] && . ./servers/cloud/.env; set +a; exec mise exec -- doppler run --",
     "dev:fetcher": "until curl -sf http://localhost:3001/contract > /dev/null; do sleep 1; done && cd servers/cloud/youtube-fetcher && { set -a; [ -f ../.env ] && . ../.env; set +a; exec mise exec -- doppler run -- .venv/bin/python app/app.py; }",
