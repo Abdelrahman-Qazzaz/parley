@@ -8,13 +8,6 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 - **Preparation metrics never run in production.** Only tests call `withPreparationMetrics`, so every `measurePreparation` in `shared/data/images.data.ts:135` just calls `run()`. Its extra arguments, including the `persistUrlsPromiseAllId` UUID minted on each call, make the image signing code harder to read and do nothing.
 - **Commented-out line** in `api/src/sockets/socketManager.ts:34`.
 
-## Untyped request context
-
-- Validation middleware copies whatever keys the schema outputs into `c.set` (`api/src/middleware/validate.middleware.ts:57`), and handlers read them back with `c.get(...)` plus a hand-written type annotation. Hono's `Variables` generic isn't used, so a misspelled key or the wrong annotation still compiles.
-- `getUserJobs` reads `c.get("limit")`, a bare string, where every other read uses `CTX_KEYS` (`api/src/controllers/jobs.controller.ts:49`). It is also the one handler not named `handle*`.
-- `CTX_KEYS.messageAttachmentsIds` holds attachment objects, not ids, and its value is `"attachments"` (`shared/keys.ts`).
-- `FORM_KEYS` names request fields that are JSON bodies now, since uploads stopped using multipart.
-
 ## Misplaced or stale comments
 
 - The doc comment for `POST /conversations/:id/messages` sits above `mergeTranscriptsIntoContent` rather than `handleCreateMessage` (`api/src/controllers/messages.controller.ts:249`).

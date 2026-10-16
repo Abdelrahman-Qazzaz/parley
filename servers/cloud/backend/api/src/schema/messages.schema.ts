@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { SendMessageBody } from "@parley/shared/contract";
 import { takesBody } from "@parley/shared/takesBody";
-import { CTX_KEYS } from "../../../shared/keys";
 import { findChatModel } from "../../../shared/ai/ai_chat_client";
 
 const MAX_MESSAGE_LENGTH = 50_000;
@@ -44,21 +43,21 @@ function getAttachmentId(attachment: MessageAttachmentInput) {
 }
 
 export const messageReqParamSchema = z.object({
-  [CTX_KEYS.conversationId]: z.string().uuid(),
-  [CTX_KEYS.messageId]: z.string().uuid(),
+  conversationId: z.string().uuid(),
+  messageId: z.string().uuid(),
 });
 
 /** Body for POST /conversations/:id/messages — the user turn to answer. */
 export const messageCreateBodySchema = takesBody<SendMessageBody>()(
   z
     .object({
-      [CTX_KEYS.messageContent]: z
+      messageContent: z
         .string()
         .trim()
         .min(1, "Message must not be empty")
         .max(MAX_MESSAGE_LENGTH, "Message is too long"),
-      [CTX_KEYS.chosenModelId]: z.string().min(1),
-      [CTX_KEYS.messageAttachmentsIds]: z
+      chosenModelId: z.string().min(1),
+      attachments: z
         .array(messageAttachmentSchema)
         .optional()
         .default([])
@@ -71,43 +70,43 @@ export const messageCreateBodySchema = takesBody<SendMessageBody>()(
             return true;
           });
         }),
-      [CTX_KEYS.lastMessageId]: z.string().uuid().nullable(),
+      lastMessageId: z.string().uuid().nullable(),
     })
     .superRefine(async (data, ctx) => {
-      const model = await findChatModel(data[CTX_KEYS.chosenModelId]);
+      const model = await findChatModel(data.chosenModelId);
       if (!model) {
         ctx.addIssue({
           code: "custom",
           message: "Invalid model: not a chat model",
-          path: [CTX_KEYS.chosenModelId],
+          path: ["chosenModelId"],
         });
         return;
       }
-      const imageCount = data[CTX_KEYS.messageAttachmentsIds].filter(
+      const imageCount = data.attachments.filter(
         (attachment) => attachment.type === "image",
       ).length;
       if (imageCount > MAX_IMAGES) {
         ctx.addIssue({
           code: "custom",
           message: `Too many images: at most ${MAX_IMAGES} per message`,
-          path: [CTX_KEYS.messageAttachmentsIds],
+          path: ["attachments"],
         });
       }
-      const transcriptCount = data[CTX_KEYS.messageAttachmentsIds].filter(
+      const transcriptCount = data.attachments.filter(
         (attachment) => attachment.type === "transcript",
       ).length;
       if (transcriptCount > MAX_TRANSCRIPTS) {
         ctx.addIssue({
           code: "custom",
           message: `Too many transcripts: at most ${MAX_TRANSCRIPTS} per message`,
-          path: [CTX_KEYS.messageAttachmentsIds],
+          path: ["attachments"],
         });
       }
       if (imageCount > 0 && !model.acceptsImages) {
         ctx.addIssue({
           code: "custom",
           message: "Invalid model: must accept image input",
-          path: [CTX_KEYS.messageAttachmentsIds],
+          path: ["attachments"],
         });
       }
     }),

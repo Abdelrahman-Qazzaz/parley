@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { QueueYoutubeBody } from "@parley/shared/contract";
 import { takesBody } from "@parley/shared/takesBody";
-import { CTX_KEYS, FORM_KEYS } from "../../../shared/keys";
+import type { UploadId } from "@parley/shared/types";
 import {
   DEFAULT_TRANSCRIBE_MODEL,
   isValidTranscribeModel,
@@ -45,14 +45,16 @@ async function refineTranscriptionModel(modelId: string, ctx: z.RefinementCtx) {
   ctx.addIssue({
     code: "custom",
     message: "Invalid transcription model",
-    path: [FORM_KEYS.transcriptModelId],
+    path: ["transcriptModelId"],
   });
 }
 
 /** The id a mint handed out and the name of the file the client uploaded to it. */
-export const uploadIdField = z.string().uuid({
-  message: "Invalid upload id",
-});
+export const uploadIdField = z
+  .string()
+  .uuid({ message: "Invalid upload id" })
+  // A UUID is exactly what UploadId spells out; zod can't type it that narrowly.
+  .transform((id) => id as UploadId);
 export const fileNameField = z.string().trim().min(1).max(255);
 
 /**
@@ -62,9 +64,9 @@ export const fileNameField = z.string().trim().min(1).max(255);
  */
 export const audioConfirmSchema = z
   .object({
-    [FORM_KEYS.uploadId]: uploadIdField,
-    [FORM_KEYS.fileName]: fileNameField,
-    [FORM_KEYS.audioSource]: z.preprocess(
+    uploadId: uploadIdField,
+    fileName: fileNameField,
+    audioSource: z.preprocess(
       blankToUndefined,
       z
         .enum(["video", "audio"], {
@@ -75,17 +77,11 @@ export const audioConfirmSchema = z
         .optional()
         .default("audio"),
     ),
-    [FORM_KEYS.transcriptModelId]: transcriptionModelField,
+    transcriptModelId: transcriptionModelField,
   })
   .superRefine(async (data, ctx) => {
-    await refineTranscriptionModel(data[FORM_KEYS.transcriptModelId], ctx);
-  })
-  .transform((data) => ({
-    [CTX_KEYS.audioUploadId]: data[FORM_KEYS.uploadId],
-    [CTX_KEYS.fileName]: data[FORM_KEYS.fileName],
-    [CTX_KEYS.transcriptModelId]: data[FORM_KEYS.transcriptModelId],
-    [CTX_KEYS.audioSource]: data[FORM_KEYS.audioSource],
-  }));
+    await refineTranscriptionModel(data.transcriptModelId, ctx);
+  });
 
 /**
  * POST /upload/youtube — a YouTube URL. The youtube-fetcher service downloads
@@ -95,23 +91,18 @@ export const audioConfirmSchema = z
 export const youtubeUploadSchema = takesBody<QueueYoutubeBody>()(
   z
     .object({
-      [CTX_KEYS.youtubeUrl]: z.string().url(),
-      [FORM_KEYS.transcriptModelId]: transcriptionModelField,
-      [CTX_KEYS.useCaptionsIfAvailable]: z.boolean().optional().default(false),
+      youtubeUrl: z.string().url(),
+      transcriptModelId: transcriptionModelField,
+      useCaptionsIfAvailable: z.boolean().optional().default(false),
     })
     .superRefine(async (data, ctx) => {
-      if (!isYoutubeUrl(data[CTX_KEYS.youtubeUrl])) {
+      if (!isYoutubeUrl(data.youtubeUrl)) {
         ctx.addIssue({
           code: "custom",
           message: "Not a valid YouTube URL",
-          path: [CTX_KEYS.youtubeUrl],
+          path: ["youtubeUrl"],
         });
       }
-      await refineTranscriptionModel(data[FORM_KEYS.transcriptModelId], ctx);
-    })
-    .transform((data) => ({
-      [CTX_KEYS.youtubeUrl]: data[CTX_KEYS.youtubeUrl],
-      [CTX_KEYS.transcriptModelId]: data[FORM_KEYS.transcriptModelId],
-      [CTX_KEYS.useCaptionsIfAvailable]: data[CTX_KEYS.useCaptionsIfAvailable],
-    })),
+      await refineTranscriptionModel(data.transcriptModelId, ctx);
+    }),
 );

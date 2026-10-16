@@ -1,59 +1,51 @@
-import { createMiddleware } from "hono/factory";
-import type { Context } from "hono";
-import type { ZodSchema, ZodType, ZodTypeDef } from "zod";
+import type { Env, MiddlewareHandler } from "hono";
+import type { z } from "zod";
 
-export function validateReqParams<T extends Record<string, unknown>>(
-  schema: ZodSchema<T>,
-) {
-  return createMiddleware(async (c, next) => {
-    const result = schema.safeParse(c.req.param());
+type Target = "json" | "param" | "query";
+
+const INVALID_MESSAGE: Record<Target, string> = {
+  json: "Invalid request body",
+  param: "Invalid request parameters",
+  query: "Invalid request query",
+};
+
+function readTarget(c: Parameters<MiddlewareHandler>[0], target: Target) {
+  switch (target) {
+    // An empty or malformed body parses as null, so a schema that preprocesses
+    // (e.g. coercing an absent body to {}) still gets to decide.
+    case "json":
+      return c.req.json().catch(() => null);
+    case "param":
+      return c.req.param();
+    case "query":
+      return c.req.query();
+  }
+}
+
+/**
+ * Parses one part of the request with `schema` and answers 400 when it
+ * doesn't fit. The handler reads the parsed value, typed, with
+ * `c.req.valid(target)`.
+ *
+ * Parsing is async so a schema with async refinements works too. A body's
+ * error surfaces the schema's own message (e.g. "Not a valid YouTube URL"); a
+ * generic string would make every custom message in the schema dead code.
+ */
+export function validate<T extends Target, S extends z.ZodTypeAny>(
+  target: T,
+  schema: S,
+): MiddlewareHandler<Env, string, { out: { [K in T]: z.output<S> } }> {
+  return async (c, next) => {
+    const result = await schema.safeParseAsync(await readTarget(c, target));
     if (!result.success) {
-      return c.json({ message: "Invalid request parameters" }, 400);
-    }
-    applyValidated(c, result.data);
-
-    await next();
-  });
-}
-
-export function validateReqBody<T extends Record<string, unknown>>(
-  // Input type is free so preprocess/transform schemas (e.g. coercing an empty
-  // body to {}) satisfy the constraint; the output stays a CTX-keyed record.
-  schema: ZodType<T, ZodTypeDef, unknown>,
-) {
-  return createMiddleware(async (c, next) => {
-    const body = await c.req.json().catch(() => null);
-    // safeParseAsync (not safeParse) so schemas with async refinements — e.g.
-    // youtubeUploadSchema validating models via validateModel — work here too.
-    const result = await schema.safeParseAsync(body);
-    if (!result.success) {
-      // Surface the schema's own message (e.g. "Not a valid YouTube URL"); a
-      // generic string would make every custom message in the schema dead code.
-      const issue = result.error.issues[0];
-      return c.json({ message: issue?.message ?? "Invalid request body" }, 400);
+      const message =
+        target === "json"
+          ? (result.error.issues[0]?.message ?? INVALID_MESSAGE.json)
+          : INVALID_MESSAGE[target];
+      return c.json({ message }, 400);
     }
 
-    applyValidated(c, result.data);
-
+    c.req.addValidatedData(target, result.data);
     await next();
-  });
-}
-
-export function validateReqQuery<T extends Record<string, unknown>>(
-  schema: ZodSchema<T>,
-) {
-  return createMiddleware(async (c, next) => {
-    const body = c.req.query();
-    const result = schema.safeParse(body);
-    if (!result.success)
-      return c.json({ message: "Invalid request query" }, 400);
-
-    applyValidated(c, result.data);
-
-    await next();
-  });
-}
-
-function applyValidated(c: Context, data: Record<string, unknown>) {
-  for (const [key, value] of Object.entries(data)) c.set(key, value);
+  };
 }

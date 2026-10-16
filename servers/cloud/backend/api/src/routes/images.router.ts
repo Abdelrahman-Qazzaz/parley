@@ -5,16 +5,7 @@ import {
   uploadConfirmRateLimiter,
   uploadRateLimiter,
 } from "../middleware/rateLimit.middleware";
-import { CTX_KEYS } from "../../../shared/keys";
-import {
-  validateReqBody,
-  validateReqParams,
-} from "../middleware/validate.middleware";
-import {
-  imageConfirmSchema,
-  imageReqParamSchema,
-} from "../schema/images.schema";
-import { requireAuth } from "../middleware/auth.middleware";
+import { requireAuth, type AuthEnv } from "../middleware/auth.middleware";
 
 /**
  * Mounted under /upload/image, ahead of the parent's middleware, so nothing
@@ -23,33 +14,30 @@ import { requireAuth } from "../middleware/auth.middleware";
  * has the confirm budget, and reading an image back re-signs at most once a
  * week, so it gets a read-sized budget instead.
  */
-export const imagesRouter = new Hono();
+export const imagesRouter = new Hono<AuthEnv>();
 
 imagesRouter.use("*", requireAuth);
 
 imagesRouter.post(
   "/",
   uploadRateLimiter,
-  imagesController.handleImageUploadUrl,
+  ...imagesController.handleImageUploadUrl,
 );
 
 imagesRouter.post(
   "/confirm",
   uploadConfirmRateLimiter,
-  validateReqBody(imageConfirmSchema),
-  imagesController.handleImageConfirm,
+  ...imagesController.handleImageConfirm,
 );
 
 imagesRouter.get(
-  `/:${CTX_KEYS.imageUploadId}`,
+  "/:imageUploadId",
   imageReadRateLimiter,
-  validateReqParams(imageReqParamSchema),
-  imagesController.handleGetImage,
+  ...imagesController.handleGetImage,
 );
 
 imagesRouter.delete(
-  `/:${CTX_KEYS.imageUploadId}`,
+  "/:imageUploadId",
   imageReadRateLimiter,
-  validateReqParams(imageReqParamSchema),
-  imagesController.handleDeleteImage,
+  ...imagesController.handleDeleteImage,
 );

@@ -17,7 +17,12 @@ authRouter.get(
   authCallbackRateLimiter,
   authController.handleCallback,
 );
-authRouter.get("/me", authMeRateLimiter, requireAuth, authController.handleMe);
+authRouter.get(
+  "/me",
+  authMeRateLimiter,
+  requireAuth,
+  ...authController.handleMe,
+);
 authRouter.post(
   "/refresh",
   authRefreshRateLimiter,

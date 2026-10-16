@@ -15,8 +15,9 @@ import {
   setRefreshToken,
   setSessionToken,
 } from "../cookies/session";
+import { authed } from "../middleware/auth.middleware";
 
-import { COOKIE_KEYS, CTX_KEYS } from "../../../shared/keys";
+import { COOKIE_KEYS } from "../../../shared/keys";
 import { data } from "../../../shared/data";
 import { logger } from "@parley/shared/logger";
 
@@ -35,12 +36,12 @@ function expiresAt(epochSeconds: number) {
  * Who is signed in, and when their access token expires, so the client can
  * refresh it before then.
  */
-export async function handleMe(c: Context) {
+export const handleMe = authed.createHandlers(async (c) => {
   return c.json({
-    userId: c.get(CTX_KEYS.userId),
-    expiresAt: expiresAt(c.get(CTX_KEYS.sessionExpiresAtEpochSeconds)),
+    userId: c.var.userId,
+    expiresAt: expiresAt(c.var.sessionExpiresAtEpochSeconds),
   });
-}
+});
 
 /**
  * Whether WorkOS turned the refresh token down, as opposed to failing to

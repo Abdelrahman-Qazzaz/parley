@@ -10,9 +10,10 @@ import { serverUrl, type Server } from "./server";
 export type { UploadedImage };
 
 /**
- * Wire names for the request fields, mirroring the server's FORM_KEYS
- * (servers/cloud/backend/shared/keys.ts). A field the server doesn't recognise is silently
- * dropped by its validator, so these have to match exactly.
+ * Wire names for the request fields, mirroring the field names the servers'
+ * upload schemas read (servers/cloud/backend/api/src/schema/upload.schema.ts,
+ * and FORM_KEYS in servers/local/shared/keys.ts). A field the server doesn't
+ * recognise is silently dropped by its validator, so these have to match exactly.
  */
 const FORM_KEYS = {
   uploadId: "uploadId",

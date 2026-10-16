@@ -40,7 +40,7 @@ export async function createApp() {
   await verifyApiServices();
 
   app.get("/health", (c) => c.json({ ok: true }));
-  app.get("/events", requireAuth, handleEvents);
+  app.get("/events", requireAuth, ...handleEvents);
   // Cross-service contract: non-sensitive shared facts (queue names + bucket
   // name) the Python youtube-fetcher reads at boot so it never hand-mirrors
   // them. Public + unauthenticated on purpose — none of this is sensitive and

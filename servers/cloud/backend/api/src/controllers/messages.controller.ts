@@ -17,7 +17,6 @@ import {
   type ResolvedImage,
   type StoredTranscriptAttachment,
 } from "../../../shared/data";
-import { CTX_KEYS } from "../../../shared/keys";
 import {
   buildUserTurn,
   chatAI,
@@ -27,7 +26,14 @@ import {
 import type { ChatTurn } from "../../../shared/ai/ai_chat_client";
 import { logger, messageOf } from "@parley/shared/logger";
 import { deleteObjects } from "../../../shared/uploads";
-import type { MessageAttachmentInput } from "../schema/messages.schema";
+import type { z } from "zod";
+import { authed } from "../middleware/auth.middleware";
+import { validate } from "../middleware/validate.middleware";
+import { conversationReqParamSchema } from "../schema/conversations.schema";
+import {
+  messageCreateBodySchema,
+  messageReqParamSchema,
+} from "../schema/messages.schema";
 
 const log = logger.child({ controller: "messages" });
 
@@ -156,37 +162,40 @@ function countMessagesInContextWindow(
 }
 
 /** GET /conversations/:conversationId/messages — full history, oldest first. */
-export async function handleListMessages(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const conversationId = c.get(CTX_KEYS.conversationId);
+export const handleListMessages = authed.createHandlers(
+  validate("param", conversationReqParamSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { conversationId } = c.req.valid("param");
 
-  // Ownership check and the rows themselves are independent reads; the rows
-  // are simply discarded on the 404 path.
-  const [ownedConversation, rows] = await Promise.all([
-    data.conversations.findOwnedConversation(userId, conversationId),
-    data.messages.findConversationMessages(conversationId),
-  ]);
+    // Ownership check and the rows themselves are independent reads; the rows
+    // are simply discarded on the 404 path.
+    const [ownedConversation, rows] = await Promise.all([
+      data.conversations.findOwnedConversation(userId, conversationId),
+      data.messages.findConversationMessages(conversationId),
+    ]);
 
-  if (!ownedConversation)
-    return c.json({ message: "Conversation not found" }, 404);
+    if (!ownedConversation)
+      return c.json({ message: "Conversation not found" }, 404);
 
-  const messageIds = userMessageIds(rows);
-  const [imagesByMessageId, transcriptsByMessageId] = await Promise.all([
-    data.images.resolveMessageImages(userId, messageIds),
-    data.transcripts.findMessageTranscriptAttachments(userId, messageIds),
-  ]);
+    const messageIds = userMessageIds(rows);
+    const [imagesByMessageId, transcriptsByMessageId] = await Promise.all([
+      data.images.resolveMessageImages(userId, messageIds),
+      data.transcripts.findMessageTranscriptAttachments(userId, messageIds),
+    ]);
 
-  return c.json({
-    lastMessageId: ownedConversation.lastMessageId,
-    messages: rows.map((row) =>
-      toMessageJson(
-        row,
-        imagesByMessageId.get(row.id),
-        transcriptsByMessageId.get(row.id),
+    return c.json({
+      lastMessageId: ownedConversation.lastMessageId,
+      messages: rows.map((row) =>
+        toMessageJson(
+          row,
+          imagesByMessageId.get(row.id),
+          transcriptsByMessageId.get(row.id),
+        ),
       ),
-    ),
-  } satisfies MessagesResponse);
-}
+    } satisfies MessagesResponse);
+  },
+);
 
 async function unclaimConversationSafely(
   userId: string,
@@ -217,15 +226,21 @@ type MessageRequest = {
   expectedLastMessageId: string | null;
 };
 
-function messageRequestFrom(c: Context): MessageRequest {
-  const attachments: MessageAttachmentInput[] = c.get(
-    CTX_KEYS.messageAttachmentsIds,
-  );
+function messageRequestFrom(
+  userId: string,
+  conversationId: string,
+  {
+    messageContent,
+    chosenModelId,
+    attachments,
+    lastMessageId,
+  }: z.output<typeof messageCreateBodySchema>,
+): MessageRequest {
   return {
-    userId: c.get(CTX_KEYS.userId),
-    conversationId: c.get(CTX_KEYS.conversationId),
-    content: c.get(CTX_KEYS.messageContent),
-    chosenModelId: c.get(CTX_KEYS.chosenModelId),
+    userId,
+    conversationId,
+    content: messageContent,
+    chosenModelId,
     attachmentIds: attachments.map((attachment) =>
       attachment.type === "image"
         ? attachment.imageUploadId
@@ -237,7 +252,7 @@ function messageRequestFrom(c: Context): MessageRequest {
     audioUploadIds: attachments.flatMap((attachment) =>
       attachment.type === "transcript" ? [attachment.audioUploadId] : [],
     ),
-    expectedLastMessageId: c.get(CTX_KEYS.lastMessageId),
+    expectedLastMessageId: lastMessageId,
   };
 }
 
@@ -523,22 +538,30 @@ function createClaimData(messageInput: MessageRequest) {
 
   return [claimToken, claimPromises] as const;
 }
-export async function handleCreateMessage(c: Context) {
-  const messageInput = messageRequestFrom(c);
-  const [claimToken, claimPromises] = createClaimData(messageInput);
+export const handleCreateMessage = authed.createHandlers(
+  validate("param", conversationReqParamSchema),
+  validate("json", messageCreateBodySchema),
+  async (c) => {
+    const messageInput = messageRequestFrom(
+      c.var.userId,
+      c.req.valid("param").conversationId,
+      c.req.valid("json"),
+    );
+    const [claimToken, claimPromises] = createClaimData(messageInput);
 
-  return streamAndPersistMessageTurn(
-    c,
-    messageInput,
-    claimPromises,
-    claimToken,
-    async () => {
-      const prepared = await prepareMessageTurn(messageInput, claimPromises);
+    return streamAndPersistMessageTurn(
+      c,
+      messageInput,
+      claimPromises,
+      claimToken,
+      async () => {
+        const prepared = await prepareMessageTurn(messageInput, claimPromises);
 
-      return prepared;
-    },
-  );
-}
+        return prepared;
+      },
+    );
+  },
+);
 
 /**
  * PATCH /conversations/:conversationId/messages/:messageId — replace a message
@@ -547,48 +570,58 @@ export async function handleCreateMessage(c: Context) {
  * that would be rejected takes nothing with it. The replacement is a new
  * message; the edited one is gone.
  */
-export async function handlePatchMessage(c: Context) {
-  const messageInput = messageRequestFrom(c);
-  const messageId = c.get(CTX_KEYS.messageId);
-  const [claimToken, claimPromises] = createClaimData(messageInput);
+export const handlePatchMessage = authed.createHandlers(
+  validate("param", messageReqParamSchema),
+  validate("json", messageCreateBodySchema),
+  async (c) => {
+    const { conversationId, messageId } = c.req.valid("param");
+    const messageInput = messageRequestFrom(
+      c.var.userId,
+      conversationId,
+      c.req.valid("json"),
+    );
+    const [claimToken, claimPromises] = createClaimData(messageInput);
 
-  return streamAndPersistMessageTurn(
-    c,
-    messageInput,
-    claimPromises,
-    claimToken,
-    async () => {
-      const prepared = await prepareMessageTurn(
-        messageInput,
-        claimPromises,
-        messageId,
-      );
-      await deleteMessageTail(messageInput, claimToken, messageId);
-      return prepared;
-    },
-  );
-}
+    return streamAndPersistMessageTurn(
+      c,
+      messageInput,
+      claimPromises,
+      claimToken,
+      async () => {
+        const prepared = await prepareMessageTurn(
+          messageInput,
+          claimPromises,
+          messageId,
+        );
+        await deleteMessageTail(messageInput, claimToken, messageId);
+        return prepared;
+      },
+    );
+  },
+);
 
 /** DELETE /conversations/:conversationId/messages/:messageId */
-export async function handleDeleteMessage(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const conversationId = c.get(CTX_KEYS.conversationId);
-  const messageId = c.get(CTX_KEYS.messageId);
+export const handleDeleteMessage = authed.createHandlers(
+  validate("param", messageReqParamSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { conversationId, messageId } = c.req.valid("param");
 
-  const result = await data.messages.deleteOwnedMessage(
-    userId,
-    conversationId,
-    messageId,
-  );
+    const result = await data.messages.deleteOwnedMessage(
+      userId,
+      conversationId,
+      messageId,
+    );
 
-  if (!result) return c.json({ message: "Message not found" }, 404);
-  // Without `onlyRole` the only other outcome is a claimed turn.
-  if (result.status !== "deleted")
-    return c.json({ message: "A response is already in progress" }, 409);
+    if (!result) return c.json({ message: "Message not found" }, 404);
+    // Without `onlyRole` the only other outcome is a claimed turn.
+    if (result.status !== "deleted")
+      return c.json({ message: "A response is already in progress" }, 409);
 
-  await deleteObjects(
-    userId,
-    result.imageUploadIds.map((uploadId) => ({ kind: "image", uploadId })),
-  );
-  return c.json({ message: "Message deleted" }, 200);
-}
+    await deleteObjects(
+      userId,
+      result.imageUploadIds.map((uploadId) => ({ kind: "image", uploadId })),
+    );
+    return c.json({ message: "Message deleted" }, 200);
+  },
+);

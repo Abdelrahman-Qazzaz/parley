@@ -1,42 +1,18 @@
 import { Hono } from "hono";
 import * as messagesController from "../controllers/messages.controller";
-import {
-  validateReqParams,
-  validateReqBody,
-} from "../middleware/validate.middleware";
-import { CTX_KEYS } from "../../../shared/keys";
-import { conversationReqParamSchema } from "../schema/conversations.schema";
-import {
-  messageReqParamSchema,
-  messageCreateBodySchema,
-} from "../schema/messages.schema";
+import type { AuthEnv } from "../middleware/auth.middleware";
 import { httpCache } from "@parley/shared/cache.middleware";
 
-export const messagesRouter = new Hono();
+export const messagesRouter = new Hono<AuthEnv>();
 
 messagesRouter.get(
   "/",
-  validateReqParams(conversationReqParamSchema),
   httpCache({ revalidate: true }),
-  messagesController.handleListMessages,
+  ...messagesController.handleListMessages,
 );
 
-messagesRouter.delete(
-  `/:${CTX_KEYS.messageId}`,
-  validateReqParams(messageReqParamSchema),
-  messagesController.handleDeleteMessage,
-);
+messagesRouter.delete("/:messageId", ...messagesController.handleDeleteMessage);
 
-messagesRouter.post(
-  "/",
-  validateReqParams(conversationReqParamSchema),
-  validateReqBody(messageCreateBodySchema),
-  messagesController.handleCreateMessage,
-);
+messagesRouter.post("/", ...messagesController.handleCreateMessage);
 
-messagesRouter.patch(
-  `/:${CTX_KEYS.messageId}`,
-  validateReqParams(messageReqParamSchema),
-  validateReqBody(messageCreateBodySchema),
-  messagesController.handlePatchMessage,
-);
+messagesRouter.patch("/:messageId", ...messagesController.handlePatchMessage);
