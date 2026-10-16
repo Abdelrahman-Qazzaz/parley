@@ -20,16 +20,16 @@ COPY servers/local/package.json servers/local/
 COPY packages/shared/package.json packages/shared/
 
 FROM manifests AS client
-RUN npm ci --ignore-scripts --workspace @summarizer/client
+RUN npm ci --ignore-scripts --workspace @parley/client
 COPY packages packages
 COPY client client
-RUN npm run build --workspace @summarizer/client
+RUN npm run build --workspace @parley/client
 
 FROM manifests AS builder
-RUN npm ci --ignore-scripts --workspace @summarizer/cloud
+RUN npm ci --ignore-scripts --workspace @parley/cloud
 COPY packages packages
 COPY servers/cloud/backend servers/cloud/backend
-RUN npm run build --workspace @summarizer/cloud
+RUN npm run build --workspace @parley/cloud
 
 FROM manifests AS runtime
 ENV NODE_ENV=production
@@ -38,7 +38,7 @@ ENV CLIENT_DIR=/repo/client-dist
 
 # Production dependencies only. Every one is pure JS, so there is nothing to
 # compile and no build toolchain in the final image.
-RUN npm ci --ignore-scripts --omit=dev --workspace @summarizer/cloud && npm cache clean --force
+RUN npm ci --ignore-scripts --omit=dev --workspace @parley/cloud && npm cache clean --force
 
 WORKDIR /repo/servers/cloud/backend
 COPY --from=builder /repo/servers/cloud/backend/dist ./dist

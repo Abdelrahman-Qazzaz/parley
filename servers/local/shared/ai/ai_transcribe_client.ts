@@ -2,9 +2,9 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
-import type { TranscribeModel } from "@summarizer/shared/contract";
+import type { TranscribeModel } from "@parley/shared/contract";
 import { getBaseEnv } from "../env";
-import { withTimeout } from "@summarizer/shared/withTimeout";
+import { withTimeout } from "@parley/shared/withTimeout";
 
 /**
  * Transcription runs on this machine: faster-whisper, in whisper.py, which uv

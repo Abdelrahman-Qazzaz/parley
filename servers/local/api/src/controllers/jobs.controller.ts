@@ -1,12 +1,12 @@
 import type { Context } from "hono";
-import type { Job, JobsPage } from "@summarizer/shared/contract";
+import type { Job, JobsPage } from "@parley/shared/contract";
 import { CTX_KEYS } from "../../../shared/keys";
 import { jobCursorSchema, type JobStatus } from "../schema/jobs.schema";
-import { encodeCursor, decodeCursor } from "@summarizer/shared/cursor";
+import { encodeCursor, decodeCursor } from "@parley/shared/cursor";
 import { files } from "../../../shared/files";
 import { data } from "../../../shared/data";
-import { tryCatch } from "@summarizer/shared/try-catch";
-import { logger } from "@summarizer/shared/logger";
+import { tryCatch } from "@parley/shared/try-catch";
+import { logger } from "@parley/shared/logger";
 
 const log = logger.child({ controller: "jobs" });
 

@@ -2,7 +2,7 @@ import type {
   Conversation,
   ConversationsResponse,
   RenameConversationBody,
-} from "@summarizer/shared/contract";
+} from "@parley/shared/contract";
 import { apiFetch, apiJson, jsonRequest } from "./http";
 import type { Server } from "./server";
 

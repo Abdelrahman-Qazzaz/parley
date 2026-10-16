@@ -1,10 +1,10 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
-import type { UploadedImage } from "@summarizer/shared/contract";
+import type { UploadedImage } from "@parley/shared/contract";
 import { data } from "../../../shared/data";
 import { files } from "../../../shared/files";
 import { CTX_KEYS } from "../../../shared/keys";
-import type { UploadId } from "@summarizer/shared/types";
+import type { UploadId } from "@parley/shared/types";
 
 /**
  * POST /upload/image — an image, dropped into the chat or uploaded from the

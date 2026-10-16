@@ -1,5 +1,5 @@
 import { createContext } from "react";
-import type { ServerEvents } from "@summarizer/shared/contract";
+import type { ServerEvents } from "@parley/shared/contract";
 
 export type EventListener<E extends keyof ServerEvents> = (
   payload: ServerEvents[E],

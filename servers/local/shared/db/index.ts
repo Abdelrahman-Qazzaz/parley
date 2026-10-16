@@ -8,7 +8,7 @@ mkdirSync(databaseDirectory, { recursive: true });
 
 /** SQLite, in one file under DATA_DIR. */
 const database = openDatabase(
-  `file:${path.join(databaseDirectory, "summarizer.db")}`,
+  `file:${path.join(databaseDirectory, "parley.db")}`,
 );
 
 export const db = database.db;

@@ -6,7 +6,7 @@ import type {
   ConsumeMessage,
 } from "amqplib";
 import { getBaseEnv } from "../env";
-import { logger, messageOf } from "@summarizer/shared/logger";
+import { logger, messageOf } from "@parley/shared/logger";
 import { QUEUES, type Queue, type QueuePayloads } from "./queues";
 export { QUEUES } from "./queues";
 

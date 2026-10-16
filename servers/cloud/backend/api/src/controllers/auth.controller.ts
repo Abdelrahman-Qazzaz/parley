@@ -18,7 +18,7 @@ import {
 
 import { COOKIE_KEYS, CTX_KEYS } from "../../../shared/keys";
 import { data } from "../../../shared/data";
-import { logger } from "@summarizer/shared/logger";
+import { logger } from "@parley/shared/logger";
 
 const log = logger.child({ controller: "auth" });
 

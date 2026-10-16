@@ -6,7 +6,7 @@ import {
   db,
   type Executor,
 } from "../db";
-import type { UploadId } from "@summarizer/shared/types";
+import type { UploadId } from "@parley/shared/types";
 import { attachments } from "./attachments.data";
 
 /** What the client is told about an image, and what the model needs of it. */

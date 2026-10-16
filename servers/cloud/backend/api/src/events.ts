@@ -1,4 +1,4 @@
-import { createEventHub } from "@summarizer/shared/events";
+import { createEventHub } from "@parley/shared/events";
 
 /**
  * The GET /events streams this instance's clients hold open, by user id: a

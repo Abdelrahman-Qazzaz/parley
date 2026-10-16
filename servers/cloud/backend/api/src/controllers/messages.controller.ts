@@ -7,9 +7,9 @@ import type {
   ChatMessage,
   MessagesResponse,
   ReplyStreamEvents,
-} from "@summarizer/shared/contract";
+} from "@parley/shared/contract";
 import { streamSSE } from "hono/streaming";
-import { SSEEventQueue } from "@summarizer/shared/sse";
+import { SSEEventQueue } from "@parley/shared/sse";
 import {
   data,
   type CreateMessageHistory,
@@ -25,7 +25,7 @@ import {
   findChatModel,
 } from "../../../shared/ai/ai_chat_client";
 import type { ChatTurn } from "../../../shared/ai/ai_chat_client";
-import { logger, messageOf } from "@summarizer/shared/logger";
+import { logger, messageOf } from "@parley/shared/logger";
 import { deleteObjects } from "../../../shared/uploads";
 import type { MessageAttachmentInput } from "../schema/messages.schema";
 

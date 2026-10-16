@@ -1,5 +1,5 @@
 import { data } from "./data";
-import { logger } from "@summarizer/shared/logger";
+import { logger } from "@parley/shared/logger";
 import { UPLOAD_CONFIRM_WINDOW_MS, deleteObjects } from "./uploads";
 
 const log = logger.child({ component: "sweeper" });

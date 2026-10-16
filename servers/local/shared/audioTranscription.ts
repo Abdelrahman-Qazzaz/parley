@@ -1,7 +1,7 @@
 import { data } from "./data";
-import { logger } from "@summarizer/shared/logger";
+import { logger } from "@parley/shared/logger";
 import { mq } from "./message-queue/messageQueue";
-import type { UploadId } from "@summarizer/shared/types";
+import type { UploadId } from "@parley/shared/types";
 
 const log = logger.child({ component: "audio-transcription" });
 

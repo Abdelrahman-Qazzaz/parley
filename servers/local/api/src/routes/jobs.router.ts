@@ -6,7 +6,7 @@ import {
 } from "../middleware/validate.middleware";
 import { CTX_KEYS } from "../../../shared/keys";
 import { jobReqParamSchema, jobsListQuerySchema } from "../schema/jobs.schema";
-import { httpCache } from "@summarizer/shared/cache.middleware";
+import { httpCache } from "@parley/shared/cache.middleware";
 
 export const jobsRouter = new Hono();
 

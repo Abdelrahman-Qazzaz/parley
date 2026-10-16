@@ -1,6 +1,6 @@
 import { getRedisClient } from "./redis";
-import { logger } from "@summarizer/shared/logger";
-import { tryCatch } from "@summarizer/shared/try-catch";
+import { logger } from "@parley/shared/logger";
+import { tryCatch } from "@parley/shared/try-catch";
 import { CACHE_KEYS, type CacheKey } from "./cacheKeys";
 
 export { CACHE_KEYS } from "./cacheKeys";

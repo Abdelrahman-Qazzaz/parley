@@ -57,7 +57,7 @@ function shouldPersist(query: Query): boolean {
  */
 function availableStorage(): Storage | undefined {
   try {
-    const probe = "__summarizer_probe__";
+    const probe = "__parley_probe__";
     window.localStorage.setItem(probe, probe);
     window.localStorage.removeItem(probe);
     return window.localStorage;
@@ -69,7 +69,7 @@ function availableStorage(): Storage | undefined {
 export const persistOptions = {
   persister: createSyncStoragePersister({
     storage: availableStorage(),
-    key: "summarizer-query-cache",
+    key: "parley-query-cache",
   }),
   maxAge: 24 * 60 * 60 * 1000,
   // Bump when a cached shape changes, to drop entries written by an older build.

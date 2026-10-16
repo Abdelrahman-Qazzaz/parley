@@ -8,7 +8,7 @@ import path from "node:path";
  * before the workers start, so each inherits it.
  */
 export default function setup() {
-  const dataDir = mkdtempSync(path.join(tmpdir(), "summarizer-test-"));
+  const dataDir = mkdtempSync(path.join(tmpdir(), "parley-test-"));
   process.env.DATA_DIR = dataDir;
   return () => rmSync(dataDir, { recursive: true, force: true });
 }

@@ -7,9 +7,9 @@ import { mq } from "../shared/message-queue/messageQueue";
 import { resumeUnfinishedJobs } from "../shared/audioTranscription";
 import { data } from "../shared/data";
 import { closeDb, migrateDb } from "../shared/db";
-import { onShutdown } from "@summarizer/shared/shutdown";
+import { onShutdown } from "@parley/shared/shutdown";
 import { files } from "../shared/files";
-import { logger } from "@summarizer/shared/logger";
+import { logger } from "@parley/shared/logger";
 import { handleTranscribeJob } from "./src/transcribeJob";
 import { handleYoutubeFetch } from "./src/youtubeFetch";
 

@@ -1,6 +1,6 @@
 import { mq } from "../shared/message-queue/messageQueue";
 import { scheduleSweeper } from "../shared/sweeper";
-import { onShutdown } from "@summarizer/shared/shutdown";
+import { onShutdown } from "@parley/shared/shutdown";
 import { verifyTranscribeWorkerServices } from "./startup";
 import { handleTranscribeJob } from "./transcribeJob";
 

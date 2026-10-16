@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   readServerSentEvents,
   type ServerSentEvent,
-} from "@summarizer/shared/sseReader";
+} from "@parley/shared/sseReader";
 
 /** A body that arrives in exactly these chunks. */
 function body(...chunks: string[]) {

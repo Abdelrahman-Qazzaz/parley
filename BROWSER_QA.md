@@ -16,9 +16,9 @@ npm run browser:auth
 In another shell, open an isolated browser session and load the generated cookie:
 
 ```sh
-playwright-cli -s=summarizer-qa open http://localhost:5173
-playwright-cli -s=summarizer-qa state-load output/playwright/auth-state.json
-playwright-cli -s=summarizer-qa goto http://localhost:5173/app
+playwright-cli -s=parley-qa open http://localhost:5173
+playwright-cli -s=parley-qa state-load output/playwright/auth-state.json
+playwright-cli -s=parley-qa goto http://localhost:5173/app
 ```
 
 Use `http://localhost:5173` consistently so the API, WebSocket, and session cookie share the same hostname. Use `playwright-cli show` to watch or take control of the session.
@@ -28,10 +28,10 @@ Use `http://localhost:5173` consistently so the API, WebSocket, and session cook
 Write screenshots, traces, and videos under `output/playwright/`, which is ignored by Git:
 
 ```sh
-playwright-cli -s=summarizer-qa screenshot --filename=output/playwright/page.png
-playwright-cli -s=summarizer-qa tracing-start
-playwright-cli -s=summarizer-qa tracing-stop
-playwright-cli -s=summarizer-qa close
+playwright-cli -s=parley-qa screenshot --filename=output/playwright/page.png
+playwright-cli -s=parley-qa tracing-start
+playwright-cli -s=parley-qa tracing-stop
+playwright-cli -s=parley-qa close
 ```
 
 This is live smoke testing: uploads, transcripts, and chat messages call the configured providers and can incur development usage.

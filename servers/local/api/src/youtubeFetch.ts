@@ -1,7 +1,7 @@
 import { mkdtemp, readdir, readFile, rm, stat } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
-import { logger, messageOf } from "@summarizer/shared/logger";
+import { logger, messageOf } from "@parley/shared/logger";
 import {
   mq,
   type QueuePayloads,

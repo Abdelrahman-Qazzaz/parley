@@ -1,4 +1,4 @@
-import { logger, messageOf } from "@summarizer/shared/logger";
+import { logger, messageOf } from "@parley/shared/logger";
 
 type ServiceCheck = {
   /** Human-readable service name, shown in the startup error. */

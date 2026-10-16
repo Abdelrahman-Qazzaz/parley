@@ -10,4 +10,7 @@ export type ThemeContextValue = {
 
 export const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-export const THEME_STORAGE_KEY = "summarizer-theme";
+export const THEME_STORAGE_KEY = "parley-theme";
+
+/** Where the theme was kept before the rename to Parley; read once, then rewritten. */
+export const LEGACY_THEME_STORAGE_KEY = "summarizer-theme";

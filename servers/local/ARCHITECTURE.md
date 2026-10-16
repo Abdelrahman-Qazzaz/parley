@@ -1,7 +1,7 @@
 # Backend architecture
 
 A monolith. Everything under `servers/local/` is a single npm package
-(`@summarizer/local`) that runs as one process, `api`: the HTTP service
+(`@parley/local`) that runs as one process, `api`: the HTTP service
 clients talk to, with job updates pushed over server-sent events (`GET
 /events`), which also fetches YouTube videos and runs
 transcription off in-memory queues. It keeps its data in SQLite, in one file under `DATA_DIR`. Migrations in `drizzle/` are

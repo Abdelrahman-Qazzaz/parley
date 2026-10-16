@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { Hono } from "hono";
-import { createEventHub } from "@summarizer/shared/events";
+import { createEventHub } from "@parley/shared/events";
 
 const hub = createEventHub<string>();
 const app = new Hono();

@@ -6,8 +6,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { ServerEvents } from "@summarizer/shared/contract";
-import { readServerSentEvents } from "@summarizer/shared/sseReader";
+import type { ServerEvents } from "@parley/shared/contract";
+import { readServerSentEvents } from "@parley/shared/sseReader";
 import { apiFetch } from "../../api/http";
 import { useServer } from "../server/useServer";
 import { useServerReady } from "../server/useServerReady";

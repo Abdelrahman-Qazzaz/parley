@@ -3,7 +3,7 @@ import type {
   ChatModel,
   ModelsResponse,
   TranscribeModel,
-} from "@summarizer/shared/contract";
+} from "@parley/shared/contract";
 import { listChatModels } from "../../../shared/ai/ai_chat_client";
 import { listTranscribeModels } from "../../../shared/ai/ai_transcribe_client";
 

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { onShutdown } from "@summarizer/shared/shutdown";
+import { onShutdown } from "@parley/shared/shutdown";
 
 /**
  * The drain itself is process-specific; what is shared — and what decides

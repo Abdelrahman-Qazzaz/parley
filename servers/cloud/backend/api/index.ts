@@ -5,7 +5,7 @@ import { events } from "./src/events";
 
 import { mq } from "../shared/message-queue/messageQueue";
 import { data } from "../shared/data";
-import { onShutdown } from "@summarizer/shared/shutdown";
+import { onShutdown } from "@parley/shared/shutdown";
 
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";

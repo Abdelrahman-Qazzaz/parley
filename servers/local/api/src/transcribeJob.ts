@@ -4,13 +4,13 @@ import {
 } from "../../shared/ai/ai_transcribe_client";
 import { files } from "../../shared/files";
 import { data } from "../../shared/data";
-import { logger } from "@summarizer/shared/logger";
+import { logger } from "@parley/shared/logger";
 import {
   DeadLetterError,
   mq,
   type DeliveryMetadata,
 } from "../../shared/message-queue/messageQueue";
-import type { UploadId } from "@summarizer/shared/types";
+import type { UploadId } from "@parley/shared/types";
 
 const log = logger.child({ component: "transcribe" });
 

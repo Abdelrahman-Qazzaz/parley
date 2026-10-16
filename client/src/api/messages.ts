@@ -6,11 +6,11 @@ import type {
   MessageTranscript,
   ReplyStreamEvents,
   SendMessageBody,
-} from "@summarizer/shared/contract";
+} from "@parley/shared/contract";
 import {
   readServerSentEvents,
   type ServerSentEvent,
-} from "@summarizer/shared/sseReader";
+} from "@parley/shared/sseReader";
 import { apiFetch, apiJson, jsonRequest } from "./http";
 import { serverUrl, type Server } from "./server";
 

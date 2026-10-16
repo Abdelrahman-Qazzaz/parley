@@ -10,7 +10,7 @@ const dataDirs = vi.hoisted(async () => {
   const { tmpdir } = await import("node:os");
   const { join } = await import("node:path");
   const shared = process.env.DATA_DIR;
-  process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "summarizer-files-"));
+  process.env.DATA_DIR = mkdtempSync(join(tmpdir(), "parley-files-"));
   return { shared, own: process.env.DATA_DIR };
 });
 

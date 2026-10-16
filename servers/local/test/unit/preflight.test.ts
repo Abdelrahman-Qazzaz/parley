@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@summarizer/shared/logger", async (importActual) => ({
-  ...(await importActual<typeof import("@summarizer/shared/logger")>()),
+vi.mock("@parley/shared/logger", async (importActual) => ({
+  ...(await importActual<typeof import("@parley/shared/logger")>()),
   logger: { error: vi.fn() },
 }));
 

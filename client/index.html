@@ -4,10 +4,12 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Summarizer</title>
+    <title>Parley</title>
     <script>
       (function () {
-        var stored = localStorage.getItem("summarizer-theme");
+        var stored =
+          localStorage.getItem("parley-theme") ||
+          localStorage.getItem("summarizer-theme");
         var prefersDark = window.matchMedia(
           "(prefers-color-scheme: dark)",
         ).matches;

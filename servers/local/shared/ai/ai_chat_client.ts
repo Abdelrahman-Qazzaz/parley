@@ -2,9 +2,9 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { createInterface } from "node:readline";
-import type { ChatModel } from "@summarizer/shared/contract";
+import type { ChatModel } from "@parley/shared/contract";
 import { getBaseEnv } from "../env";
-import { withTimeout } from "@summarizer/shared/withTimeout";
+import { withTimeout } from "@parley/shared/withTimeout";
 
 /**
  * Chat runs on the user's own Claude Code: each call is one `claude --print`

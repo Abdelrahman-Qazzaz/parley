@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
 import { apiEnvSchema, baseEnvSchema } from "../../shared/env";
 
 const validBase = {
-  DATA_DIR: "/tmp/summarizer",
+  DATA_DIR: "/tmp/parley",
   NODE_ENV: "test" as const,
 };
 
@@ -37,8 +37,8 @@ describe("baseEnvSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("keeps the data in ~/.summarizer unless told otherwise", () => {
+  it("keeps the data in ~/.parley unless told otherwise", () => {
     const result = baseEnvSchema.safeParse({});
-    expect(result.data?.DATA_DIR).toBe(path.join(homedir(), ".summarizer"));
+    expect(result.data?.DATA_DIR).toBe(path.join(homedir(), ".parley"));
   });
 });

@@ -28,7 +28,7 @@ function Wordmark() {
           />
         </svg>
       </span>
-      <span className="eyebrow text-ink">Summarizer</span>
+      <span className="eyebrow text-ink">Parley</span>
     </span>
   );
 }

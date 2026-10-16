@@ -1,6 +1,6 @@
 import { AsyncLocalStorage } from "node:async_hooks";
 import { randomUUID } from "node:crypto";
-import type { logger } from "@summarizer/shared/logger";
+import type { logger } from "@parley/shared/logger";
 
 type PreparationContext = {
   log: Pick<typeof logger, "info">;

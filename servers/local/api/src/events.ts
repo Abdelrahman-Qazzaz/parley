@@ -1,4 +1,4 @@
-import { createEventHub } from "@summarizer/shared/events";
+import { createEventHub } from "@parley/shared/events";
 
 /** The local server has one user, so every open stream hears every event. */
 export const EVERYONE = "everyone";

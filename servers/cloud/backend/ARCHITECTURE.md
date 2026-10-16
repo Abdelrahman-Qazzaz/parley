@@ -1,7 +1,7 @@
 # Backend architecture
 
 A modular monolith. Everything under `backend/` is a
-single npm package (`@summarizer/cloud`) built from one codebase and one
+single npm package (`@parley/cloud`) built from one codebase and one
 `shared/` module. It runs as multiple process types that talk through a
 RabbitMQ message queue and a shared Postgres database:
 

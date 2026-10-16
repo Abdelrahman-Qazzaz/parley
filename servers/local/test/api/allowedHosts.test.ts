@@ -8,7 +8,7 @@ vi.mock("../../shared/db", async () =>
 // first built, which is after this.
 process.env.ALLOWED_HOSTS = "macbook.tail1234.ts.net";
 // The hosted client, which calls this machine from the browser.
-process.env.ALLOWED_ORIGINS = "https://summarizer.example.app/";
+process.env.ALLOWED_ORIGINS = "https://parley.example.app/";
 
 import { createApp } from "../../api/app";
 
@@ -87,10 +87,10 @@ function preflight(origin: string, headers: Record<string, string> = {}) {
 
 describe("pages from another origin", () => {
   it("may call the API when the origin is in ALLOWED_ORIGINS", async () => {
-    const res = await preflight("https://summarizer.example.app");
+    const res = await preflight("https://parley.example.app");
 
     expect(res.headers.get("Access-Control-Allow-Origin")).toBe(
-      "https://summarizer.example.app",
+      "https://parley.example.app",
     );
   });
 
@@ -109,7 +109,7 @@ describe("pages from another origin", () => {
   });
 
   it("are told this machine may be reached, when Chrome asks", async () => {
-    const res = await preflight("https://summarizer.example.app", {
+    const res = await preflight("https://parley.example.app", {
       "Access-Control-Request-Private-Network": "true",
     });
 
@@ -127,6 +127,6 @@ describe("pages from another origin", () => {
   });
 
   it("may post a form from an origin in ALLOWED_ORIGINS", async () => {
-    expect((await formPost("https://summarizer.example.app")).status).toBe(400);
+    expect((await formPost("https://parley.example.app")).status).toBe(400);
   });
 });

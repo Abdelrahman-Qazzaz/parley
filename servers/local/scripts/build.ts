@@ -19,7 +19,7 @@ const { dependencies } = JSON.parse(await readFile("package.json", "utf8")) as {
   dependencies: Record<string, string>;
 };
 const external = Object.keys(dependencies)
-  .filter((name) => !name.startsWith("@summarizer/"))
+  .filter((name) => !name.startsWith("@parley/"))
   .flatMap((name) => [name, `${name}/*`]);
 
 const ENTRYPOINTS = {

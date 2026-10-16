@@ -28,9 +28,9 @@ const nodeEnvSchema = z
 export const baseEnvSchema = z.object({
   /**
    * Where the app keeps its files: the database, uploads and Whisper models.
-   * ~/.summarizer unless set.
+   * ~/.parley unless set.
    */
-  DATA_DIR: z.string().min(1).default(path.join(homedir(), ".summarizer")),
+  DATA_DIR: z.string().min(1).default(path.join(homedir(), ".parley")),
   /** The Claude Code program chat runs on; found on PATH by default. */
   CLAUDE_PATH: z.string().min(1).default("claude"),
   /** The uv program that runs transcription; found on PATH by default. */

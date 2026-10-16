@@ -10,7 +10,7 @@ import {
   messageReqParamSchema,
   messageCreateBodySchema,
 } from "../schema/messages.schema";
-import { httpCache } from "@summarizer/shared/cache.middleware";
+import { httpCache } from "@parley/shared/cache.middleware";
 
 export const messagesRouter = new Hono();
 

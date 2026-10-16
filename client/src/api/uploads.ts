@@ -3,7 +3,7 @@ import type {
   QueueYoutubeBody,
   UploadedAudio,
   UploadedImage,
-} from "@summarizer/shared/contract";
+} from "@parley/shared/contract";
 import { ApiError, apiJson, jsonRequest } from "./http";
 import { serverUrl, type Server } from "./server";
 

@@ -8,8 +8,8 @@ import type {
   ChatMessage,
   MessagesResponse,
   ReplyStreamEvents,
-} from "@summarizer/shared/contract";
-import { SSEEventQueue } from "@summarizer/shared/sse";
+} from "@parley/shared/contract";
+import { SSEEventQueue } from "@parley/shared/sse";
 import {
   data,
   type CreateMessageHistory,
@@ -27,7 +27,7 @@ import {
   findChatModel,
 } from "../../../shared/ai/ai_chat_client";
 import type { ChatImage, ChatTurn } from "../../../shared/ai/ai_chat_client";
-import { logger, messageOf } from "@summarizer/shared/logger";
+import { logger, messageOf } from "@parley/shared/logger";
 import { files } from "../../../shared/files";
 import type { MessageAttachmentInput } from "../schema/messages.schema";
 

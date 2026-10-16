@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { Context } from "hono";
-import type { QueuedYoutube, UploadedAudio } from "@summarizer/shared/contract";
+import type { QueuedYoutube, UploadedAudio } from "@parley/shared/contract";
 import { data } from "../../../shared/data";
 import {
   publishOrFail,
@@ -10,7 +10,7 @@ import { checkUpload, startUpload } from "../../../shared/uploads";
 import { mq } from "../../../shared/message-queue/messageQueue";
 import { CTX_KEYS } from "../../../shared/keys";
 import { ALREADY_CONFIRMED, uploadRejection } from "../utils/uploadRejection";
-import type { UploadId } from "@summarizer/shared/types";
+import type { UploadId } from "@parley/shared/types";
 
 /**
  * POST /upload/audio — a URL the browser PUTs speech audio to, straight into

@@ -61,7 +61,7 @@ export function LandingPage() {
   return (
     <div className="flex flex-1 flex-col">
       <header className="flex h-14 shrink-0 items-center justify-between px-5">
-        <span className="eyebrow text-ink">Summarizer</span>
+        <span className="eyebrow text-ink">Parley</span>
         <button
           type="button"
           onClick={toggleTheme}

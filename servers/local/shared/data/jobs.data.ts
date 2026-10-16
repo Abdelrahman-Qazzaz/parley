@@ -3,7 +3,7 @@ import { and, desc, eq, inArray, like, lt, or } from "drizzle-orm";
 import type { AnySQLiteColumn } from "drizzle-orm/sqlite-core";
 import { Attachments, AudioTranscriptionJobs, db, type Executor } from "../db";
 import type { jobStatuses } from "../db";
-import type { UploadId } from "@summarizer/shared/types";
+import type { UploadId } from "@parley/shared/types";
 import { attachments } from "./attachments.data";
 
 /**

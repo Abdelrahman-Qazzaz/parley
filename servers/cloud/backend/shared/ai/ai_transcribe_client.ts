@@ -1,5 +1,5 @@
 import { DeepgramClient } from "@deepgram/sdk";
-import type { TranscribeModel } from "@summarizer/shared/contract";
+import type { TranscribeModel } from "@parley/shared/contract";
 import { getBaseEnv } from "../env";
 import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
 
@@ -45,7 +45,7 @@ export async function transcribeAI(
   const [alternative] = response.results.channels[0]?.alternatives ?? [];
 
   // `paragraphs.transcript` is the same text broken into paragraphs, which
-  // reads better as summarizer input than the single unbroken line.
+  // reads better as model input than the single unbroken line.
   return alternative?.paragraphs?.transcript ?? alternative?.transcript ?? "";
 }
 

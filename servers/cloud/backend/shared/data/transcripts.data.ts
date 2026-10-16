@@ -9,8 +9,8 @@ import {
 } from "../db";
 
 import { jobs } from "./jobs.data";
-import type { JobSource } from "@summarizer/shared/contract";
-import type { UploadId } from "@summarizer/shared/types";
+import type { JobSource } from "@parley/shared/contract";
+import type { UploadId } from "@parley/shared/types";
 import { attachments } from "./attachments.data";
 
 /**

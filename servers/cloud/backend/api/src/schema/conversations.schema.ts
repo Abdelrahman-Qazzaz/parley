@@ -2,8 +2,8 @@ import { z } from "zod";
 import type {
   CreateConversationBody,
   RenameConversationBody,
-} from "@summarizer/shared/contract";
-import { takesBody } from "@summarizer/shared/takesBody";
+} from "@parley/shared/contract";
+import { takesBody } from "@parley/shared/takesBody";
 import { CTX_KEYS } from "../../../shared/keys";
 
 const MAX_TITLE_LENGTH = 200;

@@ -14,7 +14,7 @@
 # a broker on your own machine, use host.docker.internal rather than localhost,
 # which inside a container means the container.
 
-name: summarizer
+name: parley
 
 services:
   # Must complete before anything that touches the database starts. Needs only

@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ThemeContext, THEME_STORAGE_KEY, type Theme } from "./context";
+import {
+  LEGACY_THEME_STORAGE_KEY,
+  ThemeContext,
+  THEME_STORAGE_KEY,
+  type Theme,
+} from "./context";
 
 function getInitialTheme(): Theme {
-  const stored = localStorage.getItem(THEME_STORAGE_KEY);
+  const stored =
+    localStorage.getItem(THEME_STORAGE_KEY) ??
+    localStorage.getItem(LEGACY_THEME_STORAGE_KEY);
   if (stored === "dark" || stored === "light") return stored;
   return window.matchMedia("(prefers-color-scheme: dark)").matches
     ? "dark"
