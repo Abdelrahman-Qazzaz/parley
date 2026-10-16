@@ -12,7 +12,7 @@ import { getApiEnv } from "../../../shared/env";
  * `Secure` in production only: locally the client and the API share
  * `localhost` over plain HTTP, where it would stop the cookie being stored.
  */
-function sessionCookieOptions(path = "/") {
+function sessionCookieOptions(path: string) {
   return {
     httpOnly: true,
     secure: getApiEnv().NODE_ENV === "production",
@@ -22,21 +22,30 @@ function sessionCookieOptions(path = "/") {
 }
 
 /**
- * The refresh token is only ever read by the endpoint that spends it, so
- * the browser sends it there and nowhere else.
+ * Where the browser sends each cookie. The refresh token is only ever read
+ * by the endpoint that spends it, so it goes there and nowhere else.
  */
-const REFRESH_COOKIE_PATH = "/auth/refresh";
+const AUTH_COOKIES = {
+  session: { name: COOKIE_KEYS.session, path: "/" },
+  refresh: { name: COOKIE_KEYS.refresh, path: "/auth/refresh" },
+};
 
-export function setSessionToken(c: Context, token: string): void {
-  setCookie(c, COOKIE_KEYS.session, token, sessionCookieOptions());
-}
-
-export function setRefreshToken(c: Context, token: string): void {
+export function setAuthCookies(
+  c: Context,
+  tokens: { accessToken: string; refreshToken: string },
+): void {
+  const { session, refresh } = AUTH_COOKIES;
   setCookie(
     c,
-    COOKIE_KEYS.refresh,
-    token,
-    sessionCookieOptions(REFRESH_COOKIE_PATH),
+    session.name,
+    tokens.accessToken,
+    sessionCookieOptions(session.path),
+  );
+  setCookie(
+    c,
+    refresh.name,
+    tokens.refreshToken,
+    sessionCookieOptions(refresh.path),
   );
 }
 
@@ -44,14 +53,8 @@ export function setRefreshToken(c: Context, token: string): void {
  * The attributes have to match the ones the cookie was set with, or the
  * browser treats this as a different cookie and keeps the original.
  */
-export function clearSessionToken(c: Context): void {
-  deleteCookie(c, COOKIE_KEYS.session, sessionCookieOptions());
-}
-
-export function clearRefreshToken(c: Context): void {
-  deleteCookie(
-    c,
-    COOKIE_KEYS.refresh,
-    sessionCookieOptions(REFRESH_COOKIE_PATH),
-  );
+export function clearAuthCookies(c: Context): void {
+  for (const { name, path } of Object.values(AUTH_COOKIES)) {
+    deleteCookie(c, name, sessionCookieOptions(path));
+  }
 }

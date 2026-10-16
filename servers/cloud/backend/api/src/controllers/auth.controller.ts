@@ -9,12 +9,7 @@ import {
 } from "../auth/auth";
 import { readAccessTokenExpiry, verifyAccessToken } from "../auth/accessToken";
 import { refreshSession } from "../auth/refreshSession";
-import {
-  clearRefreshToken,
-  clearSessionToken,
-  setRefreshToken,
-  setSessionToken,
-} from "../cookies/session";
+import { clearAuthCookies, setAuthCookies } from "../cookies/session";
 
 import { COOKIE_KEYS, CTX_KEYS } from "../../../shared/keys";
 import { data } from "../../../shared/data";
@@ -76,13 +71,11 @@ export async function handleRefresh(c: Context) {
   } catch (error) {
     if (!isRejectedByWorkos(error)) throw error;
     log.debug("WorkOS refused a refresh token", { error: String(error) });
-    clearSessionToken(c);
-    clearRefreshToken(c);
+    clearAuthCookies(c);
     return c.json({ message: "Unauthorized" }, 401);
   }
 
-  setSessionToken(c, tokens.accessToken);
-  setRefreshToken(c, tokens.refreshToken);
+  setAuthCookies(c, tokens);
   return c.json({
     userId: tokens.userId,
     expiresAt: expiresAt(readAccessTokenExpiry(tokens.accessToken)),
@@ -91,8 +84,7 @@ export async function handleRefresh(c: Context) {
 
 export async function handleLogout(c: Context) {
   const token = getCookie(c, COOKIE_KEYS.session);
-  clearSessionToken(c);
-  clearRefreshToken(c);
+  clearAuthCookies(c);
 
   if (!token) return c.json(null, 200);
 
@@ -122,8 +114,7 @@ export async function handleCallback(c: Context) {
     await getAuthSessionFromCode(code);
 
   await data.users.ensureUser(userId);
-  setSessionToken(c, accessToken);
-  setRefreshToken(c, refreshToken);
+  setAuthCookies(c, { accessToken, refreshToken });
 
   return c.redirect(getApiEnv().CLIENT_URL);
 }
