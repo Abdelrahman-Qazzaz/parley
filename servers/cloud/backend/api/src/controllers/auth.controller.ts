@@ -2,11 +2,7 @@ import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { getApiEnv } from "../../../shared/env";
-import {
-  getAuthSessionFromCode,
-  getRedirectUrl,
-  revokeAuthSession,
-} from "../auth/auth";
+import { workos } from "../auth/auth";
 import { readAccessTokenExpiry, verifyAccessToken } from "../auth/accessToken";
 import { refreshSession } from "../auth/refreshSession";
 import {
@@ -24,7 +20,7 @@ import { logger } from "@parley/shared/logger";
 const log = logger.child({ controller: "auth" });
 
 export async function handleLogin(c: Context) {
-  return c.redirect(getRedirectUrl());
+  return c.redirect(workos.getRedirectUrl());
 }
 
 /** When an access token expires, as the auth responses report it. */
@@ -107,7 +103,7 @@ export async function handleLogout(c: Context) {
   }
 
   try {
-    await revokeAuthSession(sessionId);
+    await workos.revokeAuthSession(sessionId);
   } catch (error) {
     log.error("Failed to revoke WorkOS session", error);
   }
@@ -120,7 +116,7 @@ export async function handleCallback(c: Context) {
   if (!code) return c.json({ message: "code required" }, 400);
 
   const { userId, accessToken, refreshToken } =
-    await getAuthSessionFromCode(code);
+    await workos.getAuthSessionFromCode(code);
 
   await data.users.ensureUser(userId);
   setSessionToken(c, accessToken);

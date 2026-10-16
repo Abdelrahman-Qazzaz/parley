@@ -6,9 +6,8 @@ import helperImportOwner from "./eslint-rules/helperImportOwner.js";
 import publicModuleEntry from "./eslint-rules/publicModuleEntry.js";
 
 const apiDirectory = fileURLToPath(new URL("./api", import.meta.url));
-const messageQueueDirectory = fileURLToPath(
-  new URL("./shared/message-queue", import.meta.url),
-);
+const sharedDirectory = (name) =>
+  fileURLToPath(new URL(`./shared/${name}`, import.meta.url));
 const transcribeWorkerDirectory = fileURLToPath(
   new URL("./transcribe-worker", import.meta.url),
 );
@@ -29,11 +28,6 @@ const dbClientRestriction = {
       group: ["**/data/*.data"],
       message:
         "Import { data } from shared/data and call data.<table>.<operation>(), so the call reads as a database operation.",
-    },
-    {
-      group: ["**/storage/core"],
-      message:
-        "storage/core is internal to storage/. Import bucket or sign instead.",
     },
   ],
 };
@@ -64,11 +58,20 @@ export default defineConfig([
         { directories: [apiDirectory, transcribeWorkerDirectory] },
       ],
       "local/helper-import-owner": "error",
+      // A module that does I/O is one namespace object (`mq`, `bucket`,
+      // `cache`, `chat`…) behind one entry file; nothing outside reaches past it.
       "local/public-module-entry": [
         "error",
         {
-          directory: messageQueueDirectory,
-          entry: "messageQueue",
+          modules: [
+            {
+              directory: sharedDirectory("message-queue"),
+              entry: "messageQueue",
+            },
+            { directory: sharedDirectory("storage"), entry: "index" },
+            { directory: sharedDirectory("cache"), entry: "index" },
+            { directory: sharedDirectory("ai"), entry: "index" },
+          ],
         },
       ],
     },
@@ -79,16 +82,17 @@ export default defineConfig([
     rules: {
       "no-restricted-imports": "off",
       // A data module may sign URLs, which changes nothing in storage, but
-      // nothing else in storage/. Types are fine: they can't call anything.
+      // must not touch the bucket. Types are fine: they can't call anything.
       "@typescript-eslint/no-restricted-imports": [
         "error",
         {
           patterns: [
             {
-              group: ["**/storage/*", "!**/storage/sign"],
+              group: ["**/storage"],
+              importNames: ["bucket"],
               allowTypeImports: true,
               message:
-                "A *.data.ts module may only use storage/sign. Do other storage work in the caller, after the database work.",
+                "A *.data.ts module may only use sign from storage. Do other storage work in the caller, after the database work.",
             },
           ],
         },

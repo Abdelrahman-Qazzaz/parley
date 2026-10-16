@@ -17,15 +17,9 @@ import {
   type ResolvedImage,
   type StoredTranscriptAttachment,
 } from "../../../shared/data";
-import {
-  buildUserTurn,
-  chatAI,
-  generateTitle,
-  findChatModel,
-} from "../../../shared/ai/ai_chat_client";
-import type { ChatTurn } from "../../../shared/ai/ai_chat_client";
+import { buildUserTurn, chat, type ChatTurn } from "../../../shared/ai";
 import { logger, messageOf } from "@parley/shared/logger";
-import { deleteObjects } from "../../../shared/uploads";
+import { uploads } from "../../../shared/uploads";
 import type { z } from "zod";
 import { authed } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
@@ -65,7 +59,7 @@ async function titleForFirstTurn(content: string, conversationId: string) {
     .slice(0, FALLBACK_CONVERSATION_TITLE_CHARS);
 
   try {
-    return (await generateTitle("conversation", content)) || fallback;
+    return (await chat.generateTitle("conversation", content)) || fallback;
   } catch (error) {
     log.warn("Conversation title generation failed", {
       conversationId,
@@ -377,7 +371,7 @@ async function prepareMessageTurn(
   );
   if (
     containsImageInput(turns) &&
-    !(await findChatModel(messageInput.chosenModelId))?.acceptsImages
+    !(await chat.findModel(messageInput.chosenModelId))?.acceptsImages
   ) {
     throw new MessageRequestError(400, {
       message: "Invalid model: must accept image input",
@@ -421,7 +415,7 @@ async function deleteMessageTail(
     });
   }
 
-  await deleteObjects(
+  await uploads.deleteObjects(
     messageInput.userId,
     rewound.imageUploadIds.map((uploadId) => ({
       kind: "image" as const,
@@ -465,13 +459,17 @@ function streamAndPersistMessageTurn(
         messageInput.expectedLastMessageId === null
           ? titleForFirstTurn(messageInput.content, messageInput.conversationId)
           : Promise.resolve(undefined);
-      const assistantContent = await chatAI(messageInput.chosenModelId, turns, {
-        onDelta: async (delta) => {
-          events.push("delta", { delta });
+      const assistantContent = await chat.complete(
+        messageInput.chosenModelId,
+        turns,
+        {
+          onDelta: async (delta) => {
+            events.push("delta", { delta });
+          },
+          maxOutputTokens: MAX_RESPONSE_TOKENS,
+          sessionId: messageInput.conversationId,
         },
-        maxOutputTokens: MAX_RESPONSE_TOKENS,
-        sessionId: messageInput.conversationId,
-      });
+      );
       const contextWindowMessageCount = countMessagesInContextWindow([
         assistantContent.length,
         newMessageContextCharCount,
@@ -618,7 +616,7 @@ export const handleDeleteMessage = authed.createHandlers(
     if (result.status !== "deleted")
       return c.json({ message: "A response is already in progress" }, 409);
 
-    await deleteObjects(
+    await uploads.deleteObjects(
       userId,
       result.imageUploadIds.map((uploadId) => ({ kind: "image", uploadId })),
     );

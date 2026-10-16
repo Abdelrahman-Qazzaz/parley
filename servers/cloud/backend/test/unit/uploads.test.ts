@@ -19,12 +19,7 @@ vi.mock("../../shared/data/storageLedger.data", () => ({
   storageLedger: ledger,
 }));
 
-import {
-  checkUpload,
-  confirmCheckedUpload,
-  deleteObjects,
-  startUpload,
-} from "../../shared/uploads";
+import { uploads } from "../../shared/uploads";
 
 const USER = "user_01";
 const HOUR_MS = 60 * 60 * 1000;
@@ -44,9 +39,9 @@ beforeEach(() => {
   ledger.forgetObjects.mockResolvedValue(undefined);
 });
 
-describe("startUpload", () => {
+describe("uploads.start", () => {
   it("records the upload and returns its URL", async () => {
-    expect(await startUpload(USER, image)).toBe("https://upload");
+    expect(await uploads.start(USER, image)).toBe("https://upload");
     expect(ledger.recordPendingUpload).toHaveBeenCalledWith({
       userId: USER,
       ...image,
@@ -56,11 +51,11 @@ describe("startUpload", () => {
   it("returns no URL when the record can't be written", async () => {
     ledger.recordPendingUpload.mockRejectedValue(new Error("db down"));
 
-    await expect(startUpload(USER, image)).rejects.toThrow("db down");
+    await expect(uploads.start(USER, image)).rejects.toThrow("db down");
   });
 });
 
-describe("checkUpload", () => {
+describe("uploads.check", () => {
   it("passes on what storage reports for a recent pending upload", async () => {
     bucket.inspectUploadedObject.mockResolvedValue({
       ok: true,
@@ -68,7 +63,7 @@ describe("checkUpload", () => {
       contentType: "image/png",
     });
 
-    expect(await checkUpload(USER, image)).toEqual({
+    expect(await uploads.check(USER, image)).toEqual({
       ok: true,
       sizeBytes: 5,
       contentType: "image/png",
@@ -87,7 +82,7 @@ describe("checkUpload", () => {
   ])("answers %o with %s, without asking storage", async (entry, reason) => {
     ledger.findLedgerEntry.mockResolvedValue(entry);
 
-    expect(await checkUpload(USER, image)).toEqual({ ok: false, reason });
+    expect(await uploads.check(USER, image)).toEqual({ ok: false, reason });
     expect(bucket.inspectUploadedObject).not.toHaveBeenCalled();
   });
 
@@ -99,7 +94,7 @@ describe("checkUpload", () => {
       maxBytes: 10,
     });
 
-    expect(await checkUpload(USER, image)).toMatchObject({
+    expect(await uploads.check(USER, image)).toMatchObject({
       reason: "too-large",
     });
     expect(bucket.delete).not.toHaveBeenCalled();
@@ -107,12 +102,12 @@ describe("checkUpload", () => {
   });
 });
 
-describe("confirmCheckedUpload", () => {
+describe("uploads.confirm", () => {
   it("confirms within the same window the check used", async () => {
     const write = vi.fn();
     ledger.confirmUpload.mockResolvedValue(true);
 
-    expect(await confirmCheckedUpload(USER, image, write)).toBe(true);
+    expect(await uploads.confirm(USER, image, write)).toBe(true);
     expect(ledger.confirmUpload).toHaveBeenCalledWith(
       { userId: USER, ...image },
       WINDOW_MS,
@@ -121,9 +116,9 @@ describe("confirmCheckedUpload", () => {
   });
 });
 
-describe("deleteObjects", () => {
+describe("uploads.deleteObjects", () => {
   it("deletes from storage, then forgets", async () => {
-    await deleteObjects(USER, [image]);
+    await uploads.deleteObjects(USER, [image]);
 
     expect(bucket.delete).toHaveBeenCalledWith(USER, [image]);
     expect(ledger.forgetObjects).toHaveBeenCalledWith(USER, [image], undefined);
@@ -135,12 +130,14 @@ describe("deleteObjects", () => {
   it("keeps the record when storage fails, for the sweep", async () => {
     bucket.delete.mockRejectedValue(new Error("storage down"));
 
-    await expect(deleteObjects(USER, [image])).rejects.toThrow("storage down");
+    await expect(uploads.deleteObjects(USER, [image])).rejects.toThrow(
+      "storage down",
+    );
     expect(ledger.forgetObjects).not.toHaveBeenCalled();
   });
 
   it("does nothing for an empty list", async () => {
-    await deleteObjects(USER, []);
+    await uploads.deleteObjects(USER, []);
 
     expect(bucket.delete).not.toHaveBeenCalled();
   });

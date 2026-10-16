@@ -26,7 +26,7 @@ vi.mock("../../shared/data", () => ({
 
 vi.mock("../../shared/ai/ai_transcribe_client", () => ({
   DEFAULT_TRANSCRIBE_MODEL: "nova-3-general",
-  transcribeAI: mocks.transcribeAI,
+  transcription: { transcribe: mocks.transcribeAI },
 }));
 
 vi.mock("../../shared/storage/sign", () => ({ sign: { url: mocks.signUrl } }));

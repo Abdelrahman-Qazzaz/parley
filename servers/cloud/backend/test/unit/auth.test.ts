@@ -22,11 +22,7 @@ vi.mock("@workos-inc/node", () => ({
   },
 }));
 
-import {
-  getAuthSessionFromCode,
-  refreshAuthSession,
-  revokeAuthSession,
-} from "../../api/src/auth/auth";
+import { workos } from "../../api/src/auth/auth";
 
 const userId = "user_01AUTH";
 const sessionId = "session_01AUTH";
@@ -43,7 +39,7 @@ describe("WorkOS auth sessions", () => {
       refreshToken: "workos-refresh-token",
     });
 
-    await expect(getAuthSessionFromCode("oauth-code")).resolves.toEqual({
+    await expect(workos.getAuthSessionFromCode("oauth-code")).resolves.toEqual({
       userId,
       accessToken: "workos-access-token",
       refreshToken: "workos-refresh-token",
@@ -57,7 +53,7 @@ describe("WorkOS auth sessions", () => {
       refreshToken: "refresh-2",
     });
 
-    await expect(refreshAuthSession("refresh-1")).resolves.toEqual({
+    await expect(workos.refreshAuthSession("refresh-1")).resolves.toEqual({
       userId,
       accessToken: "access-2",
       refreshToken: "refresh-2",
@@ -71,7 +67,7 @@ describe("WorkOS auth sessions", () => {
   it("revokes the selected WorkOS session", async () => {
     mockRevokeSession.mockResolvedValueOnce(undefined);
 
-    await revokeAuthSession(sessionId);
+    await workos.revokeAuthSession(sessionId);
 
     expect(mockRevokeSession).toHaveBeenCalledWith({ sessionId });
   });

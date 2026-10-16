@@ -72,12 +72,8 @@ vi.mock("amqplib", async () => {
   };
 });
 
-import {
-  DeadLetterError,
-  QUEUES,
-  mq,
-  pingMQ,
-} from "../../shared/message-queue/messageQueue";
+import { DeadLetterError, mq } from "../../shared/message-queue/messageQueue";
+import { QUEUES } from "../../shared/message-queue/queues";
 
 const payload = {
   audioUploadId: "550e8400-e29b-41d4-a716-446655440000",
@@ -372,7 +368,7 @@ describe("connection loss", () => {
   });
 
   it("does not exit when the startup ping closes its connection", async () => {
-    await pingMQ();
+    await mq.ping();
     await flush();
 
     expect(exit).not.toHaveBeenCalled();

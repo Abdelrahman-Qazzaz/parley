@@ -1,12 +1,5 @@
 import { objectPath, storage } from "./core";
-import {
-  IMAGE_URL_TTL_SECONDS,
-  KINDS,
-  type UploadableKind,
-  type UploadableObject,
-} from "./schema";
-
-export { IMAGE_URL_TTL_SECONDS };
+import { KINDS, type UploadableKind, type UploadableObject } from "./schema";
 
 /**
  * A read URL for one object, valid for its kind's TTL: a week for images

@@ -9,7 +9,7 @@ import {
   conversationPatchBodySchema,
   conversationReqParamSchema,
 } from "../schema/conversations.schema";
-import { deleteObjects } from "../../../shared/uploads";
+import { uploads } from "../../../shared/uploads";
 import { data, type ConversationRow } from "../../../shared/data";
 
 function toConversationJson(row: ConversationRow): Conversation {
@@ -116,7 +116,7 @@ export const handleDeleteConversation = authed.createHandlers(
         userId,
         imageUploadIds,
       );
-    await deleteObjects(
+    await uploads.deleteObjects(
       userId,
       deletedImageAttachmentIds.map((uploadId) => ({
         kind: "image",

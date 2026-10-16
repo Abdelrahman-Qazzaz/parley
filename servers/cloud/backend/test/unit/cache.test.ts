@@ -13,12 +13,12 @@ vi.mock("@upstash/redis", () => ({
 }));
 
 import {
-  CACHE_KEYS,
   getCache,
   getOrSetCache,
   setCache,
   resetCacheMemo,
 } from "../../shared/cache/cache";
+import { CACHE_KEYS } from "../../shared/cache/cacheKeys";
 
 // OpenRouter's catalog maps to Redis key "models:v10" with a 24h Redis TTL.
 const REDIS_KEY = "models:v10";

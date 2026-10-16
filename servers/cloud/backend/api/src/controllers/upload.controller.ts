@@ -1,11 +1,8 @@
 import { randomUUID } from "node:crypto";
 import type { QueuedYoutube, UploadedAudio } from "@parley/shared/contract";
 import { data } from "../../../shared/data";
-import {
-  publishOrFail,
-  queueAudioTranscription,
-} from "../../../shared/audioTranscription";
-import { checkUpload, startUpload } from "../../../shared/uploads";
+import { audioTranscription } from "../../../shared/audioTranscription";
+import { uploads } from "../../../shared/uploads";
 import { mq } from "../../../shared/message-queue/messageQueue";
 import { authed } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
@@ -29,7 +26,7 @@ export const handleAudioUploadUrl = authed.createHandlers(async (c) => {
   const { userId } = c.var;
 
   const audioUploadId: UploadId = randomUUID();
-  const signedUploadUrl = await startUpload(userId, {
+  const signedUploadUrl = await uploads.start(userId, {
     kind: "audio",
     uploadId: audioUploadId,
   });
@@ -63,7 +60,7 @@ export const handleAudioConfirm = authed.createHandlers(
       transcriptModelId,
     } = c.req.valid("json");
 
-    const upload = await checkUpload(userId, {
+    const upload = await uploads.check(userId, {
       kind: "audio",
       uploadId: audioUploadId,
     });
@@ -72,7 +69,7 @@ export const handleAudioConfirm = authed.createHandlers(
       return c.json(body, status);
     }
 
-    const queued = await queueAudioTranscription({
+    const queued = await audioTranscription.queue({
       audioUploadId,
       userId,
       source,
@@ -124,7 +121,7 @@ export const handleYoutubeUpload = authed.createHandlers(
 
     // A failed publish would leave the job queued with no fetcher coming for
     // it; failing it puts that in front of the user instead.
-    await publishOrFail(audioUploadId, () =>
+    await audioTranscription.publishOrFail(audioUploadId, () =>
       mq.publish(mq.queues.YT_FETCH, {
         audioUploadId,
         url,

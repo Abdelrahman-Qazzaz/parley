@@ -19,10 +19,10 @@ vi.mock("../../shared/data/storageLedger.data", () => ({
 }));
 vi.mock("../../shared/uploads", () => ({
   UPLOAD_CONFIRM_WINDOW_MS: 2 * 60 * 60 * 1000,
-  deleteObjects: mockDeleteObjects,
+  uploads: { deleteObjects: mockDeleteObjects },
 }));
 
-import { scheduleSweeper, sweepUnusedObjects } from "../../shared/sweeper";
+import { sweeper } from "../../shared/sweeper";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -35,11 +35,11 @@ beforeEach(() => {
   mockDeleteObjects.mockResolvedValue(undefined);
 });
 
-describe("sweepUnusedObjects", () => {
+describe("sweeper.sweepUnusedObjects", () => {
   it("asks for unused objects past the grace, one batch at a time", async () => {
     const before = Date.now();
 
-    await sweepUnusedObjects();
+    await sweeper.sweepUnusedObjects();
 
     const [{ statuses, createdBefore, limit }] = mockFindLedgerEntries.mock
       .calls[0] as [{ statuses: string[]; createdBefore: Date; limit: number }];
@@ -61,7 +61,7 @@ describe("sweepUnusedObjects", () => {
       { userId: "u1", kind: "audio", uploadId: "a2" },
     ]);
 
-    expect(await sweepUnusedObjects()).toBe(3);
+    expect(await sweeper.sweepUnusedObjects()).toBe(3);
     expect(mockDeleteObjects).toHaveBeenCalledTimes(2);
     expect(mockDeleteObjects).toHaveBeenCalledWith("u1", [
       { kind: "image", uploadId: "i1" },
@@ -79,19 +79,19 @@ describe("sweepUnusedObjects", () => {
     ]);
     mockDeleteObjects.mockRejectedValueOnce(new Error("storage down"));
 
-    expect(await sweepUnusedObjects()).toBe(1);
+    expect(await sweeper.sweepUnusedObjects()).toBe(1);
     expect(mockDeleteObjects).toHaveBeenCalledTimes(2);
   });
 
   it("does nothing while another process holds the lock", async () => {
     mockWithAdvisoryLock.mockResolvedValue(undefined);
 
-    expect(await sweepUnusedObjects()).toBeUndefined();
+    expect(await sweeper.sweepUnusedObjects()).toBeUndefined();
     expect(mockFindLedgerEntries).not.toHaveBeenCalled();
   });
 });
 
-describe("scheduleSweeper", () => {
+describe("sweeper.schedule", () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });
@@ -100,7 +100,7 @@ describe("scheduleSweeper", () => {
   });
 
   it("sweeps at once, then every interval, until stopped", async () => {
-    const stop = scheduleSweeper(HOUR_MS);
+    const stop = sweeper.schedule(HOUR_MS);
     await vi.advanceTimersByTimeAsync(0);
     expect(mockWithAdvisoryLock).toHaveBeenCalledTimes(1);
 
@@ -118,7 +118,7 @@ describe("scheduleSweeper", () => {
       () => new Promise<void>((resolve) => (finish = resolve)),
     );
 
-    const stop = scheduleSweeper(HOUR_MS);
+    const stop = sweeper.schedule(HOUR_MS);
     await vi.advanceTimersByTimeAsync(2 * HOUR_MS);
     expect(mockWithAdvisoryLock).toHaveBeenCalledTimes(1);
 
@@ -134,7 +134,7 @@ describe("scheduleSweeper", () => {
       () => new Promise<void>((resolve) => (finish = resolve)),
     );
 
-    const stop = scheduleSweeper(HOUR_MS);
+    const stop = sweeper.schedule(HOUR_MS);
     let stopped = false;
     void stop().then(() => (stopped = true));
     await vi.advanceTimersByTimeAsync(0);
@@ -148,7 +148,7 @@ describe("scheduleSweeper", () => {
   it("survives a failed run", async () => {
     mockWithAdvisoryLock.mockRejectedValueOnce(new Error("db down"));
 
-    const stop = scheduleSweeper(HOUR_MS);
+    const stop = sweeper.schedule(HOUR_MS);
     await vi.advanceTimersByTimeAsync(HOUR_MS);
     expect(mockWithAdvisoryLock).toHaveBeenCalledTimes(2);
     await stop();

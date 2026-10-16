@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { SendMessageBody } from "@parley/shared/contract";
 import { takesBody } from "@parley/shared/takesBody";
-import { findChatModel } from "../../../shared/ai/ai_chat_client";
+import { chat } from "../../../shared/ai";
 
 const MAX_MESSAGE_LENGTH = 50_000;
 
@@ -73,7 +73,7 @@ export const messageCreateBodySchema = takesBody<SendMessageBody>()(
       lastMessageId: z.string().uuid().nullable(),
     })
     .superRefine(async (data, ctx) => {
-      const model = await findChatModel(data.chosenModelId);
+      const model = await chat.findModel(data.chosenModelId);
       if (!model) {
         ctx.addIssue({
           code: "custom",

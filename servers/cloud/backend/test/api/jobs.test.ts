@@ -48,7 +48,7 @@ vi.mock("../../shared/data/transcripts.data", async (importActual) => {
 vi.mock("../../shared/ai/ai_transcribe_client", () => ({
   DEFAULT_TRANSCRIBE_MODEL: "nova-3",
   getTranscribeModelData: vi.fn(),
-  isValidTranscribeModel: vi.fn(),
+  transcription: { isValidModel: vi.fn() },
 }));
 
 vi.mock("../../shared/message-queue/messageQueue", () => {
@@ -66,7 +66,7 @@ vi.mock("../../shared/message-queue/messageQueue", () => {
 });
 
 vi.mock("../../shared/uploads", () => ({
-  deleteObjects: mockDeleteObjects,
+  uploads: { deleteObjects: mockDeleteObjects },
 }));
 
 vi.mock("../../shared/storage/bucket", () => ({

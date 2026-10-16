@@ -9,8 +9,7 @@ const { mockGetOrSetCache, mockModelsList, mockChatSend } = vi.hoisted(() => ({
 }));
 
 vi.mock("../../shared/cache/cache", () => ({
-  CACHE_KEYS,
-  getOrSetCache: mockGetOrSetCache,
+  cache: { getOrSet: mockGetOrSetCache },
 }));
 
 /** Caching itself is covered in cache.test.ts; here the fetch always runs. */
@@ -23,13 +22,7 @@ vi.mock("@openrouter/sdk", () => ({
   },
 }));
 
-import {
-  buildUserTurn,
-  chatAI,
-  findChatModel,
-  generateTitle,
-  listChatModels,
-} from "../../shared/ai/ai_chat_client";
+import { buildUserTurn, chat } from "../../shared/ai/ai_chat_client";
 
 const MODEL_ID = "openai/gpt-4o-mini";
 
@@ -65,7 +58,7 @@ describe("listChatModels", () => {
   it("serves the catalog through its cache entry", async () => {
     mockGetOrSetCache.mockResolvedValueOnce([sampleModel]);
 
-    expect(await listChatModels()).toEqual([sampleModel]);
+    expect(await chat.listModels()).toEqual([sampleModel]);
     expect(mockGetOrSetCache).toHaveBeenCalledWith(
       CACHE_KEYS.openRouterModels,
       expect.any(Function),
@@ -94,7 +87,7 @@ describe("listChatModels", () => {
       },
     });
 
-    expect(await listChatModels()).toEqual([
+    expect(await chat.listModels()).toEqual([
       sampleModel,
       {
         id: "vendor/text-only",
@@ -115,11 +108,11 @@ describe("findChatModel", () => {
   });
 
   it("finds a listed model by id", async () => {
-    expect(await findChatModel(MODEL_ID)).toEqual(sampleModel);
+    expect(await chat.findModel(MODEL_ID)).toEqual(sampleModel);
   });
 
   it("finds nothing for an id that isn't listed", async () => {
-    expect(await findChatModel("unknown/model")).toBeUndefined();
+    expect(await chat.findModel("unknown/model")).toBeUndefined();
   });
 });
 
@@ -157,10 +150,14 @@ describe("chatAI", () => {
       choices: [{ message: { content: "hi" } }],
     });
 
-    const result = await chatAI(MODEL_ID, [{ role: "user", content: "yo" }], {
-      maxOutputTokens: 100,
-      sessionId: "conversation-1",
-    });
+    const result = await chat.complete(
+      MODEL_ID,
+      [{ role: "user", content: "yo" }],
+      {
+        maxOutputTokens: 100,
+        sessionId: "conversation-1",
+      },
+    );
 
     expect(result).toBe("hi");
     expect(mockChatSend).toHaveBeenCalledWith(
@@ -244,7 +241,7 @@ describe("chatAI timeouts", () => {
   const TITLE_TIMEOUT_MS = 15_000;
 
   const streamChat = () =>
-    chatAI(MODEL_ID, [{ role: "user", content: "yo" }], {
+    chat.complete(MODEL_ID, [{ role: "user", content: "yo" }], {
       onDelta: () => {},
     });
 
@@ -293,7 +290,7 @@ describe("chatAI timeouts", () => {
     const deltas: string[] = [];
     mockChatSend.mockImplementationOnce(streamingSend(chunks, { end: true }));
     const outcome = track(
-      chatAI(MODEL_ID, [{ role: "user", content: "yo" }], {
+      chat.complete(MODEL_ID, [{ role: "user", content: "yo" }], {
         onDelta: (delta) => {
           deltas.push(delta);
         },
@@ -330,7 +327,7 @@ describe("chatAI timeouts", () => {
     mockChatSend.mockImplementationOnce(
       (_request: unknown, { signal }: SendOptions) => abortableWait(signal),
     );
-    const outcome = track(generateTitle("conversation", "hello"));
+    const outcome = track(chat.generateTitle("conversation", "hello"));
 
     await vi.advanceTimersByTimeAsync(TITLE_TIMEOUT_MS - 1);
     expect(outcome.settled).toBe(false);
@@ -351,7 +348,7 @@ describe("generateTitle", () => {
       choices: [{ message: { content: "  Quarterly planning  " } }],
     });
 
-    const title = await generateTitle(
+    const title = await chat.generateTitle(
       "conversation",
       "How should we organize the next quarter?",
     );

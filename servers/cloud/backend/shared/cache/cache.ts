@@ -1,10 +1,7 @@
-import { getRedisClient } from "./redis";
+import { getRedisClient, pingRedis } from "./redis";
 import { logger } from "@parley/shared/logger";
 import { tryCatch } from "@parley/shared/try-catch";
 import { CACHE_KEYS, type CacheKey } from "./cacheKeys";
-
-export { CACHE_KEYS } from "./cacheKeys";
-export type { CacheKey } from "./cacheKeys";
 
 /**
  * The fixed set of cache entries. Each carries its Redis key and the two TTLs
@@ -66,7 +63,7 @@ export async function getCache<T>(name: CacheKey): Promise<T | null> {
  * Writes both tiers under the entry's fixed TTLs. A Redis failure is logged, not
  * thrown: the memo still holds the fresh value for this process.
  *
- * Exported for the cache's own tests; callers go through getOrSetCache.
+ * Exported for the cache's own tests; callers go through cache.getOrSet.
  */
 export async function setCache<T>(name: CacheKey, data: T): Promise<void> {
   const entry = CACHE_ENTRIES[name];
@@ -139,3 +136,12 @@ export function resetCacheMemo() {
   memo.clear();
   inFlight.clear();
 }
+
+/**
+ * Two tiers: an in-process memo in front of Redis. getCache, setCache and
+ * resetCacheMemo stay out of it: they're for the cache's own tests.
+ */
+export const cache = {
+  getOrSet: getOrSetCache,
+  ping: pingRedis,
+};

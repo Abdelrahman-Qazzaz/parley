@@ -7,7 +7,7 @@ import {
   jobsListQuerySchema,
 } from "../schema/jobs.schema";
 import { encodeCursor, decodeCursor } from "@parley/shared/cursor";
-import { deleteObjects } from "../../../shared/uploads";
+import { uploads } from "../../../shared/uploads";
 import { data } from "../../../shared/data";
 import { tryCatch } from "@parley/shared/try-catch";
 import { logger } from "@parley/shared/logger";
@@ -119,7 +119,9 @@ export const handleDeleteTranscribeJob = authed.createHandlers(
     // nothing knows about. The record stays marked deleted instead, and the
     // sweep removes whatever landed once the fetch is long over.
     if (!deleted.fetchMayStillWrite) {
-      await deleteObjects(userId, [{ kind: "audio", uploadId: audioUploadId }]);
+      await uploads.deleteObjects(userId, [
+        { kind: "audio", uploadId: audioUploadId },
+      ]);
     }
     return c.json({ message: "Job Deleted" }, 200);
   },

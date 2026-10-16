@@ -1,8 +1,4 @@
-import {
-  bucket,
-  type StoredObject,
-  type UploadableObject,
-} from "./storage/bucket";
+import { bucket, type StoredObject, type UploadableObject } from "./storage";
 import type { Executor } from "./db";
 import { data } from "./data";
 
@@ -17,7 +13,7 @@ export const UPLOAD_CONFIRM_WINDOW_MS = 2 * 60 * 60 * 1000;
  * An upload URL for a new object, recorded as pending. The URL isn't
  * returned unless the record exists, so no upload can land unrecorded.
  */
-export async function startUpload(userId: string, object: UploadableObject) {
+async function start(userId: string, object: UploadableObject) {
   const [, signedUrl] = await Promise.all([
     data.storageLedger.recordPendingUpload({ userId, ...object }),
     bucket.createUploadUrl(userId, object),
@@ -31,7 +27,7 @@ export async function startUpload(userId: string, object: UploadableObject) {
  * nothing either way: a rejected upload stays pending, and the sweep removes
  * it once it's past its grace.
  */
-export async function checkUpload(userId: string, object: UploadableObject) {
+async function check(userId: string, object: UploadableObject) {
   const entry = await data.storageLedger.findLedgerEntry({ userId, ...object });
 
   if (entry?.status === "confirmed") {
@@ -52,7 +48,7 @@ export async function checkUpload(userId: string, object: UploadableObject) {
  * transaction. False when it's no longer pending and in its window — another
  * confirm got there first.
  */
-export async function confirmCheckedUpload(
+async function confirm(
   userId: string,
   object: UploadableObject,
   write: (executor: Executor) => Promise<unknown>,
@@ -68,7 +64,7 @@ export async function confirmCheckedUpload(
  * Deletes objects marked deleted (or never confirmed) from storage, then
  * their records. A failure leaves the records for the sweep.
  */
-export async function deleteObjects(
+async function deleteObjects(
   userId: string,
   objects: readonly StoredObject[],
   executor?: Executor,
@@ -78,3 +74,14 @@ export async function deleteObjects(
   await bucket.delete(userId, objects);
   await data.storageLedger.forgetObjects(userId, objects, executor);
 }
+
+/**
+ * An object's way into storage and back out: a URL to upload it to, the
+ * check and confirm once it has landed, and its deletion.
+ */
+export const uploads = {
+  start,
+  check,
+  confirm,
+  deleteObjects,
+};

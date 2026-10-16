@@ -8,7 +8,6 @@ import type {
 import { getBaseEnv } from "../env";
 import { logger, messageOf } from "@parley/shared/logger";
 import { QUEUES, type Queue, type QueuePayloads } from "./queues";
-export { QUEUES } from "./queues";
 
 const log = logger.child({ component: "message-queue" });
 
@@ -233,15 +232,6 @@ async function handle<Q extends Queue>(
   }
 }
 
-/**
- * Startup health check: fails if RabbitMQ is unreachable or refuses the
- * credentials. The topology is declared when the process first uses mq.
- */
-export async function pingMQ() {
-  const connection = await amqplib.connect(getBaseEnv().MQ_URL);
-  await connection.close();
-}
-
 let opening: Promise<Broker> | undefined;
 
 function getBroker() {
@@ -251,6 +241,15 @@ function getBroker() {
 
 export const mq = {
   queues: QUEUES,
+
+  /**
+   * Startup health check: fails if RabbitMQ is unreachable or refuses the
+   * credentials. The topology is declared when the process first uses mq.
+   */
+  async ping() {
+    const connection = await amqplib.connect(getBaseEnv().MQ_URL);
+    await connection.close();
+  },
 
   async publish<Q extends Queue>(queue: Q, payload: QueuePayloads[Q]) {
     await publishConfirmed(

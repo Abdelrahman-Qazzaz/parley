@@ -1,12 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { UploadedImage } from "@parley/shared/contract";
-import { sign } from "../../../shared/storage/sign";
-import {
-  checkUpload,
-  confirmCheckedUpload,
-  deleteObjects,
-  startUpload,
-} from "../../../shared/uploads";
+import { sign } from "../../../shared/storage";
+import { uploads } from "../../../shared/uploads";
 import { data } from "../../../shared/data";
 import { authed } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
@@ -30,7 +25,7 @@ export const handleImageUploadUrl = authed.createHandlers(async (c) => {
   const { userId } = c.var;
 
   const imageUploadId: UploadId = randomUUID();
-  const signedUploadUrl = await startUpload(userId, {
+  const signedUploadUrl = await uploads.start(userId, {
     kind: "image",
     uploadId: imageUploadId,
   });
@@ -60,14 +55,14 @@ export const handleImageConfirm = authed.createHandlers(
     const { uploadId: imageUploadId, fileName } = c.req.valid("json");
 
     const image = { kind: "image", uploadId: imageUploadId } as const;
-    const upload = await checkUpload(userId, image);
+    const upload = await uploads.check(userId, image);
     if (!upload.ok) {
       const [body, status] = uploadRejection(upload, IMAGE_WORDING);
       return c.json(body, status);
     }
 
     const signedUrl = await sign.url(userId, image);
-    const confirmed = await confirmCheckedUpload(userId, image, (executor) =>
+    const confirmed = await uploads.confirm(userId, image, (executor) =>
       data.images.createImageAttachment(
         {
           userId,
@@ -125,7 +120,7 @@ export const handleDeleteImage = authed.createHandlers(
         imageUploadId,
       );
     if (deletedImageUploadId) {
-      await deleteObjects(userId, [
+      await uploads.deleteObjects(userId, [
         { kind: "image", uploadId: deletedImageUploadId },
       ]);
     }

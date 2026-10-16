@@ -13,7 +13,7 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 - The doc comment for `POST /conversations/:id/messages` sits above `mergeTranscriptsIntoContent` rather than `handleCreateMessage` (`api/src/controllers/messages.controller.ts:249`).
 - The "Bounds on what one turn can cost" comment is separated from its constants by a blank line (`messages.controller.ts:30`).
 - An orphaned doc comment ("Scoped by conversation as well as owner…") is stacked above the real one for `deleteOwnedMessage` (`shared/data/messages.data.ts:435`).
-- The comment above `findChatModel` describes `validateChatModelOutput` (`shared/ai/ai_chat_client.ts:207`).
+- The comment above `chat.findModel` (`findModel`) describes `validateChatModelOutput` (`shared/ai/ai_chat_client.ts:207`).
 - Two open TODOs head `messages.controller.ts`, one of them "refactor and fix patching&deletion handlers".
 
 ## Modules reaching across layers
@@ -24,7 +24,7 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 
 ## Indirection
 
-- `images.deleteOwnedUnlinkedUnreservedImageAttachment(s)` only forward to `attachments.deleteOwnedUnlinkedUnreservedAttachment(s)` with `kind: "image"` (`shared/data/images.data.ts:332`). `uploads.confirmCheckedUpload` is the same kind of pass-through, and it is already on your list of `uploads.ts` decisions.
+- `images.deleteOwnedUnlinkedUnreservedImageAttachment(s)` only forward to `attachments.deleteOwnedUnlinkedUnreservedAttachment(s)` with `kind: "image"` (`shared/data/images.data.ts:332`). `uploads.confirm` is the same kind of pass-through, and it is already on your list of `uploads.ts` decisions.
 - `deleteOwnedUnlinkedUnreservedAttachments` decides whether to open a transaction by checking `executor === db` and then calling itself (`shared/data/attachments.data.ts`). Callers can't tell from the signature that passing `db` behaves differently from passing a transaction.
 - `handleCreateMessage` wraps `prepareMessageTurn` in `async () => { const prepared = await …; return prepared; }`. `streamAndPersistMessageTurn` takes five parameters, and two of them (`claimToken` and `claimPromises`) always come from the same `createClaimData` call.
 
@@ -34,8 +34,7 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 
 ## Naming and small things
 
-- "rhobust" is misspelled in `ai_chat_client.ts`.
 - `DELETE /upload/image/:id` spends the image _read_ budget (`api/src/routes/images.router.ts:52`).
-- File and identifier casing is mixed: `ai_chat_client.ts`, `ai_client` and `try-catch.ts` sit next to camelCase everywhere else, and the column is `YT_sourceUrl`.
+- File and identifier casing is mixed: `ai_chat_client.ts`, `ai_transcribe_client.ts` and `try-catch.ts` sit next to camelCase everywhere else, and the column is `YT_sourceUrl`.
 - `AudioTranscriptionJobs.source` is free `text`, with the allowed values listed only in a comment (`shared/db/schema.ts:89`). The other status-like columns are `pgEnum`s.
 - `mergeTranscriptsIntoContent` casts `get(...) as string` (`messages.controller.ts:268`). This relies on an earlier size check that sits in a different function.

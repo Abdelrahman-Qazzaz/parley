@@ -2,10 +2,7 @@ import { z } from "zod";
 import type { QueueYoutubeBody } from "@parley/shared/contract";
 import { takesBody } from "@parley/shared/takesBody";
 import type { UploadId } from "@parley/shared/types";
-import {
-  DEFAULT_TRANSCRIBE_MODEL,
-  isValidTranscribeModel,
-} from "../../../shared/ai/ai_transcribe_client";
+import { DEFAULT_TRANSCRIBE_MODEL, transcription } from "../../../shared/ai";
 
 const YOUTUBE_HOSTS = new Set([
   "youtube.com",
@@ -41,7 +38,7 @@ const transcriptionModelField = z.preprocess(
  * with one message on one path rather than two copies that can drift apart.
  */
 async function refineTranscriptionModel(modelId: string, ctx: z.RefinementCtx) {
-  if (await isValidTranscribeModel(modelId)) return;
+  if (await transcription.isValidModel(modelId)) return;
   ctx.addIssue({
     code: "custom",
     message: "Invalid transcription model",

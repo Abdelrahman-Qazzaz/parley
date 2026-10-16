@@ -122,7 +122,7 @@ vi.mock("../../shared/data/transcripts.data", async (importActual) => {
 
 // Controllers release deleted objects through the upload module.
 vi.mock("../../shared/uploads", () => ({
-  deleteObjects: mockDeleteObjects,
+  uploads: { deleteObjects: mockDeleteObjects },
 }));
 
 vi.mock("../../shared/storage/bucket", () => ({
@@ -145,9 +145,12 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_chat_client")>();
   return {
     ...actual,
-    findChatModel: mockFindChatModel,
-    chatAI: mockChatAI,
-    generateTitle: mockGenerateTitle,
+    chat: {
+      ...actual.chat,
+      findModel: mockFindChatModel,
+      complete: mockChatAI,
+      generateTitle: mockGenerateTitle,
+    },
   };
 });
 

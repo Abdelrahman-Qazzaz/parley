@@ -1,18 +1,18 @@
 import { getBaseEnv } from "../env";
 import { OpenRouter } from "@openrouter/sdk";
 
-import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
+import { CACHE_KEYS, cache } from "../cache";
 import type { ChatContentItems, ChatRequest } from "@openrouter/sdk/models";
 import { withTimeout } from "@parley/shared/withTimeout";
 import type { ChatModel } from "@parley/shared/contract";
 
-const ai_client = new OpenRouter({
+const client = new OpenRouter({
   apiKey: getBaseEnv().OPENROUTER_API_KEY,
 });
 
 /** Startup health check: fails if OpenRouter is unreachable or rejects the API key. */
-export async function pingChatAI(): Promise<void> {
-  await ai_client.models.list();
+async function ping(): Promise<void> {
+  await client.models.list();
 }
 
 export type ChatTurn = {
@@ -36,7 +36,7 @@ export function buildUserTurn(
     content: [
       { type: "text", text: content },
       ...imageUrls.map((url) => ({
-        type: "image_url" as const, // find more rhobust way, or find a way to unify "image_url"
+        type: "image_url" as const, // find more robust way, or find a way to unify "image_url"
         imageUrl: { url },
       })),
     ],
@@ -58,7 +58,7 @@ async function nonStreamChatAI(
   chatRequest: ChatRequest,
   abortSignal: AbortSignal,
 ) {
-  const completion = await ai_client.chat.send(
+  const completion = await client.chat.send(
     { chatRequest },
     { signal: abortSignal },
   );
@@ -78,7 +78,7 @@ async function streamChatAI(
     markProgress,
   }: { abortSignal: AbortSignal; markProgress: () => void },
 ) {
-  const stream = await ai_client.chat.send(
+  const stream = await client.chat.send(
     { chatRequest: { ...chatRequest, stream: true } },
     { signal: abortSignal },
   );
@@ -119,7 +119,7 @@ type ChatOptions = {
   timeoutMs?: number | undefined;
 };
 
-export async function chatAI(
+async function complete(
   model: string,
   messages: ChatTurn[],
   opts: ChatOptions = {},
@@ -155,8 +155,8 @@ export async function chatAI(
 async function fetchChatModels(): Promise<ChatModel[]> {
   // Only models that answer in text: every one listed is a chat model.
   // Transcription is served by Deepgram.
-  const models = (await ai_client.models.list({ outputModalities: "text" }))
-    .result.data;
+  const models = (await client.models.list({ outputModalities: "text" })).result
+    .data;
 
   return models.map((model) => ({
     id: model.id,
@@ -169,8 +169,8 @@ async function fetchChatModels(): Promise<ChatModel[]> {
 // Every send looks up the chosen model here, so the cache keeps that lookup
 // off the network. Serving it stale while it refreshes means no send waits on
 // the catalog once a process has loaded it.
-export function listChatModels(): Promise<ChatModel[]> {
-  return getOrSetCache(CACHE_KEYS.openRouterModels, fetchChatModels, {
+function listModels(): Promise<ChatModel[]> {
+  return cache.getOrSet(CACHE_KEYS.openRouterModels, fetchChatModels, {
     serveStale: true,
   });
 }
@@ -181,20 +181,18 @@ export function listChatModels(): Promise<ChatModel[]> {
  * is a 400 on the request rather than a provider rejection mid-stream, where
  * the only channel left is an SSE error event.
  */
-export async function findChatModel(
-  id: string,
-): Promise<ChatModel | undefined> {
-  return (await listChatModels()).find((model) => model.id === id);
+async function findModel(id: string): Promise<ChatModel | undefined> {
+  return (await listModels()).find((model) => model.id === id);
 }
 
 const MAX_TITLE_INPUT_CHARS = 12_000;
 const DEFAULT_TITLE_GENERATION_MODEL = "openai/gpt-4o-mini";
 
-export async function generateTitle(
+async function generateTitle(
   kind: "conversation" | "transcript",
   content: string,
 ): Promise<string> {
-  const title = await chatAI(
+  const title = await complete(
     DEFAULT_TITLE_GENERATION_MODEL,
     [
       {
@@ -207,3 +205,12 @@ export async function generateTitle(
 
   return title.trim();
 }
+
+/** Chat completions and the chat model catalog, from OpenRouter. */
+export const chat = {
+  complete,
+  listModels,
+  findModel,
+  generateTitle,
+  ping,
+};

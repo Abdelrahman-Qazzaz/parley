@@ -14,9 +14,9 @@ import { conversationsRouter } from "./src/routes/conversations.router";
 import { handleEvents } from "./src/controllers/events.controller";
 import { requireAuth } from "./src/middleware/auth.middleware";
 
-import { AUDIO_BUCKET, MAX_AUDIO_BYTES } from "../shared/storage/bucket";
+import { AUDIO_BUCKET, MAX_AUDIO_BYTES } from "../shared/storage";
 import { verifyApiServices } from "./startup";
-import { QUEUES } from "../shared/message-queue/messageQueue";
+import { mq } from "../shared/message-queue/messageQueue";
 
 export async function createApp() {
   const env = getApiEnv();
@@ -50,7 +50,7 @@ export async function createApp() {
   // TODO: rename bucket key to audioBucket.
   app.get("/contract", (c) =>
     c.json({
-      queues: QUEUES,
+      queues: mq.queues,
       bucket: AUDIO_BUCKET,
       maxAudioBytes: MAX_AUDIO_BYTES,
     }),
