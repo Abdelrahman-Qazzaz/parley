@@ -63,7 +63,7 @@ export const apiEnvSchema = baseEnvSchema.extend({
     ),
   /**
    * Origins besides this machine's whose pages may call the API,
-   * comma-separated: the hosted client, e.g. https://summarizer.up.railway.app,
+   * comma-separated: the hosted client, e.g. https://parley.up.railway.app,
    * which reaches "This computer" from the browser. Each may read and change
    * everything here, so list only the app's own.
    */
