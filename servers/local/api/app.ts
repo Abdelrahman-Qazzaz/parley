@@ -1,7 +1,8 @@
 import { existsSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -73,18 +74,34 @@ export async function createApp() {
   // The built client, on the API's own origin. Under `npm run dev` it isn't
   // built and Vite serves it instead, proxying the API's paths here.
   const clientDir = path.resolve(env.CLIENT_DIR);
-  if (existsSync(path.join(clientDir, "index.html"))) {
-    app.use("*", serveStatic({ root: clientDir }));
+  const indexPath = path.join(clientDir, "index.html");
+  if (existsSync(indexPath)) {
     // The client's own routes are pages rather than files. Only those: any
-    // other path is the API's, and one it doesn't have is a 404.
-    const page = serveStatic({ root: clientDir, path: "index.html" });
+    // other path is the API's, and one it doesn't have is a 404. Ahead of
+    // the static files, which would answer the root with the unmarked page.
+    const html = markServedByLocalServer(await readFile(indexPath, "utf8"));
+    const page = (c: Context) => c.html(html);
     app.get("/", page);
+    app.get("/index.html", page);
     app.get("/chat", page);
     app.get("/chat/*", page);
     // This computer's section, which is the only one a page served from here
     // can use.
     app.get("/local", page);
     app.get("/local/*", page);
+    app.use("*", serveStatic({ root: clientDir }));
   }
   return app;
+}
+
+/**
+ * Tells the page this server served it, so it calls this server on its own
+ * origin. The client can't tell from the address: a phone reaches the page
+ * by its Tailscale name, on Tailscale's port.
+ */
+function markServedByLocalServer(html: string): string {
+  const head = /<head[^>]*>/i.exec(html);
+  if (!head) throw new Error(`The built client's index.html has no <head>`);
+  const at = head.index + head[0].length;
+  return `${html.slice(0, at)}<meta name="parley-server" content="local" />${html.slice(at)}`;
 }

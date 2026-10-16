@@ -14,7 +14,7 @@ beforeAll(async () => {
   const dir = await mkdtemp(path.join(tmpdir(), "client-"));
   await writeFile(
     path.join(dir, "index.html"),
-    "<!doctype html><title>app</title>",
+    "<!doctype html><html><head><title>app</title></head></html>",
   );
   await mkdir(path.join(dir, "assets"));
   await writeFile(path.join(dir, "assets", "app.js"), "console.log(1)");
@@ -62,6 +62,22 @@ describe("the built client", () => {
 
     expect(await res.text()).toContain("<title>app</title>");
   });
+
+  it.each([
+    "/",
+    "/index.html",
+    "/chat",
+    "/local/550e8400-e29b-41d4-a716-446655440000",
+  ])(
+    "marks the page at %s as this server's, so it calls this origin",
+    async (urlPath) => {
+      const res = await get(urlPath);
+
+      expect(await res.text()).toContain(
+        '<head><meta name="parley-server" content="local" /><title>app</title>',
+      );
+    },
+  );
 
   it("leaves the API's routes to the API", async () => {
     const res = await get("/conversations");

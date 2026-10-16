@@ -27,12 +27,14 @@ const LOCAL_PORT = "3002";
 
 /**
  * Whether the local server itself served this page, as it does for someone
- * using only this computer. Its API is then this page's own origin, and the
- * cloud isn't reachable from here.
+ * using only this computer, or their phone over Tailscale. Its API is then
+ * this page's own origin, and the cloud isn't reachable from here. The server
+ * marks the page, since a phone reaches it by another name and port.
  */
 export const servedByLocalServer =
-  ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname) &&
-  window.location.port === LOCAL_PORT;
+  document
+    .querySelector('meta[name="parley-server"]')
+    ?.getAttribute("content") === "local";
 
 /** The server on the user's own machine, which chats through their Claude Code. */
 export const localServer: Server = {
