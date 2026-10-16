@@ -1,14 +1,14 @@
-alias sanda='sbx run --name summarizer'
-alias tsand='sbx exec -it summarizer tmux new -A -s main'
-alias sand='sbx exec -it summarizer bash'
+alias sanda='sbx run --name summarizer-wrapper' # not needed if using t3code
+alias tsand='sbx exec -it summarizer-wrapper tmux new -A -s main'
+alias sand='sbx exec -it summarizer-wrapper bash'
 
 
 # 3001 serves the API and the websocket; Socket.IO attaches to the same server.
-alias sand_ports='sbx ports summarizer --publish 5173:5173 && sbx ports summarizer --publish 3001:3001'
+alias sand_ports='sbx ports summarizer-wrapper --publish 5173:5173 && sbx ports summarizer-wrapper --publish 3001:3001'
 
-alias sanda_browser='sbx run --name summarizer-browser --template summarizer-codex-playwright:v1'
-alias sand_browser='sbx exec -it summarizer-browser bash'
-alias sand_browser_ports='sbx ports summarizer-browser --publish 5173:5173 && sbx ports summarizer-browser --publish 3001:3001'
+alias sanda_browser='sbx run --name summarizer-wrapper-browser --template summarizer-wrapper-codex-playwright:v1'
+alias sand_browser='sbx exec -it summarizer-wrapper-browser bash'
+alias sand_browser_ports='sbx ports summarizer-wrapper-browser --publish 5173:5173 && sbx ports summarizer-wrapper-browser --publish 3001:3001'
 
 # Everything the stack has to reach, with the sandbox left on default-deny.
 # Re-run after recreating a sandbox — the allow-list does not survive it.
