@@ -14,7 +14,7 @@ const MAX_IMAGES = 6;
 
 /**
  * Transcripts one turn may carry. This is not what limits the prompt: the
- * context budget (MAX_CONTEXT_CHARS in messages.controller.ts) does that, once
+ * context budget (MAX_CONTEXT_CHARS in chat/contextWindow.ts) does that, once
  * the database has reported each transcript's size. This only bounds the
  * request, so its ids never reach the claim and context queries by the
  * thousand. Transcripts run about 900 characters a minute, so about ten
