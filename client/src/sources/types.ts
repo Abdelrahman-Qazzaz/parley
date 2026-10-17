@@ -1,3 +1,5 @@
+import { localId } from "../lib/localId";
+
 export type SourceKind = "image" | "audio" | "video" | "youtube";
 
 /**
@@ -48,4 +50,21 @@ export function sourceStatusLabel(source: StagedSource): string {
     return `ready · ${source.charCount.toLocaleString()} chars`;
   }
   return statusLabels[source.status];
+}
+
+/** A new source with every field it doesn't name left empty. */
+export function stageSource(
+  fields: Pick<StagedSource, "kind" | "name" | "status"> &
+    Partial<StagedSource>,
+): StagedSource {
+  return {
+    localId: localId(),
+    sourceUploadId: null,
+    previewUrl: null,
+    charCount: null,
+    error: null,
+    file: null,
+    youtubeUrl: null,
+    ...fields,
+  };
 }

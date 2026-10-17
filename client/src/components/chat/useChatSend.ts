@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { createConversation, type Conversation } from "../../api/conversations";
 import { ApiError, errorMessage } from "../../api/http";
 import {
+  fetchMessages,
   streamMessage,
   type ChatMessage,
   type MessageAttachmentInput,
@@ -11,7 +12,7 @@ import {
 import { queryKeys } from "../../lib/queryClient";
 import { useServer } from "../../hooks/server/useServer";
 import { useToast } from "../../hooks/toast/useToast";
-import type { StagedSource } from "../../sources/types";
+import { stageSource, type StagedSource } from "../../sources/types";
 import type { PendingTurn } from "./types";
 import { localId } from "../../lib/localId";
 
@@ -133,9 +134,41 @@ function toStoredTurns(
   return [user, assistant];
 }
 
-function toPendingTurn(content: string, sources: StagedSource[]): PendingTurn {
+/**
+ * A stored user message's attachments as composer sources, already uploaded
+ * and transcribed, so an edit can resend them and a failed one can hand them
+ * back to the composer like a failed send does.
+ */
+export function sourcesOfMessage(message: ChatMessage): StagedSource[] {
+  return [
+    ...message.transcriptAttachments.map((transcript) =>
+      stageSource({
+        kind: transcript.source,
+        name: transcript.fileName,
+        status: "ready",
+        sourceUploadId: transcript.audioUploadId,
+      }),
+    ),
+    ...message.attachments.map((image) =>
+      stageSource({
+        kind: "image",
+        name: image.fileName,
+        status: "ready",
+        sourceUploadId: image.imageUploadId,
+        previewUrl: image.url,
+      }),
+    ),
+  ];
+}
+
+function toPendingTurn(
+  content: string,
+  sources: StagedSource[],
+  replacesMessageId: string | null,
+): PendingTurn {
   return {
     content,
+    replacesMessageId,
     images: sources
       .filter((source) => source.kind === "image")
       .map((source) => ({
@@ -158,21 +191,35 @@ function toPendingTurn(content: string, sources: StagedSource[]): PendingTurn {
   };
 }
 
-type SendInput = {
-  conversationId: string | undefined;
+type TurnInput = {
   content: string;
   modelId: string;
   sources: StagedSource[];
   lastMessageId: string | null;
-  /** Called once the conversation exists, before the reply starts. */
-  onConversation: (conversationId: string) => void;
-  /** Puts the message back in the composer when the send didn't take. */
+  /** Puts the message back in the composer when the turn didn't take. */
   onRestore: (
     content: string,
     sources: StagedSource[],
     draftKey: string,
   ) => void;
 };
+
+type SendInput = TurnInput & {
+  conversationId: string | undefined;
+  /** Called once the conversation exists, before the reply starts. */
+  onConversation: (conversationId: string) => void;
+};
+
+type EditInput = TurnInput & {
+  conversationId: string;
+  /** The user message being replaced, along with everything after it. */
+  message: ChatMessage;
+};
+
+/** Ids the client made up for a turn it wrote into the cache itself. */
+function isLocalId(id: string) {
+  return id.startsWith("local:");
+}
 
 /**
  * Owns the turns that are mid-flight. Keyed by conversation so a reply streaming
@@ -190,6 +237,168 @@ export function useChatSend() {
   const dropPending = useCallback((conversationId: string) => {
     setPendingTurns((current) => without(current, conversationId));
   }, []);
+
+  /**
+   * The id the server knows a message by. A turn this client just sent sits
+   * in the cache under a made-up id until the next fetch, so look it up by
+   * position: the stored history lists the same messages in the same order.
+   */
+  const storedIdOf = useCallback(
+    async (conversationId: string, message: ChatMessage) => {
+      if (!isLocalId(message.id)) return message.id;
+
+      const key = queryKeys.messages(server.id, conversationId);
+      const position = (
+        queryClient.getQueryData<MessagesResponse>(key)?.messages ?? []
+      ).indexOf(message);
+      const stored = await queryClient.fetchQuery({
+        queryKey: key,
+        queryFn: () => fetchMessages(server, conversationId),
+        staleTime: 0,
+      });
+      const match = stored.messages[position];
+      if (position < 0 || match?.role !== "user" || isLocalId(match.id)) {
+        throw new Error("This message changed. Reload the chat and try again.");
+      }
+      return match.id;
+    },
+    [queryClient, server],
+  );
+
+  /**
+   * Streams one turn into `target` and writes it into the cache once stored.
+   * An edit's turn replaces the edited message and everything after it, on
+   * the server and in the cache alike.
+   */
+  const streamTurn = useCallback(
+    async (
+      target: string,
+      input: TurnInput,
+      replaces: { message: ChatMessage; storedId: string } | null,
+    ) => {
+      setPendingTurns((current) => ({
+        ...current,
+        [target]: toPendingTurn(
+          input.content,
+          input.sources,
+          // The stored id: finding it may have refetched the history, which
+          // replaces a local id the cache held for this message.
+          replaces?.storedId ?? null,
+        ),
+      }));
+
+      let storedAssistantId: string | null = null;
+      const deltas = createDeltaBuffer((assistantContent) =>
+        setPendingTurns((current) => {
+          const turn = current[target];
+          if (!turn) return current;
+          return { ...current, [target]: { ...turn, assistantContent } };
+        }),
+      );
+
+      try {
+        await streamMessage(
+          server,
+          {
+            conversationId: target,
+            messageContent: input.content,
+            chosenModelId: input.modelId,
+            attachments: messageAttachmentsOf(input.sources),
+            lastMessageId: input.lastMessageId,
+            ...(replaces ? { replacesMessageId: replaces.storedId } : {}),
+          },
+          {
+            onDelta: (delta) => deltas.push(delta),
+            onDone: (lastMessageId) => {
+              storedAssistantId = lastMessageId;
+            },
+          },
+        );
+      } finally {
+        deltas.stop();
+      }
+
+      // Write the finished turn into the cache rather than refetching the
+      // conversation: the whole history came down the wire after every
+      // message, and it only grows. Cancel first so an in-flight fetch can't
+      // land on top of this.
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.messages(server.id, target),
+      });
+      queryClient.setQueryData<MessagesResponse>(
+        queryKeys.messages(server.id, target),
+        (current) => {
+          const messages = current?.messages ?? [];
+          const kept = replaces
+            ? messages.slice(
+                0,
+                messages.findIndex(
+                  (message) =>
+                    message.id === replaces.message.id ||
+                    message.id === replaces.storedId,
+                ),
+              )
+            : messages;
+          return {
+            lastMessageId: storedAssistantId ?? current?.lastMessageId ?? null,
+            messages: [
+              ...kept,
+              ...toStoredTurns(
+                input,
+                target,
+                storedAssistantId ?? `local:${localId()}`,
+                deltas.text,
+              ),
+            ],
+          };
+        },
+      );
+      dropPending(target);
+      // Stale, but not refetched now: the next mount reconciles the local
+      // user-message id against the stored one at no cost here.
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.messages(server.id, target),
+        refetchType: "none",
+      });
+      void queryClient.invalidateQueries({
+        queryKey: queryKeys.conversations(server.id),
+      });
+    },
+    [dropPending, queryClient, server],
+  );
+
+  /**
+   * A turn that didn't take, sent or edited alike: the composer gets the
+   * message back and the chat is refetched to show what the server kept. A
+   * failed edit's rewind stands, so the edited message is gone from the chat
+   * and its text waits in the composer, as a failed send's does.
+   */
+  const recover = useCallback(
+    (
+      error: unknown,
+      input: TurnInput,
+      conversationId: string | undefined,
+      fallback: string,
+    ) => {
+      if (conversationId) {
+        dropPending(conversationId);
+        // The run outlives this stream server-side; a refetch is how a reply
+        // that finished anyway still reaches the screen.
+        void queryClient.invalidateQueries({
+          queryKey: queryKeys.messages(server.id, conversationId),
+        });
+      }
+      input.onRestore(input.content, input.sources, conversationId ?? "new");
+      toast.show({
+        kind: "error",
+        message:
+          error instanceof ApiError && error.status === 409
+            ? "This chat moved on. Its latest messages were reloaded — try again."
+            : errorMessage(error, fallback),
+      });
+    },
+    [dropPending, queryClient, server, toast],
+  );
 
   const send = useCallback(
     async (input: SendInput) => {
@@ -215,99 +424,38 @@ export function useChatSend() {
           input.onConversation(createdId);
         }
 
-        const target = conversationId;
-        setPendingTurns((current) => ({
-          ...current,
-          [target]: toPendingTurn(input.content, input.sources),
-        }));
-
-        let storedAssistantId: string | null = null;
-        const deltas = createDeltaBuffer((assistantContent) =>
-          setPendingTurns((current) => {
-            const turn = current[target];
-            if (!turn) return current;
-            return { ...current, [target]: { ...turn, assistantContent } };
-          }),
-        );
-
-        try {
-          await streamMessage(
-            server,
-            {
-              conversationId: target,
-              messageContent: input.content,
-              chosenModelId: input.modelId,
-              attachments: messageAttachmentsOf(input.sources),
-              lastMessageId: input.lastMessageId,
-            },
-            {
-              onDelta: (delta) => deltas.push(delta),
-              onDone: (lastMessageId) => {
-                storedAssistantId = lastMessageId;
-              },
-            },
-          );
-        } finally {
-          deltas.stop();
-        }
-
-        // Write the finished turn into the cache rather than refetching the
-        // conversation: the whole history came down the wire after every
-        // message, and it only grows. Cancel first so an in-flight fetch can't
-        // land on top of this.
-        await queryClient.cancelQueries({
-          queryKey: queryKeys.messages(server.id, target),
-        });
-        queryClient.setQueryData<MessagesResponse>(
-          queryKeys.messages(server.id, target),
-          (current) => ({
-            lastMessageId: storedAssistantId ?? current?.lastMessageId ?? null,
-            messages: [
-              ...(current?.messages ?? []),
-              ...toStoredTurns(
-                input,
-                target,
-                storedAssistantId ?? `local:${localId()}`,
-                deltas.text,
-              ),
-            ],
-          }),
-        );
-        dropPending(target);
-        // Stale, but not refetched now: the next mount reconciles the local
-        // user-message id against the stored one at no cost here.
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.messages(server.id, target),
-          refetchType: "none",
-        });
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.conversations(server.id),
-        });
+        await streamTurn(conversationId, input, null);
       } catch (error) {
-        if (conversationId) {
-          dropPending(conversationId);
-          // The run outlives this stream server-side; a refetch is how a reply
-          // that finished anyway still reaches the screen.
-          void queryClient.invalidateQueries({
-            queryKey: queryKeys.messages(server.id, conversationId),
-          });
-        }
-        input.onRestore(input.content, input.sources, conversationId ?? "new");
-        toast.show({
-          kind: "error",
-          message:
-            error instanceof ApiError && error.status === 409
-              ? "This chat moved on. Its latest messages were reloaded — try again."
-              : errorMessage(error, "The message didn't send."),
-        });
+        recover(error, input, conversationId, "The message didn't send.");
       } finally {
         setSendingKeys((current) =>
           without(current, startedKey, conversationId),
         );
       }
     },
-    [dropPending, queryClient, server, toast],
+    [queryClient, recover, server, streamTurn],
   );
 
-  return { pendingTurns, sendingKeys, send };
+  /** Replaces a user message, and every turn after it, with a new turn. */
+  const edit = useCallback(
+    async (input: EditInput) => {
+      const { conversationId } = input;
+      setSendingKeys((current) => ({ ...current, [conversationId]: true }));
+
+      try {
+        const storedId = await storedIdOf(conversationId, input.message);
+        await streamTurn(conversationId, input, {
+          message: input.message,
+          storedId,
+        });
+      } catch (error) {
+        recover(error, input, conversationId, "The edit didn't send.");
+      } finally {
+        setSendingKeys((current) => without(current, conversationId));
+      }
+    },
+    [recover, storedIdOf, streamTurn],
+  );
+
+  return { pendingTurns, sendingKeys, send, edit };
 }

@@ -11,6 +11,8 @@ export type TurnImage = {
  * persist, so the conversation reads the same before and after the refetch.
  */
 export type PendingTurn = {
+  /** An edit: this message and everything after it are being replaced. */
+  replacesMessageId: string | null;
   content: string;
   images: TurnImage[];
   transcripts: MessageTranscript[];

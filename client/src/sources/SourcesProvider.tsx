@@ -30,27 +30,10 @@ import { useToast } from "../hooks/toast/useToast";
 import { useTranscriptionModelsQuery } from "../hooks/queries/useModelsQuery";
 import { useServerReady } from "../hooks/server/useServerReady";
 import { SourcesContext, type ExistingSource } from "./context";
-import type { StagedSource } from "./types";
+import { stageSource, type StagedSource } from "./types";
 import { useTranscriptWatcher } from "./useTranscriptWatcher";
-import { localId } from "../lib/localId";
 
 type Drafts = Record<string, StagedSource[]>;
-
-function stageSource(
-  fields: Pick<StagedSource, "kind" | "name" | "status"> &
-    Partial<StagedSource>,
-): StagedSource {
-  return {
-    localId: localId(),
-    sourceUploadId: null,
-    previewUrl: null,
-    charCount: null,
-    error: null,
-    file: null,
-    youtubeUrl: null,
-    ...fields,
-  };
-}
 
 function releasePreview(source: StagedSource) {
   if (source.previewUrl?.startsWith("blob:")) {
