@@ -127,6 +127,12 @@ def handle_yt_fetch(event: dict) -> None:
             return
 
         _fetch_with_retries(audio_upload_id, url, user_id)
+        # Inside the try: a transcribe the broker refuses must fail the job,
+        # or it would sit queued with nothing coming for it.
+        mq.publish_threadsafe(
+            contract.queues.TRANSCRIBE,
+            {"audioUploadId": audio_upload_id},
+        )
     except Exception as error:
         # Tell the API so it can mark the job row failed — a malformed
         # payload (missing url/userId) must still fail the job if we know
@@ -142,10 +148,6 @@ def handle_yt_fetch(event: dict) -> None:
             )
         raise
 
-    mq.publish_threadsafe(
-        contract.queues.TRANSCRIBE,
-        {"audioUploadId": audio_upload_id},
-    )
     log.info("Fetched %s, queued transcribe", audio_upload_id)
 
 

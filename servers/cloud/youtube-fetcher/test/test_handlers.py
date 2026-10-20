@@ -292,6 +292,26 @@ class TestHandleYtFetch:
             {"audioUploadId": "u1", "userId": "usr", "error": "boom"},
         )
 
+    def test_refused_transcribe_publish_fails_the_job(self, publish, monkeypatch):
+        monkeypatch.setattr(handlers, "_fetch_with_retries", MagicMock())
+        # The transcribe publish is refused; the failure report goes through.
+        publish.side_effect = [RuntimeError("nacked"), None]
+
+        with pytest.raises(RuntimeError, match="nacked"):
+            handlers.handle_yt_fetch(
+                {
+                    "audioUploadId": "u1",
+                    "url": "https://youtu.be/x",
+                    "userId": "usr",
+                    "useCaptionsIfAvailable": False,
+                }
+            )
+
+        publish.assert_called_with(
+            QueueName("yt_fetch_failed"),
+            {"audioUploadId": "u1", "userId": "usr", "error": "nacked"},
+        )
+
     def test_failure_error_message_is_truncated(self, publish, monkeypatch):
         monkeypatch.setattr(
             handlers,
