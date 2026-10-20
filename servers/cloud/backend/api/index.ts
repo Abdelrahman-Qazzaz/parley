@@ -15,7 +15,21 @@ import { createApp } from "./app";
 const app = await createApp();
 const port = env.PORT;
 
-const server = serve({ fetch: app.fetch, port });
+/**
+ * How long an idle keep-alive connection stays open. Caddy reuses its
+ * connections to the API, and if Node closes one first (by default after
+ * about 6 s), a request Caddy sends on it at that moment is reset and the
+ * user's request fails. So this outlasts the 60 s Caddy keeps an idle one
+ * (deploy/parley.caddy); keep it above that. Shutdown isn't held up by it:
+ * server.close() drops idle connections at once.
+ */
+const KEEP_ALIVE_TIMEOUT_MS = 65_000;
+
+const server = serve({
+  fetch: app.fetch,
+  port,
+  serverOptions: { keepAliveTimeout: KEEP_ALIVE_TIMEOUT_MS },
+});
 
 await mq.consume(
   mq.queues.TRANSCRIBE_DONE,
