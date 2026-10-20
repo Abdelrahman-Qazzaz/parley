@@ -119,6 +119,21 @@ replica is interchangeable and scaling is purely a replica count. (This used to
 be split by a `WORKER_ROLE` env var, which existed only to size the transcribe
 and summarize pools separately.)
 
+### Schema changes
+
+Deploys build the database from the migrations in `drizzle/`, through the
+`migrate` one-shot (`dist/migrate.js`), never from `schema.ts` directly. So
+a change to `schema.ts` comes with its migration:
+
+1. Edit `shared/db/schema.ts`. `npm run db` (push) is fine for trying it on
+   your own database.
+2. `npm run db:generate`, and commit the new file in `drizzle/` with the
+   change. `test/unit/migrations.test.ts` fails until you do.
+
+A database made with push rather than migrations (the existing ones were)
+needs `npm run db:baseline` once before its first `migrate`: it checks the
+schema is all there and records the migrations as applied.
+
 ### No worker port
 
 The worker is a pure queue consumer and runs no HTTP server. There is no
