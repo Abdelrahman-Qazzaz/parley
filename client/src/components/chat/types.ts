@@ -17,4 +17,10 @@ export type PendingTurn = {
   images: TurnImage[];
   transcripts: MessageTranscript[];
   assistantContent: string;
+  /**
+   * The turn didn't take and the chat is being reloaded. Nothing stands in
+   * for it, and the turns an edit replaced stay hidden until the reload shows
+   * what the server kept, rather than flashing back in the meantime.
+   */
+  reloading: boolean;
 };

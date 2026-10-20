@@ -188,6 +188,7 @@ function toPendingTurn(
         : [],
     ),
     assistantContent: "",
+    reloading: false,
   };
 }
 
@@ -381,12 +382,25 @@ export function useChatSend() {
       fallback: string,
     ) => {
       if (conversationId) {
-        dropPending(conversationId);
-        // The run outlives this stream server-side; a refetch is how a reply
-        // that finished anyway still reaches the screen.
-        void queryClient.invalidateQueries({
-          queryKey: queryKeys.messages(server.id, conversationId),
+        setPendingTurns((current) => {
+          const turn = current[conversationId];
+          if (!turn) return current;
+          return { ...current, [conversationId]: { ...turn, reloading: true } };
         });
+        // The run outlives this stream server-side; a refetch is how a reply
+        // that finished anyway still reaches the screen. A turn sent while it
+        // runs isn't reloading, so it is left alone.
+        void queryClient
+          .invalidateQueries({
+            queryKey: queryKeys.messages(server.id, conversationId),
+          })
+          .finally(() =>
+            setPendingTurns((current) =>
+              current[conversationId]?.reloading
+                ? without(current, conversationId)
+                : current,
+            ),
+          );
       }
       input.onRestore(input.content, input.sources, conversationId ?? "new");
       toast.show({
@@ -397,7 +411,7 @@ export function useChatSend() {
             : errorMessage(error, fallback),
       });
     },
-    [dropPending, queryClient, server, toast],
+    [queryClient, server, toast],
   );
 
   const send = useCallback(

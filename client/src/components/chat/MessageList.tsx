@@ -109,7 +109,7 @@ export function MessageList({
                 ),
               )}
 
-              {pending && (
+              {pending && !pending.reloading && (
                 <>
                   <UserTurn
                     content={pending.content}
