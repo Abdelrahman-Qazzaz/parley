@@ -4,7 +4,6 @@
   "type": "module",
   "packageManager": "npm@11.14.1",
   "scripts": {
-    "browser:auth": "npm run --silent doppler -- tsx scripts/createBrowserAuthState.ts",
     "build": "tsx scripts/build.ts",
     "start:api": "node dist/api.js",
     "start:transcribe-worker": "node dist/transcribe-worker.js",

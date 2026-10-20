@@ -24,6 +24,10 @@ Branches still on the old layout (local-edition, and anything cut before two-ser
 
 Remove a finished worktree with `git worktree remove ../summarizer-<feature>`, not by deleting the folder.
 
+## Testing in a browser
+
+To check a change in the running app, sign in as the test user: `TEST_USER_EMAIL` and `TEST_USER_PASSWORD` in Doppler's dev config, a WorkOS staging account that signs in with a password. Never use the owner's own account. [BROWSER_QA.md](BROWSER_QA.md) has the steps, including what a Docker sandbox needs before the sign-in page loads.
+
 ## What I need from you
 
 End every turn where you're blocked on me, or where the next step needs me, with a short "**What I need from you**" section. Numbered, one concrete action or decision per item: exactly what to do, where (which site, app, file or person), and what to send back. e.g. "Open the Convex dashboard, add `OPENAI_API_KEY` under Settings → Environment Variables, then reply 'done'", not "I need the API key set up".
