@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+from concurrent.futures import Future
 from typing import Any, Callable
 
 import pika
@@ -10,6 +11,19 @@ from env import env
 from contract import QueueName
 
 log = logging.getLogger(__name__)
+
+# How long a handler waits for the broker to confirm a publish. Confirms
+# normally take milliseconds; this only bounds a broker that has stopped
+# answering.
+PUBLISH_CONFIRM_TIMEOUT_S = 30
+
+# Survives a broker restart. A message without it is dropped when RabbitMQ
+# restarts, even in a durable queue. Same as amqplib's `persistent: true`.
+PERSISTENT = pika.BasicProperties(
+    content_type="application/json",
+    delivery_mode=pika.DeliveryMode.Persistent,
+)
+
 
 class MQ:
     def __init__(self) -> None:
@@ -30,6 +44,10 @@ class MQ:
         # Same as channel.prefetch(1)
         self.channel.basic_qos(prefetch_count=1)
 
+        # basic_publish now waits for the broker to take the message, and
+        # raises if it refuses — the TS side's confirm channel.
+        self.channel.confirm_delivery()
+
     def close(self) -> None:
         if self.connection is not None and self.connection.is_open:
             self.connection.close()
@@ -45,16 +63,29 @@ class MQ:
             exchange="",
             routing_key=queue,
             body=json.dumps(data).encode(),
+            properties=PERSISTENT,
         )
 
     def publish_threadsafe(self, queue: QueueName, data: Any) -> None:
         """Publish from a handler (worker) thread: the connection is
-        single-threaded, so hop onto its thread via add_callback_threadsafe."""
-        assert self.connection is not None
+        single-threaded, so hop onto its thread via add_callback_threadsafe.
 
-        self.connection.add_callback_threadsafe(
-            lambda: self._publish(queue, data)
-        )
+        Returns once the broker has confirmed the message, and raises if it
+        refused it or didn't answer in time, so the handler fails rather than
+        carrying on as if the message were sent."""
+        assert self.connection is not None
+        sent: Future[None] = Future()
+
+        def publish() -> None:
+            try:
+                self._publish(queue, data)
+            except Exception as error:
+                sent.set_exception(error)
+            else:
+                sent.set_result(None)
+
+        self.connection.add_callback_threadsafe(publish)
+        sent.result(timeout=PUBLISH_CONFIRM_TIMEOUT_S)
 
     def listen(
         self,
@@ -109,4 +140,3 @@ class MQ:
 
 
 mq = MQ()
-
