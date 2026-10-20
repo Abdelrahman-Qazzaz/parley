@@ -1,0 +1,43 @@
+# The server's shared reverse proxy: one Caddy in front of every project on the
+# box. It owns ports 80 and 443, gets an HTTPS certificate for each site
+# automatically, and reaches each project's containers over the external
+# `proxy` network. provision.sh installs this at /opt/proxy and starts it.
+#
+# Each project adds one site file to /opt/proxy/caddy/sites/ and reloads:
+#
+#   docker compose -f /opt/proxy/compose.yaml exec -T caddy \
+#     caddy reload --config /etc/caddy/Caddyfile
+#
+# A reload that fails leaves the running config in place.
+
+name: proxy
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "80:80" # certificate challenges, and the redirect to HTTPS
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      # A directory, not single files: an editor that saves by replacing the
+      # file would leave a single-file mount pointing at the old one.
+      - ./caddy:/etc/caddy:ro
+      # Certificates. Losing them means issuing again, and Let's Encrypt
+      # rate-limits that.
+      - caddy-data:/data
+      - caddy-config:/config
+    networks: [proxy]
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+    restart: unless-stopped
+
+networks:
+  proxy:
+    external: true
+
+volumes:
+  caddy-data:
+  caddy-config:

@@ -3,11 +3,13 @@
 package.json
 mise.toml
 servers/cloud/compose.yaml
+servers/cloud/compose.prod.yaml
+servers/cloud/deploy/*
+.github/workflows/*
 knip.json
 Dockerfile
 *.config.*
 *.env.example
-railway.json
 doppler.yaml
 tsconfig*.json
 requirements*.txt

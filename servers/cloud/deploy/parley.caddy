@@ -1,0 +1,15 @@
+# Parley's site on the server's shared proxy (proxy/). deploy.sh fills in the
+# domain, copies this into the proxy's sites/, and reloads Caddy. Caddy gets
+# and renews the HTTPS certificate itself.
+__PARLEY_DOMAIN__ {
+	reverse_proxy parley-api:3001 {
+		# The API keys its auth rate limits on X-Real-IP (getClientIpKey in
+		# api/src/middleware/rateLimit.middleware.ts). This sets it rather
+		# than adding to it: whatever the client sent is replaced by the
+		# address that actually connected.
+		header_up X-Real-IP {remote_host}
+		# Event streams and streamed chat replies reach the browser as they're
+		# written, not when a buffer fills.
+		flush_interval -1
+	}
+}

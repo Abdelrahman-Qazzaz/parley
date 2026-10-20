@@ -6,8 +6,8 @@
  * middleware, and the routers mount it.
  *
  * What a budget belongs to:
- * - clientIp: the client's address, as Railway's edge proxy reports it in
- *   X-Real-IP.
+ * - clientIp: the client's address, as the server's Caddy proxy reports it
+ *   in X-Real-IP.
  * - userId: the signed-in user, from the session cookie. In the API that
  *   means requireAuth runs first; anything enforcing it outside the API has
  *   to verify the WorkOS access token in that cookie to know the user.

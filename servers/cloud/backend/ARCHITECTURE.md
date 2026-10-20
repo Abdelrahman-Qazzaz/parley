@@ -103,6 +103,11 @@ it later finishes.
 
 ## Deployment & scaling
 
+Production is one VPS running `servers/cloud/compose.yaml` with
+`compose.prod.yaml` on top, behind a shared Caddy proxy, deployed by
+`.github/workflows/deploy.yml` on every push to `main`. See
+[`servers/cloud/deploy/README.md`](../deploy/README.md).
+
 One build artifact, run as different processes:
 
 - `api` — normally a single instance behind an ingress. Its port is

@@ -33,7 +33,7 @@ and the chat UI treats the turn as finished at that point.
 only logs inside `withPreparationMetrics` (`shared/preparationMetrics.ts:22`),
 and nothing calls that since `d70ee27` merged the create and patch
 handlers. Wrapping `prepareTurn` in it again gives production numbers. The
-most useful one is a single Railway → Supabase database round trip, since
+most useful one is a single server → Supabase database round trip, since
 it decides whether 6 is worth 10 ms or 150 ms.
 
 ## Rate limits after scaling out
@@ -78,12 +78,15 @@ Things to settle before moving:
   published keys, the same check `api/src/auth/accessToken.ts` makes.
   Keyed on IP alone, users behind one address (an office, carrier NAT)
   share a budget, the problem the auth limits just got fixed for.
-- **Railway may not need your own load balancer.** Railway spreads traffic
-  across a service's replicas itself, and as far as I know its edge offers no
-  rate limiting to configure. Check both before relying on either. The
-  sockets don't need one either; see [Scaling out](#scaling-out-the-socket-problem).
+- **The server's Caddy can be the load balancer.** It already sits in front
+  of the API (`servers/cloud/deploy/`), and `reverse_proxy` spreads traffic
+  across several upstreams itself. Its standard build has no rate limiting,
+  though: that needs a plugin such as `caddy-ratelimit`, or a different
+  proxy. The sockets don't need a load balancer; see
+  [Scaling out](#scaling-out-the-socket-problem).
 - **Until then, in-memory counts stop being exact with replicas.** Each
-  replica counts on its own, and Railway doesn't pin a user to one replica,
+  replica counts on its own, and Caddy's default load balancing doesn't pin
+  a user to one replica,
   so a user's effective budget grows with the replica count. If replicas
   come before a load balancer, divide the limits by the count or go back to
   a shared store.
