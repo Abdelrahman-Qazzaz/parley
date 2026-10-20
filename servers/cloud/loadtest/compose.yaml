@@ -1,0 +1,295 @@
+# The backend under load, with nothing it calls billed: every paid service is
+# a stand-in on this machine. See README.md for how to run it.
+#
+#   docker compose up -d --build --wait          the stack
+#   docker compose run --rm --no-deps k6 run /scripts/load.js -e PROFILE=smoke
+#   docker compose down -v                       everything, data included
+#
+# The API keys below are fake on purpose. A call that somehow reached a real
+# provider would be turned away with a 401 instead of billed. The Supabase
+# keys and passwords only open this stack's own containers.
+
+name: parley-loadtest
+
+x-supabase-keys:
+  # Signed with JWT_SECRET below; valid until 2100. Not secrets.
+  service-role-key: &service-role-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIiwiaXNzIjoic3VwYWJhc2UtbG9hZHRlc3QiLCJpYXQiOjE3NjAwMDAwMDAsImV4cCI6NDEwMjQ0NDgwMH0.85J5lXE7N3jw0SY5W-gErL_q2r5zxDytDQwnnfNdewQ
+  anon-key: &anon-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWxvYWR0ZXN0IiwiaWF0IjoxNzYwMDAwMDAwLCJleHAiOjQxMDI0NDQ4MDB9.Etms7G81u2pXMNya7QfZ3Kl-YQzuyJd23LsXLGjU5Rs
+  jwt-secret: &jwt-secret loadtest-only-jwt-secret-not-a-real-secret-0123456789
+
+# What the API and the worker share: shared/env.ts's base schema.
+x-base-env:
+  &base-env # Not production: shared/env.ts refuses the overrides below there.
+  NODE_ENV: development
+  # Development defaults to debug, and logging every query would be part of
+  # what gets measured.
+  LOG_LEVEL: info
+  # Silences the development warning about running outside Doppler; nothing
+  # here comes from Doppler.
+  DOPPLER_PROJECT: loadtest
+  DOPPLER_CONFIG: loadtest
+  DATABASE_URL: postgres://postgres:loadtest@db:5432/postgres
+  MQ_URL: amqp://loadtest:loadtest@rabbitmq:5672
+  SUPABASE_URL: http://storage-proxy:8000
+  SUPABASE_SERVICE_ROLE_KEY: *service-role-key
+  OPENROUTER_API_KEY: fake-loadtest-key
+  DEEPGRAM_API_KEY: fake-loadtest-key
+  OPENROUTER_BASE_URL: http://mocks:4000/openrouter
+  DEEPGRAM_BASE_URL: http://mocks:4000/deepgram
+
+x-app: &app
+  image: parley-loadtest-app
+  build:
+    context: ../../..
+    dockerfile: servers/cloud/backend/Dockerfile
+  environment: *base-env
+
+services:
+  # ---- Supabase: Postgres and Storage, as Supabase runs them
+
+  db:
+    image: supabase/postgres:17.11.0.006
+    command: ["postgres", "-c", "config_file=/etc/postgresql/postgresql.conf"]
+    environment:
+      POSTGRES_HOST: /var/run/postgresql
+      POSTGRES_PASSWORD: loadtest
+      PGPASSWORD: loadtest
+      POSTGRES_DB: postgres
+      PGDATABASE: postgres
+      JWT_SECRET: *jwt-secret
+    volumes:
+      - ./supabase/roles.sql:/docker-entrypoint-initdb.d/init-scripts/99-roles.sql:ro
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres", "-h", "localhost"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  storage:
+    image: supabase/storage-api:v1.84.4
+    environment:
+      ANON_KEY: *anon-key
+      SERVICE_KEY: *service-role-key
+      AUTH_JWT_SECRET: *jwt-secret
+      DATABASE_URL: postgres://supabase_storage_admin:loadtest@db:5432/postgres
+      # Supabase's Free plan cap, which MAX_AUDIO_BYTES is held to.
+      FILE_SIZE_LIMIT: 52428800
+      STORAGE_BACKEND: file
+      FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+      TENANT_ID: stub
+      REGION: stub
+      GLOBAL_S3_BUCKET: stub
+      ENABLE_IMAGE_TRANSFORMATION: "false"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:5000/status",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+
+  # Supabase serves Storage under /storage/v1, which is where supabase-js
+  # looks for it; its gateway strips the prefix the same way.
+  storage-proxy:
+    image: nginx:1.29-alpine
+    volumes:
+      - ./supabase/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      storage:
+        condition: service_healthy
+
+  # ---- Upstash Redis: a local Redis behind the REST API Upstash speaks
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  srh:
+    image: hiett/serverless-redis-http:0.0.10
+    environment:
+      SRH_MODE: env
+      SRH_TOKEN: loadtest
+      SRH_CONNECTION_STRING: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  # ---- RabbitMQ
+
+  rabbitmq:
+    image: rabbitmq:4-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: loadtest
+      RABBITMQ_DEFAULT_PASS: loadtest
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 10s
+      retries: 30
+
+  # ---- OpenRouter, Deepgram and WorkOS
+
+  mocks:
+    image: node:24-alpine
+    working_dir: /app
+    command: ["node", "--disable-warning=ExperimentalWarning", "server.ts"]
+    volumes:
+      - ./mocks:/app:ro
+    environment:
+      # How slow the stand-in providers are; see mocks/server.ts.
+      CHAT_FIRST_TOKEN_MS: ${CHAT_FIRST_TOKEN_MS:-800}
+      CHAT_TOKEN_INTERVAL_MS: ${CHAT_TOKEN_INTERVAL_MS:-30}
+      CHAT_TOKENS: ${CHAT_TOKENS:-150}
+      TITLE_MS: ${TITLE_MS:-600}
+      TRANSCRIBE_MS: ${TRANSCRIBE_MS:-5000}
+    # Off the dev ports, so the stack runs beside `npm run dev`.
+    ports:
+      - "4100:4000"
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--tries=1",
+          "--spider",
+          "http://127.0.0.1:4000/health",
+        ]
+      interval: 2s
+      retries: 30
+
+  # ---- One-shots that ready the empty stack
+
+  # The tables, made to match shared/db/schema.ts with drizzle-kit push, which
+  # is how the real databases get theirs. The checked-in migrations lag the
+  # schema, so dist/migrate.js would leave tables out. drizzle-kit is a dev
+  # dependency, so this runs in the image's build stage.
+  schema:
+    image: parley-loadtest-schema
+    build:
+      context: ../../..
+      dockerfile: servers/cloud/backend/Dockerfile
+      target: builder
+    working_dir: /repo/servers/cloud/backend
+    command: ["npx", "drizzle-kit", "push", "--force"]
+    environment:
+      DATABASE_URL: postgres://postgres:loadtest@db:5432/postgres
+      DOPPLER_PROJECT: loadtest
+      DOPPLER_CONFIG: loadtest
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  push-storage:
+    <<: *app
+    command: ["node", "dist/push-storage.js"]
+    depends_on:
+      storage-proxy:
+        condition: service_started
+    restart: "no"
+
+  # The users k6 signs in as (mocks/server.ts names them the same way).
+  # Conversations and uploads must belong to a user that exists.
+  seed-users:
+    image: supabase/postgres:17.11.0.006
+    entrypoint:
+      [
+        "psql",
+        "postgres://postgres:loadtest@db:5432/postgres",
+        "-v",
+        "ON_ERROR_STOP=1",
+        "-c",
+      ]
+    command:
+      - >-
+        INSERT INTO users (id)
+        SELECT 'loadtest-user-' || n FROM generate_series(1, ${LOADTEST_USERS:-1000}) AS n
+        ON CONFLICT DO NOTHING
+    depends_on:
+      schema:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # ---- The backend
+
+  api:
+    <<: *app
+    command: ["node", "dist/api.js"]
+    environment:
+      <<: *base-env
+      WORKOS_API_KEY: sk_fake_loadtest
+      WORKOS_CLIENT_ID: client_fake_loadtest
+      # The SDK takes a host and no path, so the stand-in answers at its root.
+      WORKOS_API_BASE_URL: http://mocks:4000
+      CLIENT_URL: http://localhost:5173
+      API_BASE_URL: http://api:3001
+      PORT: 3001
+      UPSTASH_REDIS_REST_URL: http://srh:80
+      UPSTASH_REDIS_REST_TOKEN: loadtest
+      # 1 measures the real limits; the default keeps k6 out of them.
+      RATE_LIMIT_MULTIPLIER: ${RATE_LIMIT_MULTIPLIER:-1000}
+    ports:
+      - "3101:3001"
+    depends_on:
+      push-storage:
+        condition: service_completed_successfully
+      seed-users:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      srh:
+        condition: service_started
+      mocks:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+    # The preflight aborts if a dependency isn't answering yet.
+    restart: on-failure
+
+  # `--scale transcribe-worker=N` to add workers.
+  transcribe-worker:
+    <<: *app
+    command: ["node", "dist/transcribe-worker.js"]
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: on-failure
+
+  # ---- The load: `docker compose run --rm --no-deps k6 run /scripts/load.js`
+
+  k6:
+    image: grafana/k6:1.8.2
+    profiles: ["k6"]
+    volumes:
+      - ./k6:/scripts:ro
+      - ./results:/results
+    environment:
+      API_URL: http://api:3001
+      MOCKS_URL: http://mocks:4000
+      LOADTEST_USERS: ${LOADTEST_USERS:-1000}
+    depends_on:
+      api:
+        condition: service_healthy

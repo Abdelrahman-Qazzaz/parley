@@ -47,8 +47,45 @@ const nodeEnvSchema = z
   .enum(["development", "production", "test"])
   .default("development");
 
-/** Shared by API, worker, and Drizzle. Exported for its own unit test. */
-export const baseEnvSchema = z.object({
+/**
+ * Settings that point the app at stand-ins for its paid services, or loosen
+ * its rate limits, so the load test (servers/cloud/loadtest) runs without a
+ * bill. Each is read in the one place its client is built. None may be set in
+ * production, where they would send real traffic to a mock or let real users
+ * past the limits.
+ */
+const LOADTEST_OVERRIDES = [
+  "OPENROUTER_BASE_URL",
+  "DEEPGRAM_BASE_URL",
+  "WORKOS_API_BASE_URL",
+  "RATE_LIMIT_MULTIPLIER",
+] as const;
+
+function rejectLoadtestOverridesInProduction(
+  env: { NODE_ENV: string } & Partial<Record<string, unknown>>,
+  ctx: z.RefinementCtx,
+) {
+  if (env.NODE_ENV !== "production") return;
+  for (const key of LOADTEST_OVERRIDES) {
+    if (env[key] === undefined) continue;
+    ctx.addIssue({
+      code: "custom",
+      path: [key],
+      message: "is a load-test override and can't be set in production",
+    });
+  }
+  // The load test's Redis stand-in speaks plain HTTP; Upstash never does.
+  const redisUrl = env.UPSTASH_REDIS_REST_URL;
+  if (typeof redisUrl === "string" && !redisUrl.startsWith("https://")) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["UPSTASH_REDIS_REST_URL"],
+      message: "UPSTASH_REDIS_REST_URL must use HTTPS",
+    });
+  }
+}
+
+const baseEnvObject = z.object({
   DATABASE_URL: z.string().min(1),
   MQ_URL: z.string().min(1),
   SUPABASE_URL: z.string().url(),
@@ -56,28 +93,35 @@ export const baseEnvSchema = z.object({
   OPENROUTER_API_KEY: z.string().min(1),
   DEEPGRAM_API_KEY: z.string().min(1),
   NODE_ENV: nodeEnvSchema,
+  OPENROUTER_BASE_URL: z.string().url().optional(),
+  DEEPGRAM_BASE_URL: z.string().url().optional(),
 });
 
+/** Shared by API, worker, and Drizzle. Exported for its own unit test. */
+export const baseEnvSchema = baseEnvObject.superRefine(
+  rejectLoadtestOverridesInProduction,
+);
+
 /** Exported for its own unit test; the API reads env through getApiEnv. */
-export const apiEnvSchema = baseEnvSchema.extend({
-  WORKOS_API_KEY: z.string().min(1),
-  WORKOS_CLIENT_ID: z.string().min(1),
-  CLIENT_URL: z.string().url(),
-  API_BASE_URL: z.string().url(),
-  PORT: z.coerce.number().int().positive().default(3001),
-  /**
-   * The built client, which the API serves when it's there. Relative to the
-   * working directory, like the migrations; the image sets its own.
-   */
-  CLIENT_DIR: z.string().min(1).default("../../../client/dist"),
-  UPSTASH_REDIS_REST_URL: z
-    .string()
-    .url()
-    .refine((url) => url.startsWith("https://"), {
-      message: "UPSTASH_REDIS_REST_URL must use HTTPS",
-    }),
-  UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
-});
+export const apiEnvSchema = baseEnvObject
+  .extend({
+    WORKOS_API_KEY: z.string().min(1),
+    WORKOS_CLIENT_ID: z.string().min(1),
+    CLIENT_URL: z.string().url(),
+    API_BASE_URL: z.string().url(),
+    PORT: z.coerce.number().int().positive().default(3001),
+    /**
+     * The built client, which the API serves when it's there. Relative to the
+     * working directory, like the migrations; the image sets its own.
+     */
+    CLIENT_DIR: z.string().min(1).default("../../../client/dist"),
+    UPSTASH_REDIS_REST_URL: z.string().url(),
+    UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
+    WORKOS_API_BASE_URL: z.string().url().optional(),
+    /** Every rate limit's budget is multiplied by this. */
+    RATE_LIMIT_MULTIPLIER: z.coerce.number().positive().optional(),
+  })
+  .superRefine(rejectLoadtestOverridesInProduction);
 
 const drizzleEnvSchema = z.object({
   DATABASE_URL: z.string().min(1),

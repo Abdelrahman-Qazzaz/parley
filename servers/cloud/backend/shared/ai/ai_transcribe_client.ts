@@ -3,7 +3,11 @@ import type { TranscribeModel } from "@parley/shared/contract";
 import { getBaseEnv } from "../env";
 import { CACHE_KEYS, cache } from "../cache";
 
-const deepgram = new DeepgramClient({ apiKey: getBaseEnv().DEEPGRAM_API_KEY });
+const deepgram = new DeepgramClient({
+  apiKey: getBaseEnv().DEEPGRAM_API_KEY,
+  // The load test's stand-in; unset, the SDK uses Deepgram itself.
+  baseUrl: getBaseEnv().DEEPGRAM_BASE_URL,
+});
 
 /**
  * Deepgram transcribes a multi-hour file in one job, but a long one can take

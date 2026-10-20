@@ -8,6 +8,8 @@ import type { ChatModel } from "@parley/shared/contract";
 
 const client = new OpenRouter({
   apiKey: getBaseEnv().OPENROUTER_API_KEY,
+  // The load test's stand-in; unset, the SDK uses OpenRouter itself.
+  serverURL: getBaseEnv().OPENROUTER_BASE_URL,
 });
 
 /** Startup health check: fails if OpenRouter is unreachable or rejects the API key. */

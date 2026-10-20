@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
 
-# One image, four entrypoints. api and transcribe-worker are the same artifact
-# started differently (see ARCHITECTURE.md); migrate and baseline are the
-# operational one-shots.
+# One image, five entrypoints. api and transcribe-worker are the same artifact
+# started differently (see ARCHITECTURE.md); migrate, baseline and push-storage
+# are the operational one-shots.
 #
 # Build context is the repo root, not this directory: the repo is one npm
 # workspace with one lockfile, the image carries the built client, which the
@@ -52,4 +52,5 @@ USER node
 #   transcribe-worker  node dist/transcribe-worker.js
 #   migrate            node dist/migrate.js
 #   baseline           node dist/baseline.js
+#   push-storage       node dist/push-storage.js
 CMD ["node", "dist/api.js"]
