@@ -1,6 +1,6 @@
-import { refreshAuthSession } from "./auth";
+import { workos } from "./auth";
 
-type RefreshedTokens = Awaited<ReturnType<typeof refreshAuthSession>>;
+type RefreshedTokens = Awaited<ReturnType<typeof workos.refreshAuthSession>>;
 
 /**
  * How long a refresh's result is kept for requests that bring the refresh
@@ -26,7 +26,7 @@ export function refreshSession(refreshToken: string): Promise<RefreshedTokens> {
   const existing = refreshes.get(refreshToken);
   if (existing) return existing;
 
-  const refreshing = refreshAuthSession(refreshToken);
+  const refreshing = workos.refreshAuthSession(refreshToken);
   refreshes.set(refreshToken, refreshing);
   refreshing.then(
     () => {

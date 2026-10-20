@@ -24,10 +24,13 @@ vi.mock("../../api/src/auth/auth", async (importOriginal) => {
     await importOriginal<typeof import("../../api/src/auth/auth")>();
   return {
     ...actual,
-    getRedirectUrl: mockGetRedirectUrl,
-    getAuthSessionFromCode: mockGetAuthSessionFromCode,
-    revokeAuthSession: mockRevokeAuthSession,
-    refreshAuthSession: mockRefreshAuthSession,
+    workos: {
+      ...actual.workos,
+      getRedirectUrl: mockGetRedirectUrl,
+      getAuthSessionFromCode: mockGetAuthSessionFromCode,
+      revokeAuthSession: mockRevokeAuthSession,
+      refreshAuthSession: mockRefreshAuthSession,
+    },
   };
 });
 

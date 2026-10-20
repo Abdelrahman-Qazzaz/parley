@@ -7,22 +7,22 @@ export const WORKOS_REDIRECT_URI = new URL(
   getApiEnv().API_BASE_URL,
 ).toString();
 
-const workos = new WorkOS(getApiEnv().WORKOS_API_KEY, {
+const client = new WorkOS(getApiEnv().WORKOS_API_KEY, {
   clientId: getApiEnv().WORKOS_CLIENT_ID,
 });
 
 /** Startup health check: fails if WorkOS is unreachable or rejects the API key. */
-export async function pingWorkos(): Promise<void> {
-  await workos.userManagement.listUsers({ limit: 1 });
+async function ping(): Promise<void> {
+  await client.userManagement.listUsers({ limit: 1 });
 }
 
 /** Where WorkOS publishes the keys it signs access tokens with. */
-export function getJwksUrl() {
-  return workos.userManagement.getJwksUrl(getApiEnv().WORKOS_CLIENT_ID);
+function getJwksUrl() {
+  return client.userManagement.getJwksUrl(getApiEnv().WORKOS_CLIENT_ID);
 }
 
-export function getRedirectUrl() {
-  return workos.userManagement.getAuthorizationUrl({
+function getRedirectUrl() {
+  return client.userManagement.getAuthorizationUrl({
     // Specify that we'd like AuthKit to handle the authentication flow
     provider: "authkit",
 
@@ -37,9 +37,9 @@ export function getRedirectUrl() {
  * tokens: the access token becomes the session cookie as it is, and the
  * refresh token is what gets a new one when it expires.
  */
-export async function getAuthSessionFromCode(code: string) {
+async function getAuthSessionFromCode(code: string) {
   const { user, accessToken, refreshToken } =
-    await workos.userManagement.authenticateWithCode({
+    await client.userManagement.authenticateWithCode({
       code,
       clientId: getApiEnv().WORKOS_CLIENT_ID,
     });
@@ -51,20 +51,30 @@ export async function getAuthSessionFromCode(code: string) {
  * a new refresh token. WorkOS rotates refresh tokens, so the one passed in
  * stops working once this succeeds.
  */
-export async function refreshAuthSession(refreshToken: string) {
+async function refreshAuthSession(refreshToken: string) {
   const {
     user,
     accessToken,
     refreshToken: nextRefreshToken,
-  } = await workos.userManagement.authenticateWithRefreshToken({
+  } = await client.userManagement.authenticateWithRefreshToken({
     refreshToken,
     clientId: getApiEnv().WORKOS_CLIENT_ID,
   });
   return { userId: user.id, accessToken, refreshToken: nextRefreshToken };
 }
 
-export async function revokeAuthSession(sessionId: string): Promise<void> {
-  await workos.userManagement.revokeSession({
+async function revokeAuthSession(sessionId: string): Promise<void> {
+  await client.userManagement.revokeSession({
     sessionId,
   });
 }
+
+/** Sign-in and sessions, from WorkOS AuthKit. */
+export const workos = {
+  ping,
+  getJwksUrl,
+  getRedirectUrl,
+  getAuthSessionFromCode,
+  refreshAuthSession,
+  revokeAuthSession,
+};

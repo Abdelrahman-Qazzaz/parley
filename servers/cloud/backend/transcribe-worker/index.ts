@@ -1,5 +1,5 @@
 import { mq } from "../shared/message-queue/messageQueue";
-import { scheduleSweeper } from "../shared/sweeper";
+import { sweeper } from "../shared/sweeper";
 import { onShutdown } from "@parley/shared/shutdown";
 import { verifyTranscribeWorkerServices } from "./startup";
 import { handleTranscribeJob } from "./transcribeJob";
@@ -20,7 +20,7 @@ await mq.consume(mq.queues.CAPTION_TRANSCRIPT, handleTranscribeJob, {
 });
 
 // Every worker schedules it; the sweep's own lock keeps them from overlapping.
-const stopSweeper = scheduleSweeper();
+const stopSweeper = sweeper.schedule();
 
 /**
  * Cancel first so the broker stops delivering, then let the job in progress

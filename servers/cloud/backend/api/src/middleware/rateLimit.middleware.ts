@@ -7,7 +7,7 @@ import {
   type RateLimitKey,
   type RateLimitName,
 } from "../rateLimit/policies";
-import { CTX_KEYS } from "../../../shared/keys";
+import type { AuthEnv } from "./auth.middleware";
 
 const rateLimitMessage = {
   message: "Too many requests, please try again later.",
@@ -38,8 +38,10 @@ function getClientIpKey(c: Context): string {
   }
   return "unknown";
 }
-function getUserId(c: Context): string {
-  const userId = c.get(CTX_KEYS.userId);
+function getUserId(
+  c: Context<{ Variables: Partial<AuthEnv["Variables"]> }>,
+): string {
+  const userId = c.get("userId");
   if (typeof userId !== "string" || userId.length === 0)
     throw new Error(
       "Rate limiter requires authenticated userId; mount requireAuth before the rate limiter",

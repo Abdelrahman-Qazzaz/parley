@@ -1,34 +1,22 @@
 import { Hono } from "hono";
 import * as jobsController from "../controllers/jobs.controller";
 import { jobRateLimiter } from "../middleware/rateLimit.middleware";
-import { requireAuth } from "../middleware/auth.middleware";
-import {
-  validateReqParams,
-  validateReqQuery,
-} from "../middleware/validate.middleware";
-import { CTX_KEYS } from "../../../shared/keys";
-import { jobReqParamSchema, jobsListQuerySchema } from "../schema/jobs.schema";
+import { requireAuth, type AuthEnv } from "../middleware/auth.middleware";
 import { httpCache } from "@parley/shared/cache.middleware";
 
-export const jobsRouter = new Hono();
+export const jobsRouter = new Hono<AuthEnv>();
 
 jobsRouter.use("*", requireAuth, jobRateLimiter);
 
 jobsRouter.get(
-  `/transcribe/:${CTX_KEYS.audioUploadId}`,
-  validateReqParams(jobReqParamSchema),
+  "/transcribe/:audioUploadId",
   httpCache({ revalidate: true }),
-  jobsController.handleGetTranscribeJob,
+  ...jobsController.handleGetTranscribeJob,
 );
 
 jobsRouter.delete(
-  `/transcribe/:${CTX_KEYS.audioUploadId}`,
-  validateReqParams(jobReqParamSchema),
-  jobsController.handleDeleteTranscribeJob,
+  "/transcribe/:audioUploadId",
+  ...jobsController.handleDeleteTranscribeJob,
 );
 
-jobsRouter.get(
-  "/",
-  validateReqQuery(jobsListQuerySchema),
-  jobsController.getUserJobs,
-);
+jobsRouter.get("/", ...jobsController.handleListJobs);

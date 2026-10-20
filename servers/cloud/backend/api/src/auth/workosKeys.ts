@@ -1,5 +1,5 @@
 import { createRemoteJWKSet } from "jose";
-import { getJwksUrl } from "./auth";
+import { workos } from "./auth";
 
 /**
  * How long the fetched keys are trusted before they're fetched again. A token
@@ -16,7 +16,7 @@ let keys: ReturnType<typeof createRemoteJWKSet> | undefined;
  * in the process, so verifying a token makes no request of its own.
  */
 export function workosKeys() {
-  keys ??= createRemoteJWKSet(new URL(getJwksUrl()), {
+  keys ??= createRemoteJWKSet(new URL(workos.getJwksUrl()), {
     cacheMaxAge: KEYS_MAX_AGE_MS,
   });
   return keys;

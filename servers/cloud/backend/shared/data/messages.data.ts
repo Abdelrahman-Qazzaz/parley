@@ -90,61 +90,48 @@ type ContextMessage = {
   }[];
 };
 
-export type CreateMessageHistory = {
+/**
+ * A past turn that may go back into the prompt, with what it was sent with:
+ * its transcripts' text in link order, and its images as stored, so the
+ * caller signs only the ones it keeps.
+ */
+export type HistoryCandidate = {
   id: string;
   role: MessageRow["role"];
   content: string;
   createdAt: Date;
   transcriptContents: string[];
-  imageUrls: string[];
-  contextCharCount: number;
+  images: {
+    imageUploadId: string;
+    signedUrl: string | null;
+    signedUrlExpiresAt: Date | null;
+  }[];
 };
 
-type CreateMessageHistoryRow = {
-  currentTurnContextCharCount: number;
-  currentTranscriptCount: number;
-  messageId: string | null;
-  role: MessageRow["role"] | null;
-  content: string | null;
-  createdAt: string | null;
+type HistoryRow = {
+  messageId: string;
+  role: MessageRow["role"];
+  content: string;
+  createdAt: string;
   attachmentId: string | null;
   attachmentKind: "image" | "audio" | null;
   signedUrl: string | null;
   signedUrlExpiresAt: string | null;
   transcriptContent: string | null;
-  transcriptCharCount: number | null;
 };
 
-type CreateMessageHistoryImage = {
-  imageUploadId: string;
-  signedUrl: string | null;
-  signedUrlExpiresAt: Date | null;
-};
-
-type PendingCreateMessageHistory = Omit<CreateMessageHistory, "imageUrls"> & {
-  images: CreateMessageHistoryImage[];
-};
-
-/** Fully resolved admitted history for POST message creation, newest first. */
-async function findCreateMessageHistory(input: {
+/**
+ * The turns a new message's prompt may draw on, newest first, in one query:
+ * at most `maximumMessageCount`, and no more than the conversation's window
+ * held last time. Deciding which of them fit is the caller's.
+ */
+async function findContextHistory(input: {
   userId: string;
   conversationId: string;
-  newMessageContentCharCount: number;
-  newTranscriptUploadIds: readonly string[];
-  transcriptSeparatorCharCount: number;
-  maximumContextCharCount: number;
   maximumMessageCount: number;
-  maximumImageCount: number;
   /** Editing a message: take history from before it, not from the tail. */
   beforeMessageId?: string;
-}): Promise<CreateMessageHistory[]> {
-  const currentTranscriptFilter =
-    input.newTranscriptUploadIds.length > 0
-      ? inArray(TranscriptContents.audioUploadId, [
-          ...input.newTranscriptUploadIds,
-        ])
-      : sql`false`;
-
+}): Promise<HistoryCandidate[]> {
   // Same order as messageIsBefore: created_at, then role, then id.
   const historyBound =
     input.beforeMessageId === undefined
@@ -163,28 +150,8 @@ async function findCreateMessageHistory(input: {
             and bound.${sql.identifier(ChatMessages.conversationId.name)} = ${input.conversationId}
         )`;
 
-  const rows = await db.execute<CreateMessageHistoryRow>(sql`
-    with current_turn as (
-      select
-        (
-          ${input.newMessageContentCharCount}
-          + coalesce(
-              sum(
-                ${TranscriptContents.charCount}
-                + ${input.transcriptSeparatorCharCount}
-              ),
-              0
-            )
-        )::integer as context_char_count,
-        count(${TranscriptContents.audioUploadId})::integer as transcript_count
-      from ${TranscriptContents}
-      inner join ${Attachments}
-        on ${Attachments.attachmentId} = ${TranscriptContents.audioUploadId}
-        and ${Attachments.userId} = ${input.userId}
-        and ${Attachments.kind} = 'audio'
-      where ${currentTranscriptFilter}
-    ),
-    recent_messages as (
+  const rows = await db.execute<HistoryRow>(sql`
+    with recent_messages as (
       select
         ${ChatMessages.id} as message_id,
         ${ChatMessages.role} as role,
@@ -214,8 +181,6 @@ async function findCreateMessageHistory(input: {
       )
     )
     select
-      current_turn.context_char_count as "currentTurnContextCharCount",
-      current_turn.transcript_count as "currentTranscriptCount",
       recent_messages.message_id as "messageId",
       recent_messages.role as role,
       recent_messages.content as content,
@@ -224,10 +189,8 @@ async function findCreateMessageHistory(input: {
       ${Attachments.kind} as "attachmentKind",
       ${Attachments.signedUrl} as "signedUrl",
       ${Attachments.signedUrlExpiresAt} as "signedUrlExpiresAt",
-      ${TranscriptContents.content} as "transcriptContent",
-      ${TranscriptContents.charCount} as "transcriptCharCount"
-    from current_turn
-    left join recent_messages on true
+      ${TranscriptContents.content} as "transcriptContent"
+    from recent_messages
     left join ${ChatMessageAttachmentLinks}
       on ${ChatMessageAttachmentLinks.messageId} = recent_messages.message_id
     left join ${Attachments}
@@ -242,29 +205,11 @@ async function findCreateMessageHistory(input: {
       recent_messages.message_id desc,
       ${ChatMessageAttachmentLinks.position} asc
   `);
-  const currentTurn = rows[0];
-  if (
-    !currentTurn ||
-    currentTurn.currentTranscriptCount !==
-      input.newTranscriptUploadIds.length ||
-    currentTurn.currentTurnContextCharCount >= input.maximumContextCharCount
-  ) {
-    return [];
-  }
 
-  const candidates: PendingCreateMessageHistory[] = [];
-  const historyByMessageId = new Map<string, PendingCreateMessageHistory>();
+  const history: HistoryCandidate[] = [];
+  const historyByMessageId = new Map<string, HistoryCandidate>();
 
   for (const row of rows) {
-    if (
-      row.messageId === null ||
-      row.role === null ||
-      row.content === null ||
-      row.createdAt === null
-    ) {
-      continue;
-    }
-
     let message = historyByMessageId.get(row.messageId);
     if (!message) {
       message = {
@@ -274,17 +219,13 @@ async function findCreateMessageHistory(input: {
         createdAt: new Date(row.createdAt),
         transcriptContents: [],
         images: [],
-        contextCharCount: row.content.length,
       };
-      candidates.push(message);
+      history.push(message);
       historyByMessageId.set(row.messageId, message);
     }
 
     if (row.attachmentKind === "audio" && row.transcriptContent !== null) {
       message.transcriptContents.push(row.transcriptContent);
-      message.contextCharCount +=
-        (row.transcriptCharCount ?? row.transcriptContent.length) +
-        input.transcriptSeparatorCharCount;
     }
 
     if (row.attachmentKind === "image" && row.attachmentId !== null) {
@@ -298,37 +239,7 @@ async function findCreateMessageHistory(input: {
     }
   }
 
-  const history: PendingCreateMessageHistory[] = [];
-  let remainingContextCharCount =
-    input.maximumContextCharCount - currentTurn.currentTurnContextCharCount;
-  for (const message of candidates) {
-    if (message.contextCharCount > remainingContextCharCount) break;
-    remainingContextCharCount -= message.contextCharCount;
-    history.push(message);
-  }
-
-  const imageRowsByUploadId = new Map<string, CreateMessageHistoryImage>();
-  let remainingImageCount = Math.max(0, input.maximumImageCount);
-  for (const message of history) {
-    message.images = message.images.slice(0, remainingImageCount);
-    remainingImageCount -= message.images.length;
-    for (const image of message.images) {
-      imageRowsByUploadId.set(image.imageUploadId, image);
-    }
-  }
-
-  const urlByImageUploadId = await images.resolveImageAttachmentUrls(
-    input.userId,
-    [...imageRowsByUploadId.values()],
-  );
-
-  return history.map(({ images, ...message }) => ({
-    ...message,
-    imageUrls: images.flatMap((image) => {
-      const url = urlByImageUploadId.get(image.imageUploadId);
-      return url ? [url] : [];
-    }),
-  }));
+  return history;
 }
 
 async function hydrateContextMessages(
@@ -632,7 +543,7 @@ async function persistAndUnclaimChatTurn(turn: {
 
 export const messages = {
   findConversationMessages,
-  findCreateMessageHistory,
+  findContextHistory,
   findRecentMessagesWithContext,
   deleteOwnedMessage,
   persistAndUnclaimChatTurn,

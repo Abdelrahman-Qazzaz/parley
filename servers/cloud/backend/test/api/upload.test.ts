@@ -36,8 +36,8 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
   const actual =
     await importActual<typeof import("../../shared/ai/ai_chat_client")>();
   return {
-    ...actual, // preserves DEFAULT_MODELS and anything else
-    listChatModels: mockListChatModels, // override only what needs mocking
+    ...actual,
+    chat: { ...actual.chat, listModels: mockListChatModels },
   };
 });
 
@@ -46,7 +46,10 @@ vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
     await importActual<typeof import("../../shared/ai/ai_transcribe_client")>();
   return {
     ...actual, // preserves DEFAULT_TRANSCRIBE_MODEL
-    isValidTranscribeModel: mockIsValidTranscribeModel,
+    transcription: {
+      ...actual.transcription,
+      isValidModel: mockIsValidTranscribeModel,
+    },
   };
 });
 

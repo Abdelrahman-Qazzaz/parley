@@ -1,15 +1,14 @@
 import { randomUUID } from "node:crypto";
-import type { Context } from "hono";
 import type { UploadedImage } from "@parley/shared/contract";
-import { sign } from "../../../shared/storage/sign";
-import {
-  checkUpload,
-  confirmCheckedUpload,
-  deleteObjects,
-  startUpload,
-} from "../../../shared/uploads";
+import { sign } from "../../../shared/storage";
+import { uploads } from "../../../shared/uploads";
 import { data } from "../../../shared/data";
-import { CTX_KEYS } from "../../../shared/keys";
+import { authed } from "../middleware/auth.middleware";
+import { validate } from "../middleware/validate.middleware";
+import {
+  imageConfirmSchema,
+  imageReqParamSchema,
+} from "../schema/images.schema";
 import { ALREADY_CONFIRMED, uploadRejection } from "../utils/uploadRejection";
 import type { UploadId } from "@parley/shared/types";
 
@@ -22,17 +21,23 @@ import type { UploadId } from "@parley/shared/types";
  * completes leaves nothing for the rest of the code to trip over; the sweep
  * removes it.
  */
-export async function handleImageUploadUrl(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
+export const handleImageUploadUrl = authed.createHandlers(async (c) => {
+  const { userId } = c.var;
 
   const imageUploadId: UploadId = randomUUID();
-  const signedUploadUrl = await startUpload(userId, {
+  const signedUploadUrl = await uploads.start(userId, {
     kind: "image",
     uploadId: imageUploadId,
   });
 
   return c.json({ uploadId: imageUploadId, signedUploadUrl });
-}
+});
+
+const IMAGE_WORDING = {
+  noun: "image",
+  wrongType: () => "File must be an image",
+  tooLarge: "Image is too large",
+};
 
 /**
  * POST /upload/image/confirm — the image is in the bucket: check it, record
@@ -43,81 +48,83 @@ export async function handleImageUploadUrl(c: Context) {
  * The upload must be pending in the ledger for this user as an image, so an
  * id minted for audio is a 404. A rejected upload is left for the sweep.
  */
-const IMAGE_WORDING = {
-  noun: "image",
-  wrongType: () => "File must be an image",
-  tooLarge: "Image is too large",
-};
+export const handleImageConfirm = authed.createHandlers(
+  validate("json", imageConfirmSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { uploadId: imageUploadId, fileName } = c.req.valid("json");
 
-export async function handleImageConfirm(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const imageUploadId: UploadId = c.get(CTX_KEYS.imageUploadId);
-  const fileName = c.get(CTX_KEYS.fileName);
+    const image = { kind: "image", uploadId: imageUploadId } as const;
+    const upload = await uploads.check(userId, image);
+    if (!upload.ok) {
+      const [body, status] = uploadRejection(upload, IMAGE_WORDING);
+      return c.json(body, status);
+    }
 
-  const image = { kind: "image", uploadId: imageUploadId } as const;
-  const upload = await checkUpload(userId, image);
-  if (!upload.ok) {
-    const [body, status] = uploadRejection(upload, IMAGE_WORDING);
-    return c.json(body, status);
-  }
+    const signedUrl = await sign.url(userId, image);
+    const confirmed = await uploads.confirm(userId, image, (executor) =>
+      data.images.createImageAttachment(
+        {
+          userId,
+          imageUploadId,
+          fileName,
+          mimeType: upload.contentType,
+          sizeBytes: upload.sizeBytes,
+          signedUrl,
+        },
+        executor,
+      ),
+    );
+    if (!confirmed) {
+      return c.json({ message: ALREADY_CONFIRMED }, 409);
+    }
 
-  const signedUrl = await sign.url(userId, image);
-  const confirmed = await confirmCheckedUpload(userId, image, (executor) =>
-    data.images.createImageAttachment(
-      {
-        userId,
-        imageUploadId,
-        fileName,
-        mimeType: upload.contentType,
-        sizeBytes: upload.sizeBytes,
-        signedUrl,
-      },
-      executor,
-    ),
-  );
-  if (!confirmed) {
-    return c.json({ message: ALREADY_CONFIRMED }, 409);
-  }
-
-  return c.json({
-    imageUploadId,
-    fileName,
-    size: upload.sizeBytes,
-    mimeType: upload.contentType,
-    url: signedUrl,
-  } satisfies UploadedImage);
-}
+    return c.json({
+      imageUploadId,
+      fileName,
+      size: upload.sizeBytes,
+      mimeType: upload.contentType,
+      url: signedUrl,
+    } satisfies UploadedImage);
+  },
+);
 
 /**
  * GET /upload/image/:imageUploadId — the image itself, by a redirect to its
  * signed URL, as the local server serves the file at the same path. The
  * signature is cached; it's only re-signed once that nears expiry.
  */
-export async function handleGetImage(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const imageUploadId = c.get(CTX_KEYS.imageUploadId);
+export const handleGetImage = authed.createHandlers(
+  validate("param", imageReqParamSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { imageUploadId } = c.req.valid("param");
 
-  const [image] = await data.images.resolveImages(userId, [imageUploadId]);
+    const [image] = await data.images.resolveImages(userId, [imageUploadId]);
 
-  if (!image) return c.json({ message: "Image not found" }, 404);
+    if (!image) return c.json({ message: "Image not found" }, 404);
 
-  return c.redirect(image.url, 302);
-}
+    return c.redirect(image.url, 302);
+  },
+);
 
 /** DELETE /upload/image/:imageUploadId — delete an unlinked, unreserved image attachment. */
-export async function handleDeleteImage(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const imageUploadId = c.get(CTX_KEYS.imageUploadId);
-  const deletedImageUploadId =
-    await data.images.deleteOwnedUnlinkedUnreservedImageAttachment(
-      userId,
-      imageUploadId,
-    );
-  if (deletedImageUploadId) {
-    await deleteObjects(userId, [
-      { kind: "image", uploadId: deletedImageUploadId },
-    ]);
-  }
+export const handleDeleteImage = authed.createHandlers(
+  validate("param", imageReqParamSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { imageUploadId } = c.req.valid("param");
+    const deletedImageUploadId =
+      await data.images.deleteOwnedUnlinkedUnreservedImageAttachment(
+        userId,
+        imageUploadId,
+      );
+    if (deletedImageUploadId) {
+      await uploads.deleteObjects(userId, [
+        { kind: "image", uploadId: deletedImageUploadId },
+      ]);
+    }
 
-  return c.json({ message: "Image deleted" });
-}
+    return c.json({ message: "Image deleted" });
+  },
+);

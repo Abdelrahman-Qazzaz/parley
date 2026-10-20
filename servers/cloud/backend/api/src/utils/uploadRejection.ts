@@ -1,7 +1,7 @@
-import type { checkUpload } from "../../../shared/uploads";
+import type { uploads } from "../../../shared/uploads";
 
 type Rejection = Extract<
-  Awaited<ReturnType<typeof checkUpload>>,
+  Awaited<ReturnType<typeof uploads.check>>,
   { ok: false }
 >;
 

@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import * as modelsController from "../controllers/models.controller";
 import { modelRateLimiter } from "../middleware/rateLimit.middleware";
-import { requireAuth } from "../middleware/auth.middleware";
+import { requireAuth, type AuthEnv } from "../middleware/auth.middleware";
 import { httpCache } from "@parley/shared/cache.middleware";
 
-export const modelsRouter = new Hono();
+export const modelsRouter = new Hono<AuthEnv>();
 
 modelsRouter.use("*", requireAuth, modelRateLimiter);
 
@@ -15,5 +15,8 @@ modelsRouter.use(
     staleWhileRevalidateSeconds: 86_400,
   }),
 );
-modelsRouter.get("/chat", modelsController.handleGetModels);
-modelsRouter.get("/transcription", modelsController.handleGetTranscribeModels);
+modelsRouter.get("/chat", ...modelsController.handleGetModels);
+modelsRouter.get(
+  "/transcription",
+  ...modelsController.handleGetTranscribeModels,
+);

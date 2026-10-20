@@ -2,23 +2,20 @@ import type { Context } from "hono";
 import { getCookie } from "hono/cookie";
 
 import { getApiEnv } from "../../../shared/env";
-import {
-  getAuthSessionFromCode,
-  getRedirectUrl,
-  revokeAuthSession,
-} from "../auth/auth";
+import { workos } from "../auth/auth";
 import { readAccessTokenExpiry, verifyAccessToken } from "../auth/accessToken";
 import { refreshSession } from "../auth/refreshSession";
 import { clearAuthCookies, setAuthCookies } from "../cookies/session";
+import { authed } from "../middleware/auth.middleware";
 
-import { COOKIE_KEYS, CTX_KEYS } from "../../../shared/keys";
+import { COOKIE_KEYS } from "../../../shared/keys";
 import { data } from "../../../shared/data";
 import { logger } from "@parley/shared/logger";
 
 const log = logger.child({ controller: "auth" });
 
 export async function handleLogin(c: Context) {
-  return c.redirect(getRedirectUrl());
+  return c.redirect(workos.getRedirectUrl());
 }
 
 /** When an access token expires, as the auth responses report it. */
@@ -30,12 +27,12 @@ function expiresAt(epochSeconds: number) {
  * Who is signed in, and when their access token expires, so the client can
  * refresh it before then.
  */
-export async function handleMe(c: Context) {
+export const handleMe = authed.createHandlers(async (c) => {
   return c.json({
-    userId: c.get(CTX_KEYS.userId),
-    expiresAt: expiresAt(c.get(CTX_KEYS.sessionExpiresAtEpochSeconds)),
+    userId: c.var.userId,
+    expiresAt: expiresAt(c.var.sessionExpiresAtEpochSeconds),
   });
-}
+});
 
 /**
  * Whether WorkOS turned the refresh token down, as opposed to failing to
@@ -98,7 +95,7 @@ export async function handleLogout(c: Context) {
   }
 
   try {
-    await revokeAuthSession(sessionId);
+    await workos.revokeAuthSession(sessionId);
   } catch (error) {
     log.error("Failed to revoke WorkOS session", error);
   }
@@ -111,7 +108,7 @@ export async function handleCallback(c: Context) {
   if (!code) return c.json({ message: "code required" }, 400);
 
   const { userId, accessToken, refreshToken } =
-    await getAuthSessionFromCode(code);
+    await workos.getAuthSessionFromCode(code);
 
   await data.users.ensureUser(userId);
   setAuthCookies(c, { accessToken, refreshToken });

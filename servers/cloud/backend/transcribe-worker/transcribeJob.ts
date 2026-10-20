@@ -1,8 +1,5 @@
-import {
-  DEFAULT_TRANSCRIBE_MODEL,
-  transcribeAI,
-} from "../shared/ai/ai_transcribe_client";
-import { sign } from "../shared/storage/sign";
+import { DEFAULT_TRANSCRIBE_MODEL, transcription } from "../shared/ai";
+import { sign } from "../shared/storage";
 import { data } from "../shared/data";
 import { logger } from "@parley/shared/logger";
 import {
@@ -43,7 +40,7 @@ async function transcribeAudio(job: ClaimedJob) {
     kind: "audio",
     uploadId: job.audioUploadId,
   });
-  return transcribeAI(
+  return transcription.transcribe(
     job.transcriptModelId ?? DEFAULT_TRANSCRIBE_MODEL,
     audioUrl,
   );

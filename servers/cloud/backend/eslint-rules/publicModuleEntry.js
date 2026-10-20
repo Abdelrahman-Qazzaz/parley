@@ -20,16 +20,27 @@ export default {
     type: "problem",
     docs: {
       description:
-        "Restrict imports from a module directory to one public entry point.",
+        "Restrict imports from each module directory to its one public entry point.",
     },
     schema: [
       {
         type: "object",
         properties: {
-          directory: { type: "string" },
-          entry: { type: "string" },
+          modules: {
+            type: "array",
+            minItems: 1,
+            items: {
+              type: "object",
+              properties: {
+                directory: { type: "string" },
+                entry: { type: "string" },
+              },
+              required: ["directory", "entry"],
+              additionalProperties: false,
+            },
+          },
         },
-        required: ["directory", "entry"],
+        required: ["modules"],
         additionalProperties: false,
       },
     ],
@@ -41,13 +52,26 @@ export default {
 
   create(context) {
     const [options] = context.options;
-    const moduleDirectory = path.resolve(options.directory);
-    const publicEntry = withoutTypeScriptExtension(
-      path.join(moduleDirectory, options.entry),
-    );
     const importerPath = withoutTypeScriptExtension(context.filename);
+    // A module's own files import each other freely; only outsiders are held
+    // to the entry.
+    const modules = options.modules
+      .map(({ directory, entry }) => {
+        const moduleDirectory = path.resolve(directory);
+        return {
+          moduleDirectory,
+          entry,
+          publicEntry: withoutTypeScriptExtension(
+            path.join(moduleDirectory, entry),
+          ),
+        };
+      })
+      .filter(
+        ({ moduleDirectory }) =>
+          !isInsideDirectory(importerPath, moduleDirectory),
+      );
 
-    if (isInsideDirectory(importerPath, moduleDirectory)) return {};
+    if (modules.length === 0) return {};
 
     function checkImportSource(sourceNode) {
       if (
@@ -60,19 +84,23 @@ export default {
       const importedPath = withoutTypeScriptExtension(
         path.resolve(path.dirname(importerPath), sourceNode.value),
       );
+      const module = modules.find(({ moduleDirectory }) =>
+        isInsideDirectory(importedPath, moduleDirectory),
+      );
+      if (!module) return;
 
-      if (
-        !isInsideDirectory(importedPath, moduleDirectory) ||
-        importedPath === publicEntry
-      )
-        return;
+      const isEntry =
+        importedPath === module.publicEntry ||
+        // `./storage` resolves to storage/index.ts.
+        (module.entry === "index" && importedPath === module.moduleDirectory);
+      if (isEntry) return;
 
       context.report({
         node: sourceNode,
         messageId: "privateModule",
         data: {
-          directory: path.basename(moduleDirectory),
-          entry: options.entry,
+          directory: path.basename(module.moduleDirectory),
+          entry: module.entry,
         },
       });
     }

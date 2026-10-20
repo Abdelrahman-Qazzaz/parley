@@ -51,7 +51,7 @@ vi.mock("../../shared/db", async () => ({
 
 // Controllers release deleted objects through the upload module.
 vi.mock("../../shared/uploads", () => ({
-  deleteObjects: mockDeleteObjects,
+  uploads: { deleteObjects: mockDeleteObjects },
 }));
 
 vi.mock("../../shared/storage/bucket", () => ({

@@ -1,51 +1,36 @@
 import { Hono } from "hono";
 import * as conversationsController from "../controllers/conversations.controller";
 import { conversationRateLimiter } from "../middleware/rateLimit.middleware";
-import { requireAuth } from "../middleware/auth.middleware";
-import {
-  validateReqParams,
-  validateReqBody,
-} from "../middleware/validate.middleware";
-import { CTX_KEYS } from "../../../shared/keys";
-import {
-  conversationReqParamSchema,
-  conversationCreateBodySchema,
-  conversationPatchBodySchema,
-} from "../schema/conversations.schema";
+import { requireAuth, type AuthEnv } from "../middleware/auth.middleware";
 import { messagesRouter } from "./messages.router";
 
-export const conversationsRouter = new Hono();
+export const conversationsRouter = new Hono<AuthEnv>();
 
 conversationsRouter.use("*", requireAuth, conversationRateLimiter);
 
-conversationsRouter.get("/", conversationsController.handleListConversations);
+conversationsRouter.get(
+  "/",
+  ...conversationsController.handleListConversations,
+);
 
 conversationsRouter.post(
   "/",
-  validateReqBody(conversationCreateBodySchema),
-  conversationsController.handleCreateConversation,
+  ...conversationsController.handleCreateConversation,
 );
 
 conversationsRouter.get(
-  `/:${CTX_KEYS.conversationId}`,
-  validateReqParams(conversationReqParamSchema),
-  conversationsController.handleGetConversation,
+  "/:conversationId",
+  ...conversationsController.handleGetConversation,
 );
 
 conversationsRouter.patch(
-  `/:${CTX_KEYS.conversationId}`,
-  validateReqParams(conversationReqParamSchema),
-  validateReqBody(conversationPatchBodySchema),
-  conversationsController.handlePatchConversation,
+  "/:conversationId",
+  ...conversationsController.handlePatchConversation,
 );
 
 conversationsRouter.delete(
-  `/:${CTX_KEYS.conversationId}`,
-  validateReqParams(conversationReqParamSchema),
-  conversationsController.handleDeleteConversation,
+  "/:conversationId",
+  ...conversationsController.handleDeleteConversation,
 );
 
-conversationsRouter.route(
-  `/:${CTX_KEYS.conversationId}/messages`,
-  messagesRouter,
-);
+conversationsRouter.route("/:conversationId/messages", messagesRouter);

@@ -1,7 +1,7 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import type { TranscribeModel } from "@parley/shared/contract";
 import { getBaseEnv } from "../env";
-import { CACHE_KEYS, getOrSetCache } from "../cache/cache";
+import { CACHE_KEYS, cache } from "../cache";
 
 const deepgram = new DeepgramClient({ apiKey: getBaseEnv().DEEPGRAM_API_KEY });
 
@@ -14,14 +14,11 @@ const TRANSCRIBE_TIMEOUT_SECONDS = 20 * 60;
 const TRANSCRIBE_MAX_RETRIES = 1;
 
 /** Startup health check: fails if Deepgram is unreachable or rejects the API key. */
-export async function pingTranscribeAI(): Promise<void> {
+async function ping(): Promise<void> {
   await deepgram.auth.v1.tokens.grant();
 }
 
-export async function transcribeAI(
-  model: string,
-  audioUrl: string,
-): Promise<string> {
+async function transcribe(model: string, audioUrl: string): Promise<string> {
   const response = await deepgram.listen.v1.media.transcribeUrl(
     {
       url: audioUrl,
@@ -92,8 +89,9 @@ async function fetchTranscribeModelData(): Promise<TranscribeModelData> {
   );
 }
 
+/** Exported for tests that seed the catalog; callers use the namespace. */
 export function getTranscribeModelData(): Promise<TranscribeModelData> {
-  return getOrSetCache(
+  return cache.getOrSet(
     CACHE_KEYS.deepgramTranscribeModels,
     fetchTranscribeModelData,
   );
@@ -104,21 +102,27 @@ export function getTranscribeModelData(): Promise<TranscribeModelData> {
  * names repeat across generations ("general" is both nova-2 and nova-3), so
  * the canonical name is what a person picks from too.
  */
-export async function listTranscribeModels(): Promise<TranscribeModel[]> {
+async function listModels(): Promise<TranscribeModel[]> {
   const modelData = await getTranscribeModelData();
   return Object.keys(modelData).map((id) => ({ id, name: id }));
 }
 
 /**
- * Whether a model id can be used for transcription: one listTranscribeModels
+ * Whether a model id can be used for transcription: one listModels
  * lists. Deepgram STT models are single-modality, so presence in the catalog
- * is the whole check, as it is for findChatModel on the chat side.
+ * is the whole check, as it is for chat.findModel.
  */
-export async function isValidTranscribeModel(
-  modelId: string,
-): Promise<boolean> {
+async function isValidModel(modelId: string): Promise<boolean> {
   const modelData = await getTranscribeModelData();
   return Object.hasOwn(modelData, modelId);
 }
 
 export const DEFAULT_TRANSCRIBE_MODEL = "nova-3-general";
+
+/** Speech-to-text and its model catalog, from Deepgram. */
+export const transcription = {
+  transcribe,
+  listModels,
+  isValidModel,
+  ping,
+};

@@ -15,8 +15,7 @@ vi.mock("@deepgram/sdk", () => ({
 }));
 
 vi.mock("../../shared/cache/cache", () => ({
-  CACHE_KEYS,
-  getOrSetCache: mockGetOrSetCache,
+  cache: { getOrSet: mockGetOrSetCache },
 }));
 
 /** Caching itself is covered in cache.test.ts; here the fetch always runs. */
@@ -25,8 +24,7 @@ const runFetch = <T>(_name: unknown, fetch: () => Promise<T>) => fetch();
 import {
   DEFAULT_TRANSCRIBE_MODEL,
   getTranscribeModelData,
-  isValidTranscribeModel,
-  listTranscribeModels,
+  transcription,
 } from "../../shared/ai/ai_transcribe_client";
 
 const sttResponse = {
@@ -88,7 +86,7 @@ describe("listTranscribeModels", () => {
   });
 
   it("lists each model by its canonical name", async () => {
-    expect(await listTranscribeModels()).toEqual([
+    expect(await transcription.listModels()).toEqual([
       { id: "nova-3-general", name: "nova-3-general" },
       { id: "nova-2-general", name: "nova-2-general" },
     ]);
@@ -103,18 +101,20 @@ describe("isValidTranscribeModel", () => {
   });
 
   it("accepts a model by its canonical_name", async () => {
-    expect(await isValidTranscribeModel("nova-3-general")).toBe(true);
+    expect(await transcription.isValidModel("nova-3-general")).toBe(true);
   });
 
   it("rejects a display name, which repeats across generations", async () => {
-    expect(await isValidTranscribeModel("general")).toBe(false);
+    expect(await transcription.isValidModel("general")).toBe(false);
   });
 
   it("accepts the default when display names differ from model IDs", async () => {
-    expect(await isValidTranscribeModel(DEFAULT_TRANSCRIBE_MODEL)).toBe(true);
+    expect(await transcription.isValidModel(DEFAULT_TRANSCRIBE_MODEL)).toBe(
+      true,
+    );
   });
 
   it("rejects a model that is not in the catalog", async () => {
-    expect(await isValidTranscribeModel("whisper-large")).toBe(false);
+    expect(await transcription.isValidModel("whisper-large")).toBe(false);
   });
 });

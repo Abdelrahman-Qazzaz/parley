@@ -1,10 +1,15 @@
-import type { Context } from "hono";
 import type {
   Conversation,
   ConversationsResponse,
 } from "@parley/shared/contract";
-import { CTX_KEYS } from "../../../shared/keys";
-import { deleteObjects } from "../../../shared/uploads";
+import { authed } from "../middleware/auth.middleware";
+import { validate } from "../middleware/validate.middleware";
+import {
+  conversationCreateBodySchema,
+  conversationPatchBodySchema,
+  conversationReqParamSchema,
+} from "../schema/conversations.schema";
+import { uploads } from "../../../shared/uploads";
 import { data, type ConversationRow } from "../../../shared/data";
 
 function toConversationJson(row: ConversationRow): Conversation {
@@ -17,91 +22,107 @@ function toConversationJson(row: ConversationRow): Conversation {
 }
 
 /** GET /conversations — the user's conversations, most recently active first. */
-export async function handleListConversations(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
+export const handleListConversations = authed.createHandlers(async (c) => {
+  const { userId } = c.var;
 
   const rows = await data.conversations.findUserConversations(userId);
 
   return c.json({
     conversations: rows.map(toConversationJson),
   } satisfies ConversationsResponse);
-}
+});
 
 /** GET /conversations/:conversationId */
-export async function handleGetConversation(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const conversationId = c.get(CTX_KEYS.conversationId);
+export const handleGetConversation = authed.createHandlers(
+  validate("param", conversationReqParamSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { conversationId } = c.req.valid("param");
 
-  const row = await data.conversations.findOwnedConversation(
-    userId,
-    conversationId,
-  );
-
-  if (!row) return c.json({ message: "Conversation not found" }, 404);
-  return c.json(toConversationJson(row));
-}
-
-/** POST /conversations — title optional; the DB default applies when omitted. */
-export async function handleCreateConversation(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const title: string | undefined = c.get(CTX_KEYS.conversationTitle);
-
-  const row = await data.conversations.createConversation(userId, title);
-
-  return c.json(toConversationJson(row), 201);
-}
-
-/** PATCH /conversations/:conversationId — rename. */
-export async function handlePatchConversation(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const conversationId = c.get(CTX_KEYS.conversationId);
-  const title: string = c.get(CTX_KEYS.conversationTitle);
-
-  const row = await data.conversations.renameConversation(
-    userId,
-    conversationId,
-    title,
-  );
-
-  if (!row) return c.json({ message: "Conversation not found" }, 404);
-  return c.json(toConversationJson(row));
-}
-
-/** DELETE /conversations/:conversationId */
-export async function handleDeleteConversation(c: Context) {
-  const userId = c.get(CTX_KEYS.userId);
-  const conversationId = c.get(CTX_KEYS.conversationId);
-
-  // Keep the candidates before their message links cascade away. Uploads still
-  // referenced by another conversation are filtered out after the delete.
-  const imageUploadIds = await data.images.findConversationImageAttachmentIds(
-    userId,
-    conversationId,
-  );
-
-  const row = await data.conversations.deleteOwnedConversation(
-    userId,
-    conversationId,
-  );
-
-  if (!row) {
-    const ownedConversation = await data.conversations.findOwnedConversation(
+    const row = await data.conversations.findOwnedConversation(
       userId,
       conversationId,
     );
-    if (!ownedConversation)
-      return c.json({ message: "Conversation not found" }, 404);
-    return c.json({ message: "A response is already in progress" }, 409);
-  }
 
-  const deletedImageAttachmentIds =
-    await data.images.deleteOwnedUnlinkedUnreservedImageAttachments(
+    if (!row) return c.json({ message: "Conversation not found" }, 404);
+    return c.json(toConversationJson(row));
+  },
+);
+
+/** POST /conversations — title optional; the DB default applies when omitted. */
+export const handleCreateConversation = authed.createHandlers(
+  validate("json", conversationCreateBodySchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { conversationTitle: title } = c.req.valid("json");
+
+    const row = await data.conversations.createConversation(userId, title);
+
+    return c.json(toConversationJson(row), 201);
+  },
+);
+
+/** PATCH /conversations/:conversationId — rename. */
+export const handlePatchConversation = authed.createHandlers(
+  validate("param", conversationReqParamSchema),
+  validate("json", conversationPatchBodySchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { conversationId } = c.req.valid("param");
+    const { conversationTitle: title } = c.req.valid("json");
+
+    const row = await data.conversations.renameConversation(
       userId,
-      imageUploadIds,
+      conversationId,
+      title,
     );
-  await deleteObjects(
-    userId,
-    deletedImageAttachmentIds.map((uploadId) => ({ kind: "image", uploadId })),
-  );
-  return c.json({ message: "Conversation deleted" }, 200);
-}
+
+    if (!row) return c.json({ message: "Conversation not found" }, 404);
+    return c.json(toConversationJson(row));
+  },
+);
+
+/** DELETE /conversations/:conversationId */
+export const handleDeleteConversation = authed.createHandlers(
+  validate("param", conversationReqParamSchema),
+  async (c) => {
+    const { userId } = c.var;
+    const { conversationId } = c.req.valid("param");
+
+    // Keep the candidates before their message links cascade away. Uploads still
+    // referenced by another conversation are filtered out after the delete.
+    const imageUploadIds = await data.images.findConversationImageAttachmentIds(
+      userId,
+      conversationId,
+    );
+
+    const row = await data.conversations.deleteOwnedConversation(
+      userId,
+      conversationId,
+    );
+
+    if (!row) {
+      const ownedConversation = await data.conversations.findOwnedConversation(
+        userId,
+        conversationId,
+      );
+      if (!ownedConversation)
+        return c.json({ message: "Conversation not found" }, 404);
+      return c.json({ message: "A response is already in progress" }, 409);
+    }
+
+    const deletedImageAttachmentIds =
+      await data.images.deleteOwnedUnlinkedUnreservedImageAttachments(
+        userId,
+        imageUploadIds,
+      );
+    await uploads.deleteObjects(
+      userId,
+      deletedImageAttachmentIds.map((uploadId) => ({
+        kind: "image",
+        uploadId,
+      })),
+    );
+    return c.json({ message: "Conversation deleted" }, 200);
+  },
+);

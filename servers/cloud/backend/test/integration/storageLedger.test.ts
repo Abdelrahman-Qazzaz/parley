@@ -62,8 +62,8 @@ import {
 import { attachments } from "../../shared/data/attachments.data";
 import { jobs } from "../../shared/data/jobs.data";
 import { images } from "../../shared/data/images.data";
-import { sweepUnusedObjects } from "../../shared/sweeper";
-import { deleteObjects } from "../../shared/uploads";
+import { sweeper } from "../../shared/sweeper";
+import { uploads } from "../../shared/uploads";
 import { storageLedger } from "../../shared/data/storageLedger.data";
 import { advisoryLock } from "../../shared/data/advisoryLock.data";
 
@@ -536,7 +536,7 @@ describe.skipIf(!testState.databaseUrl)("storage ledger in PostgreSQL", () => {
       expect(await statusOf(a)).toBe("deleted");
       expect(await db.select().from(Attachments)).toEqual([]);
 
-      await deleteObjects(userId, [{ kind: "image", uploadId: a }]);
+      await uploads.deleteObjects(userId, [{ kind: "image", uploadId: a }]);
 
       expect(testState.deleteFromBucket).toHaveBeenCalledWith(userId, [
         { kind: "image", uploadId: a },
@@ -552,7 +552,7 @@ describe.skipIf(!testState.databaseUrl)("storage ledger in PostgreSQL", () => {
       testState.deleteFromBucket.mockRejectedValueOnce(new Error("down"));
 
       await expect(
-        deleteObjects(userId, [{ kind: "image", uploadId: a }]),
+        uploads.deleteObjects(userId, [{ kind: "image", uploadId: a }]),
       ).rejects.toThrow("down");
 
       expect(await statusOf(a)).toBe("deleted");
@@ -684,7 +684,7 @@ describe.skipIf(!testState.databaseUrl)("storage ledger in PostgreSQL", () => {
         return [];
       });
 
-      expect(await sweepUnusedObjects()).toBe(2);
+      expect(await sweeper.sweepUnusedObjects()).toBe(2);
 
       expect(testState.deleteFromBucket).toHaveBeenCalledWith(userId, [
         { kind: "image", uploadId: stalePending.uploadId },

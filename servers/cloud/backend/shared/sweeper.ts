@@ -1,6 +1,6 @@
 import { data } from "./data";
 import { logger } from "@parley/shared/logger";
-import { UPLOAD_CONFIRM_WINDOW_MS, deleteObjects } from "./uploads";
+import { UPLOAD_CONFIRM_WINDOW_MS, uploads } from "./uploads";
 
 const log = logger.child({ component: "sweeper" });
 
@@ -23,10 +23,10 @@ const LOCK_NAME = "storage-sweep";
  * Returns how many were removed, or undefined when another process holds the
  * lock. Anything beyond the batch is next run's.
  *
- * Exported for tests that drive one batch; production runs it via
- * scheduleSweeper below.
+ * Exposed for tests that drive one batch; production runs it via
+ * sweeper.schedule.
  */
-export async function sweepUnusedObjects() {
+async function sweepUnusedObjects() {
   return data.advisoryLock.withAdvisoryLock(LOCK_NAME, async () => {
     const objects = await data.storageLedger.findLedgerEntries({
       statuses: ["pending", "deleted"],
@@ -37,7 +37,7 @@ export async function sweepUnusedObjects() {
     let removed = 0;
     for (const [userId, owned] of Map.groupBy(objects, (o) => o.userId)) {
       try {
-        await deleteObjects(
+        await uploads.deleteObjects(
           userId,
           owned.map(({ kind, uploadId }) => ({ kind, uploadId })),
         );
@@ -67,7 +67,7 @@ export async function sweepUnusedObjects() {
  * schedule and waits for a sweep in progress. A run still going when the next
  * is due is left to finish rather than joined by a second one.
  */
-export function scheduleSweeper(intervalMs = INTERVAL_MS) {
+function schedule(intervalMs = INTERVAL_MS) {
   let inFlight: Promise<void> | undefined;
 
   const run = () => {
@@ -88,3 +88,8 @@ export function scheduleSweeper(intervalMs = INTERVAL_MS) {
     await inFlight;
   };
 }
+
+export const sweeper = {
+  schedule,
+  sweepUnusedObjects,
+};

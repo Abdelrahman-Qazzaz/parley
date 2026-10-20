@@ -4,11 +4,11 @@
  * settings. The storage counterpart of `npm run db`, which does the same for
  * the tables.
  */
-import { bucket } from "../shared/storage/bucket";
 import {
   BUCKET_SETTINGS,
+  bucket,
   matchesBucketSettings,
-} from "../shared/storage/schema";
+} from "../shared/storage";
 
 for (const [name, declared] of Object.entries(BUCKET_SETTINGS)) {
   const live = await bucket.readSettings(name);
