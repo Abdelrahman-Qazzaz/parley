@@ -29,12 +29,28 @@ and the chat UI treats the turn as finished at that point.
 
 ## Measure first
 
-`measurePreparation` already times each step of preparing a turn, but it
-only logs inside `withPreparationMetrics` (`src/preparationMetrics.ts:22`),
-and nothing calls that since `d70ee27` merged the create and patch
-handlers. Wrapping `prepareTurn` in it again gives production numbers. The
-most useful one is a single server → Supabase database round trip, since
-it decides whether 6 is worth 10 ms or 150 ms.
+Both message handlers run inside `withPreparationMetrics` again
+(`withTurnMetrics` in `messages.controller.ts`), so every turn logs
+"Message preparation operation completed" once per step, with
+`durationMs`, and `completedAfterMs` measured from the handler's start
+(after auth and body validation):
+
+- The two claims (`claimConversationTurn`, `claimAttachments`, timed in
+  `chat/turnClaim.ts`) and the three reads beside them (`resolveImages`,
+  `findTranscripts`, `findContextHistory`, in `chat/turn.ts`) share a
+  `promiseAllId`. The one with the largest `completedAfterMs` in a group is
+  what the turn waited for. If that is a claim, caching the history would
+  save database load, not time.
+- `imageUrls.resolve` and its children, which sign the admitted history's
+  images after the group settles (#3).
+- `rewindTo` on edits (#4), `persistAndUnclaimChatTurn` (#6).
+- "Message first token generated" puts the model's own time to first token
+  next to the preparation that came before it.
+
+Durations include waiting for a free connection: each turn uses up to 5 at
+once, out of a pool of 7 (`src/db/pool.ts`). A single API → Supabase round
+trip is still the most useful baseline, since it decides whether 6 is worth
+10 ms or 150 ms.
 
 ## Rate limits after scaling out
 

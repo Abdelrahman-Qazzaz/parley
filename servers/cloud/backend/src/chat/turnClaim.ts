@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { logger } from "@parley/shared/logger";
 import { data } from "../data";
+import { measurePreparation } from "../preparationMetrics";
 
 const log = logger.child({ component: "turn-claim" });
 
@@ -11,6 +12,8 @@ const log = logger.child({ component: "turn-claim" });
  */
 export type TurnClaim = {
   token: string;
+  /** Groups the claim's timings with the reads prepareTurn runs beside it. */
+  preparationId: string;
   /** False when the conversation moved on or another turn holds it. */
   conversationClaimed: Promise<boolean>;
   /** False when an attachment is missing or not the user's. */
@@ -33,18 +36,27 @@ export function claimTurn(request: {
   attachmentIds: readonly string[];
 }): TurnClaim {
   const token = randomUUID();
-  const conversationClaimed = data.conversations
-    .claimConversationTurn(
-      request.userId,
-      request.conversationId,
-      request.expectedLastMessageId,
-      token,
-    )
-    .then((claimToken) => claimToken !== null);
-  const attachmentsReserved = data.attachments.claimAttachments(
-    request.userId,
-    request.attachmentIds,
-    token,
+  const preparationId = randomUUID();
+  const conversationClaimed = measurePreparation(
+    "claimConversationTurn",
+    preparationId,
+    () =>
+      data.conversations.claimConversationTurn(
+        request.userId,
+        request.conversationId,
+        request.expectedLastMessageId,
+        token,
+      ),
+  ).then((claimToken) => claimToken !== null);
+  const attachmentsReserved = measurePreparation(
+    "claimAttachments",
+    preparationId,
+    () =>
+      data.attachments.claimAttachments(
+        request.userId,
+        request.attachmentIds,
+        token,
+      ),
   );
 
   async function release() {
@@ -65,5 +77,11 @@ export function claimTurn(request: {
       });
   }
 
-  return { token, conversationClaimed, attachmentsReserved, release };
+  return {
+    token,
+    preparationId,
+    conversationClaimed,
+    attachmentsReserved,
+    release,
+  };
 }

@@ -7,7 +7,9 @@ import type {
   MessagesResponse,
   ReplyStreamEvents,
 } from "@parley/shared/contract";
+import { randomUUID } from "node:crypto";
 import { streamSSE } from "hono/streaming";
+import { logger } from "@parley/shared/logger";
 import { SSEEventQueue } from "@parley/shared/sse";
 import {
   data,
@@ -15,6 +17,11 @@ import {
   type ResolvedImage,
   type StoredTranscriptAttachment,
 } from "../data";
+import {
+  measurePreparation,
+  msSince,
+  withPreparationMetrics,
+} from "../preparationMetrics";
 import { uploads } from "../uploads";
 import { authed } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
@@ -115,6 +122,7 @@ export const handleListMessages = authed.createHandlers(
 function streamTurn(
   c: Context,
   request: TurnRequest,
+  metrics: TurnMetrics,
   claim: TurnClaim,
   prepare: () => Promise<PreparedTurn>,
 ) {
@@ -133,11 +141,24 @@ function streamTurn(
       );
       responseReady.resolve(streamResponse);
 
+      const modelStartedAt = performance.now();
+      const modelStartedAfterMs = msSince(metrics.startedAt);
+      let firstTokenLogged = false;
       const lastMessageId = await answerTurn(
         request,
         claim,
         prepared,
-        (delta) => events.push("delta", { delta }),
+        (delta) => {
+          if (delta.length > 0 && !firstTokenLogged) {
+            firstTokenLogged = true;
+            metrics.log.info("Message first token generated", {
+              modelStartedAfterMs,
+              modelTimeToFirstTokenMs: msSince(modelStartedAt),
+              firstTokenAfterMs: msSince(metrics.startedAt),
+            });
+          }
+          events.push("delta", { delta });
+        },
       );
 
       events.push("done", { lastMessageId });
@@ -164,6 +185,32 @@ function streamTurn(
   return responseReady.promise;
 }
 
+type TurnMetrics = {
+  log: Pick<typeof logger, "info">;
+  startedAt: number;
+};
+
+/**
+ * Times every step of a turn from the handler's start (after auth and body
+ * validation). Each step logs "Message preparation operation completed"; the
+ * claims and the reads that run beside them share a promiseAllId, so the
+ * slowest of them is what the turn waited for.
+ */
+function withTurnMetrics<T>(
+  request: TurnRequest,
+  run: (metrics: TurnMetrics) => T,
+): T {
+  const metrics = {
+    log: logger.child({
+      controller: "messages",
+      requestId: randomUUID(),
+      conversationId: request.conversationId,
+    }),
+    startedAt: performance.now(),
+  };
+  return withPreparationMetrics(metrics, () => run(metrics));
+}
+
 /** POST /conversations/:conversationId/messages — answer a new user turn. */
 export const handleCreateMessage = authed.createHandlers(
   validate("param", conversationReqParamSchema),
@@ -174,9 +221,12 @@ export const handleCreateMessage = authed.createHandlers(
       c.req.valid("param").conversationId,
       c.req.valid("json"),
     );
-    const claim = claimTurn(request);
-
-    return streamTurn(c, request, claim, () => prepareTurn(request, claim));
+    return withTurnMetrics(request, (metrics) => {
+      const claim = claimTurn(request);
+      return streamTurn(c, request, metrics, claim, () =>
+        prepareTurn(request, claim),
+      );
+    });
   },
 );
 
@@ -197,12 +247,15 @@ export const handlePatchMessage = authed.createHandlers(
       conversationId,
       c.req.valid("json"),
     );
-    const claim = claimTurn(request);
-
-    return streamTurn(c, request, claim, async () => {
-      const prepared = await prepareTurn(request, claim, messageId);
-      await rewindTo(request, claim, messageId);
-      return prepared;
+    return withTurnMetrics(request, (metrics) => {
+      const claim = claimTurn(request);
+      return streamTurn(c, request, metrics, claim, async () => {
+        const prepared = await prepareTurn(request, claim, messageId);
+        await measurePreparation("rewindTo", undefined, () =>
+          rewindTo(request, claim, messageId),
+        );
+        return prepared;
+      });
     });
   },
 );
