@@ -36,10 +36,15 @@ export function MessageList({
   messages,
   pending,
   loading,
+  onEdit,
+  canEdit,
 }: {
   messages: ChatMessage[];
   pending: PendingTurn | null;
   loading: boolean;
+  /** Replaces a user message, and every turn after it, with a new turn. */
+  onEdit: (message: ChatMessage, content: string) => void;
+  canEdit: boolean;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [stuckToBottom, setStuckToBottom] = useState(true);
@@ -60,6 +65,13 @@ export function MessageList({
     if (scroller) scroller.scrollTop = scroller.scrollHeight;
   }, [messages, pending?.assistantContent, pending?.content, stuckToBottom]);
 
+  // While an edit is answered, the turns it replaces are already gone on the
+  // server; show the conversation as it will read once the edit lands.
+  const replacedAt = pending?.replacesMessageId
+    ? messages.findIndex((message) => message.id === pending.replacesMessageId)
+    : -1;
+  const shown = replacedAt >= 0 ? messages.slice(0, replacedAt) : messages;
+
   const isEmpty = messages.length === 0 && !pending && !loading;
 
   return (
@@ -78,13 +90,15 @@ export function MessageList({
             <LoadingTurns />
           ) : (
             <div className="space-y-8">
-              {messages.map((message) =>
+              {shown.map((message) =>
                 message.role === "user" ? (
                   <UserTurn
                     key={message.id}
                     content={message.content}
                     images={message.attachments}
                     transcripts={message.transcriptAttachments}
+                    onEdit={(content) => onEdit(message, content)}
+                    canEdit={canEdit && !pending}
                   />
                 ) : (
                   <AssistantTurn
@@ -95,7 +109,7 @@ export function MessageList({
                 ),
               )}
 
-              {pending && (
+              {pending && !pending.reloading && (
                 <>
                   <UserTurn
                     content={pending.content}

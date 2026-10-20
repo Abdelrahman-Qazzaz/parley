@@ -17,7 +17,8 @@ import { useSources } from "../../sources/useSources";
 import { Composer } from "../composer/Composer";
 import { DropOverlay } from "../composer/DropOverlay";
 import { MessageList } from "./MessageList";
-import { useChatSend } from "./useChatSend";
+import type { ChatMessage } from "../../api/messages";
+import { sourcesOfMessage, useChatSend } from "./useChatSend";
 
 const NEW_CHAT_KEY = "new";
 
@@ -52,7 +53,7 @@ export function ChatView() {
   const messagesQuery = useMessagesQuery(conversationId);
   const chatModels = useChatModelsQuery(ready);
   const [modelPick, setModelPick] = useState<string | null>(null);
-  const { pendingTurns, sendingKeys, send } = useChatSend();
+  const { pendingTurns, sendingKeys, send, edit } = useChatSend();
 
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
@@ -135,6 +136,32 @@ export function ChatView() {
     });
   };
 
+  // Editing needs what sending needs, bar a draft: a model, a loaded
+  // history, and no turn in this chat still being answered.
+  const canEdit = !!conversationId && !!modelId && !sending && historyReady;
+
+  /**
+   * Sends an edited message in place of `message`, with the attachments it
+   * was sent with. If it fails, the composer gets the text and attachments
+   * back, as after a failed send.
+   */
+  const handleEdit = (message: ChatMessage, content: string) => {
+    if (!conversationId || !canEdit || !modelId) return;
+
+    void edit({
+      conversationId,
+      message,
+      content,
+      modelId,
+      sources: sourcesOfMessage(message),
+      lastMessageId: messagesQuery.data?.lastMessageId ?? null,
+      onRestore: (restoredContent, restoredSources, restoreKey) => {
+        setTexts((current) => ({ ...current, [restoreKey]: restoredContent }));
+        restoreSourcesFor(restoreKey, restoredSources);
+      },
+    });
+  };
+
   const handleDragEnter = (event: DragEvent) => {
     if (!event.dataTransfer.types.includes("Files")) return;
     dragDepth.current += 1;
@@ -176,6 +203,8 @@ export function ChatView() {
             conversationId ? (pendingTurns[conversationId] ?? null) : null
           }
           loading={!!conversationId && messagesQuery.isLoading}
+          onEdit={handleEdit}
+          canEdit={canEdit}
         />
       )}
 

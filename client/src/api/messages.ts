@@ -30,7 +30,14 @@ export type {
  */
 export const MAX_CONTEXT_MESSAGES = 50;
 
-export type SendMessageInput = SendMessageBody & { conversationId: string };
+export type SendMessageInput = SendMessageBody & {
+  conversationId: string;
+  /**
+   * Set to edit that message instead of adding one: the server drops it and
+   * everything after it, then answers this turn in its place.
+   */
+  replacesMessageId?: string;
+};
 
 export async function fetchMessages(
   server: Server,
@@ -86,16 +93,23 @@ function dispatchReplyEvent(
  * Sends the turn and reads the reply off the SSE body. EventSource can't POST,
  * so this is fetch + a reader. The run itself is server-side and finishes even
  * if this stream dies — a failure here means "refetch", not "the turn was lost".
+ *
+ * An edit (`replacesMessageId`) streams the same way. If the model fails once
+ * the server has dropped the old turns, they stay dropped and nothing new is
+ * saved, which reads exactly like a send that failed.
  */
 export async function streamMessage(
   server: Server,
   input: SendMessageInput,
   callbacks: StreamCallbacks,
 ): Promise<void> {
+  const messagesPath = `/conversations/${input.conversationId}/messages`;
   const response = await apiFetch(
     server,
-    `/conversations/${input.conversationId}/messages`,
-    jsonRequest("POST", {
+    input.replacesMessageId
+      ? `${messagesPath}/${input.replacesMessageId}`
+      : messagesPath,
+    jsonRequest(input.replacesMessageId ? "PATCH" : "POST", {
       messageContent: input.messageContent,
       chosenModelId: input.chosenModelId,
       attachments: input.attachments,
