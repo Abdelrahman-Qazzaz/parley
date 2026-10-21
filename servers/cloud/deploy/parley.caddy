@@ -11,5 +11,12 @@ __PARLEY_DOMAIN__ {
 		# Event streams and streamed chat replies reach the browser as they're
 		# written, not when a buffer fills.
 		flush_interval -1
+		# Caddy closes an idle connection to the API before the API would
+		# (KEEP_ALIVE_TIMEOUT_MS in backend/api/index.ts), so it never sends a
+		# request on one the API is closing. Its default is 2 minutes, which
+		# outlasts the API's; keep this under the API's.
+		transport http {
+			keepalive 60s
+		}
 	}
 }
