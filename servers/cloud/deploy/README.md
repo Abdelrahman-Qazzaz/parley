@@ -16,7 +16,7 @@ to `main` builds the images and deploys them
 
 Once per server. Steps 1 to 3 happen on your own machine.
 
-1. **Order the VPS.** Ubuntu 24.04, in the region closest to the Supabase
+1. **Order the VPS.** Ubuntu 24.04 or 26.04, in the region closest to the Supabase
    project, with your SSH public key added when ordering.
 2. **Make a deploy key** for GitHub Actions. It signs in as `deploy`, a user
    that can run Docker and nothing more.

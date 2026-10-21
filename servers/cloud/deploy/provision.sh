@@ -1,5 +1,5 @@
 #!/bin/sh
-# Sets up a fresh Ubuntu 24.04 VPS to run Parley, and any other project, behind
+# Sets up a fresh Ubuntu 24.04 or 26.04 VPS to run Parley, and any other project, behind
 # the shared Caddy proxy. Run it once, with sudo, as the admin user the VPS
 # came with (README.md, "Set up the server"):
 #
