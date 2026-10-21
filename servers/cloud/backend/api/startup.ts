@@ -3,7 +3,7 @@ import { mq } from "../shared/message-queue/messageQueue";
 import { pingDb } from "../shared/db";
 import { bucket } from "../shared/storage";
 import { cache } from "../shared/cache";
-import { chat } from "../shared/ai";
+import { chat, transcription } from "../shared/ai";
 import { workos } from "./src/auth/auth";
 import { UPLOAD_CONFIRM_WINDOW_MS } from "../shared/uploads";
 
@@ -30,5 +30,6 @@ export function verifyApiServices(): Promise<void> {
     { name: "Upstash Redis", check: cache.ping },
     { name: "WorkOS", check: workos.ping },
     { name: "OpenRouter", check: chat.ping },
+    { name: "Deepgram", check: transcription.ping },
   ]);
 }

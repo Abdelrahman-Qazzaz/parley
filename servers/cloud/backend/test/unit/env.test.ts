@@ -94,12 +94,12 @@ describe("apiEnvSchema", () => {
 });
 
 describe("baseEnvSchema", () => {
-  it("accepts a valid base env — all the worker needs", () => {
+  it("accepts a valid base env", () => {
     const result = baseEnvSchema.safeParse(validBase);
     expect(result.success).toBe(true);
   });
 
-  it("refuses the worker's load-test overrides in production", () => {
+  it("refuses the base load-test overrides in production", () => {
     const result = baseEnvSchema.safeParse({
       ...validBase,
       NODE_ENV: "production",

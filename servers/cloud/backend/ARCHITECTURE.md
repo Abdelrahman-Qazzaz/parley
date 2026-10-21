@@ -1,18 +1,17 @@
 # Backend architecture
 
-A modular monolith. Everything under `backend/` is a
-single npm package (`@parley/cloud`) built from one codebase and one
-`shared/` module. It runs as multiple process types that talk through a
-RabbitMQ message queue and a shared Postgres database:
+A monolith. Everything under `backend/` is a single npm package
+(`@parley/cloud`) that runs as one process, `api`:
 
-- `api` — the HTTP service clients talk to, with job updates pushed over
-  server-sent events (`GET /events`). In production it also
-  serves the built client (`CLIENT_DIR`) on `/`, `/chat` and `/chat/*`, so the
-  page and the API share one origin and the session cookie is first-party.
-- `transcribe-worker` — the background queue worker that runs transcription.
+- the HTTP service clients talk to, with job updates pushed over server-sent
+  events (`GET /events`). In production it also serves the built client
+  (`CLIENT_DIR`) on `/`, `/chat` and `/chat/*`, so the page and the API share
+  one origin and the session cookie is first-party.
+- transcription, which it takes from a RabbitMQ queue. See
+  [Why transcription runs in the API](#why-transcription-runs-in-the-api).
 
-They are the same artifact started at different entrypoints, not independently
-deployable services. See [Why it isn't microservices](#why-it-isnt-microservices).
+The Python YouTube fetcher (`servers/cloud/youtube-fetcher`) is the other
+process; the two talk only through RabbitMQ.
 
 ## Attachment vocabulary
 
@@ -34,19 +33,25 @@ starting half-alive.
 
 Defined in `shared/message-queue/queues.ts`:
 
-| Queue                | Producer → Consumer    | Payload                                                  |
-| -------------------- | ---------------------- | -------------------------------------------------------- |
-| `transcribe`         | api / fetcher → worker | `{ audioUploadId }`                                      |
-| `caption_transcript` | fetcher → worker       | `{ audioUploadId, transcript }`                          |
-| `transcribe_done`    | worker → api           | `{ audioUploadId, userId }`                              |
-| `yt_fetch`           | api → youtube-fetcher  | `{ audioUploadId, url, userId, useCaptionsIfAvailable }` |
-| `yt_fetch_failed`    | youtube-fetcher → api  | `{ audioUploadId, userId, error? }`                      |
+| Queue                | Producer → Consumer   | Payload                                                  |
+| -------------------- | --------------------- | -------------------------------------------------------- |
+| `transcribe`         | api / fetcher → api   | `{ audioUploadId }`                                      |
+| `caption_transcript` | fetcher → api         | `{ audioUploadId, transcript }`                          |
+| `yt_fetch`           | api → youtube-fetcher | `{ audioUploadId, url, userId, useCaptionsIfAvailable }` |
+| `yt_fetch_failed`    | youtube-fetcher → api | `{ audioUploadId, userId, error? }`                      |
 
-The channel uses `prefetch(1)` **per consumer**, so a single worker process
-handles at most one transcribe job at a time.
+The API publishes to `transcribe` and consumes it too. The queue is what
+keeps an upload's job across a restart or deploy, and what holds back the
+ones over the concurrency limit until there's room.
 
-Each consumer sets how many attempts a message gets:
-`mq.consume(queue, handler, { attempts })`. A handler fails an attempt by
+Each consumer sets how many messages it works on at once,
+`mq.consume(queue, handler, { attempts, prefetch })`, 1 unless it says
+otherwise. `transcribe` takes `getTranscriptionConcurrency()`
+(`api/src/transcribeJob.ts`): 40, under the 50 transcriptions Deepgram runs at
+once for a project. Every API instance together has to stay under that, so
+once there are several, each one's share comes from the load balancer.
+
+Each consumer also sets how many attempts a message gets. A handler fails an attempt by
 throwing, and the next attempt runs 2 seconds later in the same process.
 A message that fails its last attempt, throws a `DeadLetterError`, or isn't
 valid JSON is published to the `dead_letter` queue under its original queue's
@@ -54,7 +59,7 @@ name, with the reason in an `x-failure-reason` header, and then acked.
 Nothing is requeued, and nothing consumes `dead_letter`: replay by hand once
 the cause is fixed.
 
-A worker that fails a job it claimed hands the claim back before its next
+A transcription that fails a job it claimed hands the claim back before its next
 attempt, so that attempt finds the job queued. If it can't hand the claim
 back, the job stays `processing` and the message is dead-lettered; set the
 job back to `queued` with no claim token before replaying it.
@@ -68,19 +73,19 @@ reconnects in-process; the platform's restart policy brings it back.
   browser
     │  upload audio
     ▼
-  ┌──────┐  create AudioTranscriptionJobs (queued)      ┌───────────────────┐
-  │ api  │ ───────────── transcribe ───────────────────▶│ transcribe worker │
-  └──────┘                                              └───────────────────┘
-    ▲                                                     │ claim job, sign audio URL,
-    │                                                     │ call Deepgram, save transcript
-    │◀───────────── transcribe_done ──────────────────────┤ and complete job in Postgres
+  ┌──────┐  create AudioTranscriptionJobs (queued)   ┌──────────┐
+  │ api  │ ──────────── publish transcribe ─────────▶│ RabbitMQ │
+  │      │ ◀─────────── consume transcribe ──────────┤          │
+  └──────┘                                           └──────────┘
+    │  claim job, sign audio URL, call Deepgram,
+    │  save transcript and complete job in Postgres
     └── GET /events: jobUpdated to the user's streams ──▶ browser
 ```
 
 A YouTube upload takes the same path one step earlier: the API publishes
 `yt_fetch`. When captions are preferred, the Python fetcher tries them first:
 if the video has a caption track, it skips the audio download and publishes
-`caption_transcript` with the caption text in the message, which the worker
+`caption_transcript` with the caption text in the message, which the API
 stores as the transcript. Otherwise it stores audio under the job's
 `audioUploadId` and publishes `transcribe`.
 
@@ -98,7 +103,7 @@ SSE endpoint every other chat turn uses.
 
 Job state transitions are **claimed atomically**. A fresh delivery can claim
 only a queued job; a broker redelivery can reclaim a processing job. Every claim
-gets a new token, which prevents an older worker from writing a stale result if
+gets a new token, which prevents an older delivery from writing a stale result if
 it later finishes.
 
 ## Deployment & scaling
@@ -108,21 +113,14 @@ Production is one VPS running `servers/cloud/compose.yaml` with
 `.github/workflows/deploy.yml` on every push to `main`. See
 [`servers/cloud/deploy/README.md`](../deploy/README.md).
 
-One build artifact, run as different processes:
+`api` runs as a single instance behind Caddy. Its port is fixed and known
+(`PORT`, which also carries its event stream) because Caddy dials it. Do not
+randomize it.
 
-- `api` — normally a single instance behind an ingress. Its port is
-  fixed and known (`PORT`, which also carries its event stream) because
-  clients dial it. Do not randomize it.
-- `transcribe-worker` (`transcribe-worker/index.ts`) — run **N replicas** to
-  scale throughput.
-  Because the workers are RabbitMQ _competing consumers_, messages are
-  load-balanced across every connected replica automatically. No load balancer
-  sits in front of workers — they pull work.
-
-The worker consumes one queue, so there is nothing to select between: every
-replica is interchangeable and scaling is purely a replica count. (This used to
-be split by a `WORKER_ROLE` env var, which existed only to size the transcribe
-and summarize pools separately.)
+Running more than one instance needs more than a replica count: rate limits
+and event streams are per process (see MESSAGE_LATENCY.md), and the instances
+have to split the transcription concurrency between them (see
+[Message queues](#message-queues)).
 
 ### Schema changes
 
@@ -139,32 +137,16 @@ A database made with push rather than migrations (the existing ones were)
 needs `npm run db:baseline` once before its first `migrate`: it checks the
 schema is all there and records the migrations as applied.
 
-### No worker port
+## Why transcription runs in the API
 
-The worker is a pure queue consumer and runs no HTTP server. There is no
-port to configure:
+It used to be a separate `transcribe-worker` process, from when that process
+also wrote summaries; summaries became chat replies, which the API runs. What
+was left only waits: it signs a URL to the audio, Deepgram downloads and
+transcribes it, and the transcript is saved. Waiting costs a Node process
+almost nothing, and the API already waits on longer calls than this for every
+chat reply.
 
-- Nothing dials the worker, so it needs no listening socket for traffic.
-- A single shared `.env` can't hand different ports to the N processes built
-  from one artifact anyway, so a configurable port wouldn't help.
-- The open RabbitMQ consumer socket keeps the Node event loop alive, and
-  losing it exits the process.
-
-Liveness in an orchestrator is therefore a **process / queue-connection**
-concern (restart-on-crash, or an exec/TCP probe), not an HTTP health check.
-
-## Why it isn't microservices
-
-It shares the traits that make scaling easy — separate processes, async
-message-queue decoupling, independent horizontal scaling of the worker tier —
-but not the ones that define microservices:
-
-- One codebase, one deployable. All processes build from the same package
-  and import `shared/` by relative path.
-- Shared database. API and workers read/write the same Postgres tables;
-  microservices own their data privately.
-- No independent deploy cadence. You can't ship the worker without shipping
-  the API's code — it's the same artifact.
-
-Promoting `shared/` to a published/workspace package would only be needed if the
-API and the worker ever became separately built deployables.
+A separate process would buy independent scaling, and there is nothing to
+scale: one process can wait on more transcriptions than the 50 Deepgram runs
+at once. In the API, the user's screen is updated directly when a transcript
+is saved, rather than through a message back to the API that could be lost.

@@ -16,7 +16,7 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 
 ## Modules reaching across layers
 
-- `shared/cache/redis.ts:6` calls `getApiEnv()`, which requires the API-only variables (WorkOS, Upstash). `shared/ai/ai_transcribe_client.ts` imports the cache, so the worker is one call away from exiting at runtime on a missing API variable.
+- `shared/cache/redis.ts:6` calls `getApiEnv()`, which requires the API-only variables (WorkOS, Upstash), so `shared/` depends on the API's configuration. `shared/ai/ai_transcribe_client.ts` imports the cache.
 - `shared/env.ts:86` parses `drizzleEnv` when the module is imported, in every process, though only `drizzle.config.ts` uses it.
 - `api/index.ts:1` calls `getApiEnv()` above the import that defines it. It works because ESM hoists imports, but it reads like a use-before-define.
 

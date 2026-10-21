@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
   saveCompletedTranscript: vi.fn(),
   transcribeAI: vi.fn(),
   signUrl: vi.fn(),
-  publish: vi.fn(),
+  sendEvent: vi.fn(),
 }));
 
 vi.mock("../../shared/data", () => ({
@@ -31,17 +31,11 @@ vi.mock("../../shared/ai/ai_transcribe_client", () => ({
 
 vi.mock("../../shared/storage/sign", () => ({ sign: { url: mocks.signUrl } }));
 
-vi.mock("../../shared/message-queue/messageQueue", async (importActual) => ({
-  ...(await importActual<
-    typeof import("../../shared/message-queue/messageQueue")
-  >()),
-  mq: {
-    queues: { TRANSCRIBE_DONE: "transcribe_done" },
-    publish: mocks.publish,
-  },
+vi.mock("../../api/src/events", () => ({
+  events: { send: mocks.sendEvent },
 }));
 
-import { handleTranscribeJob } from "../../transcribe-worker/transcribeJob";
+import { handleTranscribeJob } from "../../api/src/transcribeJob";
 import { DeadLetterError } from "../../shared/message-queue/messageQueue";
 
 const audioInput = { audioUploadId } as const;
@@ -67,7 +61,6 @@ describe("handleTranscribeJob", () => {
     beforeEach(() => {
       mocks.transcribeAI.mockResolvedValue("the audio, transcribed");
       mocks.saveCompletedTranscript.mockResolvedValue(true);
-      mocks.publish.mockResolvedValue(undefined);
     });
 
     it("stores the captions the message carries, without transcribing audio", async () => {
@@ -103,12 +96,11 @@ describe("handleTranscribeJob", () => {
       );
     });
 
-    it("announces the finished job to the API", async () => {
+    it("tells the user's open streams the job is done", async () => {
       await handleTranscribeJob(audioInput, firstAttempt);
 
-      expect(mocks.publish).toHaveBeenCalledWith("transcribe_done", {
+      expect(mocks.sendEvent).toHaveBeenCalledWith("user_01", "jobUpdated", {
         audioUploadId,
-        userId: "user_01",
       });
     });
 
@@ -119,7 +111,7 @@ describe("handleTranscribeJob", () => {
 
       expect(mocks.transcribeAI).not.toHaveBeenCalled();
       expect(mocks.saveCompletedTranscript).not.toHaveBeenCalled();
-      expect(mocks.publish).not.toHaveBeenCalled();
+      expect(mocks.sendEvent).not.toHaveBeenCalled();
     });
 
     it("announces nothing after losing its claim to another worker", async () => {
@@ -127,7 +119,7 @@ describe("handleTranscribeJob", () => {
 
       await handleTranscribeJob(audioInput, firstAttempt);
 
-      expect(mocks.publish).not.toHaveBeenCalled();
+      expect(mocks.sendEvent).not.toHaveBeenCalled();
     });
 
     it("may reclaim a processing job only when the broker redelivered it", async () => {
@@ -195,20 +187,6 @@ describe("handleTranscribeJob", () => {
       await expect(
         handleTranscribeJob(audioInput, firstAttempt),
       ).rejects.toThrow("database unavailable");
-
-      expect(mocks.unclaimAndResetAudioJob).not.toHaveBeenCalled();
-      expect(mocks.failAudioJob).not.toHaveBeenCalled();
-    });
-
-    // The transcript is saved by then: a lost announcement is not a failed job.
-    it("finishes the message when only the completion notice fails", async () => {
-      mocks.transcribeAI.mockResolvedValue("a transcript");
-      mocks.saveCompletedTranscript.mockResolvedValue(true);
-      mocks.publish.mockRejectedValue(new Error("broker unavailable"));
-
-      await expect(
-        handleTranscribeJob(audioInput, firstAttempt),
-      ).resolves.toBeUndefined();
 
       expect(mocks.unclaimAndResetAudioJob).not.toHaveBeenCalled();
       expect(mocks.failAudioJob).not.toHaveBeenCalled();

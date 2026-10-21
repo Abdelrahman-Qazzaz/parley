@@ -6,10 +6,7 @@
   "scripts": {
     "build": "tsx scripts/build.ts",
     "start:api": "node dist/api.js",
-    "start:transcribe-worker": "node dist/transcribe-worker.js",
-    "dev": "npm run --silent doppler -- concurrently -k -n api,transcribe-worker \"tsx watch --inspect=9229 api/index.ts\" \"tsx watch --inspect=9230 transcribe-worker/index.ts\"",
-    "dev:api": "npm run --silent doppler -- tsx watch --inspect=9229 api/index.ts",
-    "dev:transcribe-worker": "npm run --silent doppler -- tsx watch --inspect=9230 transcribe-worker/index.ts",
+    "dev": "npm run --silent doppler -- tsx watch --inspect=9229 api/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "db": "npm run --silent doppler -- drizzle-kit push",
@@ -41,7 +38,6 @@
   "devDependencies": {
     "@types/amqplib": "0.10.8",
     "@types/node": "25.6.0",
-    "concurrently": "9.2.1",
     "drizzle-kit": "0.31.10",
     "esbuild": "^0.28.2",
     "eslint": "9.39.4",

@@ -44,7 +44,7 @@ beforeEach(() => {
 });
 
 // Every key is <userId>/<folder>/<id>. youtube-fetcher/app/bucket.py builds the
-// same keys for audio, and the worker reads them back from here.
+// same keys for audio, and transcription reads them back from here.
 describe("delete", () => {
   it("removes a mix of kinds with one request per bucket", async () => {
     const removed: Record<string, string[]> = {};

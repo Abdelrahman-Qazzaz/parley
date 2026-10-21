@@ -17,7 +17,7 @@ x-supabase-keys:
   anon-key: &anon-key eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlzcyI6InN1cGFiYXNlLWxvYWR0ZXN0IiwiaWF0IjoxNzYwMDAwMDAwLCJleHAiOjQxMDI0NDQ4MDB9.Etms7G81u2pXMNya7QfZ3Kl-YQzuyJd23LsXLGjU5Rs
   jwt-secret: &jwt-secret loadtest-only-jwt-secret-not-a-real-secret-0123456789
 
-# What the API and the worker share: shared/env.ts's base schema.
+# shared/env.ts's base schema; the API adds its own below.
 x-base-env:
   &base-env # Not production: shared/env.ts refuses the overrides below there.
   NODE_ENV: development
@@ -267,15 +267,6 @@ services:
       retries: 30
       start_period: 10s
     # The preflight aborts if a dependency isn't answering yet.
-    restart: on-failure
-
-  # `--scale transcribe-worker=N` to add workers.
-  transcribe-worker:
-    <<: *app
-    command: ["node", "dist/transcribe-worker.js"]
-    depends_on:
-      api:
-        condition: service_healthy
     restart: on-failure
 
   # ---- The load: `docker compose run --rm --no-deps k6 run /scripts/load.js`

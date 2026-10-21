@@ -1,15 +1,37 @@
-import { DEFAULT_TRANSCRIBE_MODEL, transcription } from "../shared/ai";
-import { sign } from "../shared/storage";
-import { data } from "../shared/data";
+import { DEFAULT_TRANSCRIBE_MODEL, transcription } from "../../shared/ai";
+import { sign } from "../../shared/storage";
+import { data } from "../../shared/data";
 import { logger } from "@parley/shared/logger";
 import {
   DeadLetterError,
-  mq,
   type DeliveryMetadata,
-} from "../shared/message-queue/messageQueue";
+} from "../../shared/message-queue/messageQueue";
 import type { UploadId } from "@parley/shared/types";
+import { events } from "./events";
 
-const log = logger.child({ component: "transcribe-worker" });
+const log = logger.child({ component: "transcribe" });
+
+/**
+ * How many transcriptions Deepgram runs at once for the whole project, across
+ * every API instance. Deepgram allows 50 on Pay As You Go, a limit that plan
+ * can't raise, and refuses more with a 429; this leaves 10 for anything else
+ * using the same Deepgram project, such as development.
+ */
+const DEEPGRAM_CONCURRENCY = 40;
+
+/**
+ * How many audio jobs this API instance transcribes at once: its share of
+ * DEEPGRAM_CONCURRENCY, so every instance together stays under Deepgram's
+ * limit. The rest wait in the queue.
+ *
+ * There's one instance, so its share is all of it. Once the API scales out,
+ * this asks the load balancer, which knows how many instances there are and
+ * divides DEEPGRAM_CONCURRENCY between them. Read once, when the consumer
+ * starts.
+ */
+export async function getTranscriptionConcurrency(): Promise<number> {
+  return DEEPGRAM_CONCURRENCY;
+}
 
 /** The audio was transcribed, but there was nothing in it to transcribe. */
 class NoSpeechError extends Error {
@@ -142,22 +164,6 @@ export async function handleTranscribeJob(
     return;
   }
 
-  await announceCompletion(audioUploadId, userId);
-}
-
-/**
- * Tells the API the job is done, so the user's screen updates. The transcript
- * is already saved, so a failed publish isn't a failed transcription, and
- * trying the message again wouldn't announce it: there's no queued job left
- * to claim. The client sees the result the next time it refetches the job,
- * on a reload or when its event stream opens again.
- */
-async function announceCompletion(audioUploadId: UploadId, userId: string) {
-  try {
-    await mq.publish(mq.queues.TRANSCRIBE_DONE, { audioUploadId, userId });
-  } catch (error) {
-    log.error("Could not announce a completed transcription", error, {
-      audioUploadId,
-    });
-  }
+  // Tells the user's open streams the job is done, so their screen updates.
+  events.send(userId, "jobUpdated", { audioUploadId });
 }

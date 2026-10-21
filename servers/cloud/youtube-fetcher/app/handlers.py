@@ -36,7 +36,7 @@ PERMANENT_FAILURES = (
     "is not a valid url",
 )
 
-# The transcribe worker derives the audio format from the stored content type
+# Transcription derives the audio format from the stored content type
 # (backend/shared/ai/transcribe.ts) — it must be accurate, not just plausible.
 EXT_CONTENT_TYPES = {
     "webm": "audio/webm",
@@ -232,5 +232,5 @@ def _fetch_and_upload(audio_upload_id: str, url: str, user_id: str) -> None:
         log.info("Downloaded %s: %d bytes, %s", audio_upload_id, size, content_type)
         # upload_audio builds the "<userId>/audios/<storageObjectId>" key (same
         # convention as direct uploads, backend/shared/storage/bucket.ts objectPath),
-        # so the transcribe worker finds it and ownership stays structural.
+        # so transcription finds it and ownership stays structural.
         bucket.upload_audio(user_id, audio_upload_id, str(audio), content_type)

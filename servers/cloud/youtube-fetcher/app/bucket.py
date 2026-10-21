@@ -30,7 +30,7 @@ def _object_path(user_id: str, kind: str, storage_object_id: str) -> str:
 def upload_audio(
     user_id: str, audio_upload_id: str, local_path: str, content_type: str
 ):
-    """Store downloaded audio where the transcribe worker signs it from."""
+    """Store downloaded audio where the API signs it from to transcribe it."""
     return _upload_file(user_id, "audios", audio_upload_id, local_path, content_type)
 
 

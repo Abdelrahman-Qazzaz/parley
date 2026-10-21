@@ -17,7 +17,6 @@
     "api/**/*.ts",
     "shared/**/*.ts",
     "scripts/**/*.ts",
-    "transcribe-worker/**/*.ts",
     "drizzle.config.ts",
     "test/**/*.ts",
     "vitest.config.ts",

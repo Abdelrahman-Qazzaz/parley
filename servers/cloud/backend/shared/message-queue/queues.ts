@@ -2,7 +2,6 @@ import type { UploadId } from "@parley/shared/types";
 
 export const QUEUES = {
   TRANSCRIBE: "transcribe",
-  TRANSCRIBE_DONE: "transcribe_done",
   YT_FETCH: "yt_fetch",
   YT_FETCH_FAILED: "yt_fetch_failed",
   CAPTION_TRANSCRIPT: "caption_transcript",
@@ -12,11 +11,6 @@ export type Queue = (typeof QUEUES)[keyof typeof QUEUES];
 export type QueuePayloads = {
   [QUEUES.TRANSCRIBE]: {
     audioUploadId: UploadId;
-  };
-
-  [QUEUES.TRANSCRIBE_DONE]: {
-    audioUploadId: UploadId;
-    userId: string;
   };
 
   [QUEUES.YT_FETCH]: {

@@ -53,14 +53,6 @@ services:
         limits:
           memory: 768m
 
-  transcribe-worker:
-    build: !reset null
-    image: *cloud-image
-    deploy:
-      resources:
-        limits:
-          memory: 768m
-
   youtube-fetcher:
     build: !reset null
     image: ghcr.io/abdelrahman-qazzaz/parley-youtube-fetcher:${IMAGE_TAG:?set IMAGE_TAG}

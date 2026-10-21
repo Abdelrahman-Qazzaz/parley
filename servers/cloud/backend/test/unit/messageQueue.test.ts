@@ -8,6 +8,8 @@ type FakeChannel = EventEmitter & {
   ack: ReturnType<typeof vi.fn>;
   nack: ReturnType<typeof vi.fn>;
   cancel: ReturnType<typeof vi.fn>;
+  prefetch: ReturnType<typeof vi.fn>;
+  consume: ReturnType<typeof vi.fn>;
 };
 
 /** The fake broker: the connection, its two channels, and what they saw. */
@@ -305,6 +307,38 @@ describe("consuming", () => {
       mq.consume(QUEUES.TRANSCRIBE, () => {}, { attempts: 0 }),
     ).rejects.toThrow("at least one attempt");
   });
+
+  it("sets each consumer's prefetch right before starting it, 1 by default", async () => {
+    await mq.consume(QUEUES.TRANSCRIBE, () => {}, {
+      attempts: 1,
+      prefetch: 40,
+    });
+    await mq.consume(QUEUES.YT_FETCH_FAILED, () => {}, { attempts: 1 });
+
+    const { prefetch, consume } = broker.consumer!;
+    expect(prefetch.mock.calls).toEqual([[40], [1]]);
+    expect(consume.mock.calls.map(([queue]) => queue)).toEqual([
+      QUEUES.TRANSCRIBE,
+      QUEUES.YT_FETCH_FAILED,
+    ]);
+    expect([
+      prefetch.mock.invocationCallOrder[0],
+      consume.mock.invocationCallOrder[0],
+      prefetch.mock.invocationCallOrder[1],
+      consume.mock.invocationCallOrder[1],
+    ]).toEqual(
+      [
+        ...prefetch.mock.invocationCallOrder,
+        ...consume.mock.invocationCallOrder,
+      ].sort((a, b) => a - b),
+    );
+  });
+
+  it("refuses a consumer with no prefetch", async () => {
+    await expect(
+      mq.consume(QUEUES.TRANSCRIBE, () => {}, { attempts: 1, prefetch: 0 }),
+    ).rejects.toThrow("prefetch of at least 1");
+  });
 });
 
 describe("stopConsuming", () => {
@@ -338,7 +372,7 @@ describe("stopConsuming", () => {
 
 describe("connection loss", () => {
   it("exits when the broker closes the connection", async () => {
-    await mq.consume(QUEUES.TRANSCRIBE_DONE, () => {}, { attempts: 1 });
+    await mq.consume(QUEUES.YT_FETCH_FAILED, () => {}, { attempts: 1 });
 
     broker.connection!.emit("close", new Error("CONNECTION_FORCED"));
     await flush();
@@ -348,7 +382,7 @@ describe("connection loss", () => {
   });
 
   it("exits once when a channel closes, however many events follow", async () => {
-    await mq.consume(QUEUES.TRANSCRIBE_DONE, () => {}, { attempts: 1 });
+    await mq.consume(QUEUES.YT_FETCH_FAILED, () => {}, { attempts: 1 });
 
     broker.consumer!.emit("error", new Error("PRECONDITION_FAILED"));
     broker.consumer!.emit("close");
@@ -359,7 +393,7 @@ describe("connection loss", () => {
   });
 
   it("does not exit when this process closes the connection", async () => {
-    await mq.consume(QUEUES.TRANSCRIBE_DONE, () => {}, { attempts: 1 });
+    await mq.consume(QUEUES.YT_FETCH_FAILED, () => {}, { attempts: 1 });
 
     await mq.close();
     await flush();

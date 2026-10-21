@@ -88,7 +88,6 @@ async function open(url: string): Promise<Broker> {
     await publisher.bindQueue(DEAD_LETTER, DEAD_LETTER, queue);
   }
 
-  await broker.consumer.prefetch(1);
   return broker;
 }
 
@@ -263,23 +262,38 @@ export const mq = {
   /**
    * Hands each message on `queue` to `handler`, trying up to `attempts` times
    * before dead-lettering it. A handler fails an attempt by throwing.
+   *
+   * `prefetch` is how many of the queue's messages this process works on at
+   * once (default 1); the broker holds the rest back until one is settled, so
+   * other processes consuming the queue get them instead.
    */
   async consume<Q extends Queue>(
     queue: Q,
     handler: Handler<Q>,
-    { attempts }: { attempts: number },
+    { attempts, prefetch = 1 }: { attempts: number; prefetch?: number },
   ) {
     if (!Number.isInteger(attempts) || attempts < 1) {
       throw new Error(`A consumer needs at least one attempt, got ${attempts}`);
     }
+    if (!Number.isInteger(prefetch) || prefetch < 1) {
+      throw new Error(
+        `A consumer needs a prefetch of at least 1, got ${prefetch}`,
+      );
+    }
 
     const broker = await getBroker();
-    const { consumerTag } = await broker.consumer.consume(queue, (message) => {
-      if (!message) return;
-      const handling = handle(broker, queue, message, handler, attempts);
-      broker.running.add(handling);
-      void handling.finally(() => broker.running.delete(handling));
-    });
+    // The prefetch applies to the consumers the channel starts after it. Both
+    // are sent in the same turn, and a channel sends in order, so no other
+    // consume() can start a consumer between them and take this prefetch.
+    const [, { consumerTag }] = await Promise.all([
+      broker.consumer.prefetch(prefetch),
+      broker.consumer.consume(queue, (message) => {
+        if (!message) return;
+        const handling = handle(broker, queue, message, handler, attempts);
+        broker.running.add(handling);
+        void handling.finally(() => broker.running.delete(handling));
+      }),
+    ]);
     broker.consumerTags.push(consumerTag);
   },
 

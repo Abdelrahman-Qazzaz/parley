@@ -27,14 +27,14 @@ if ! doppler run -- sh -c '[ -n "${RABBITMQ_PASSWORD:-}" ]'; then
 fi
 
 compose pull
-# migrate runs to completion before the API and worker start (compose.yaml).
+# migrate runs to completion before the API starts (compose.yaml).
 # --wait returns once everything is running and healthy, so a broken build
 # fails the workflow instead of passing quietly.
 compose up -d --remove-orphans --wait --wait-timeout 300
 
-# The worker and fetcher have no healthcheck, since they serve nothing, so
-# --wait only knows they started. One that fails on boot exits within seconds
-# and Docker restarts it, so give them time to, then fail if anything did.
+# The fetcher has no healthcheck, since it serves nothing, so --wait only
+# knows it started. If it fails on boot it exits within seconds and Docker
+# restarts it, so give it time to, then fail if anything restarted.
 restarts() {
   # One argument per container id, so the split is the point.
   # shellcheck disable=SC2046

@@ -1,7 +1,7 @@
 # Runs the whole backend locally, and is the production topology too:
 # compose.prod.yaml layers the server's differences on top (see deploy/). A
 # RabbitMQ broker, one migrate one-shot that must finish first, then the API,
-# the worker (scale this one), and the YouTube fetcher.
+# which also runs transcription, and the YouTube fetcher.
 #
 #   npm run stack   (from the repo root: doppler run -- docker compose up)
 #
@@ -100,28 +100,6 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
-    restart: unless-stopped
-
-  # Competing consumers on one queue: `docker compose up --scale
-  # transcribe-worker=3` is the whole scaling story.
-  transcribe-worker:
-    build:
-      # The repo root: the image carries the built client the API serves.
-      context: ../..
-      dockerfile: servers/cloud/backend/Dockerfile
-    command: ["node", "dist/transcribe-worker.js"]
-    environment:
-      - DATABASE_URL
-      - *mq-url
-      - SUPABASE_URL
-      - SUPABASE_SERVICE_ROLE_KEY
-      - OPENROUTER_API_KEY
-      - DEEPGRAM_API_KEY
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      rabbitmq:
-        condition: service_healthy
     restart: unless-stopped
 
   # Reads queue and bucket names from the API's /contract at boot, so it waits

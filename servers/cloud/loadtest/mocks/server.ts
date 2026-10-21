@@ -216,7 +216,27 @@ const TRANSCRIBE_MODELS = [
 const TRANSCRIPT =
   "This is a canned transcript from the load test's stand-in for Deepgram. No audio was sent to a real transcription service.";
 
+/**
+ * Transcriptions running now, and the most there have been at once: Deepgram
+ * refuses more than 50 at once, and the API holds itself to fewer.
+ */
+const transcriptions = { running: 0, peak: 0 };
+
 async function transcribe(
+  res: ServerResponse,
+  body: { url?: string },
+  signal: AbortSignal,
+) {
+  transcriptions.running++;
+  transcriptions.peak = Math.max(transcriptions.peak, transcriptions.running);
+  try {
+    await transcribeCounted(res, body, signal);
+  } finally {
+    transcriptions.running--;
+  }
+}
+
+async function transcribeCounted(
   res: ServerResponse,
   body: { url?: string },
   signal: AbortSignal,
@@ -328,7 +348,7 @@ const routes: Record<string, Route> = {
     json(res, 200, { tokens });
   },
   "GET /loadtest/stats": (_req, res) =>
-    json(res, 200, { counts, delays: DELAYS }),
+    json(res, 200, { counts, transcriptions, delays: DELAYS }),
   "GET /health": (_req, res) => json(res, 200, { ok: true }),
 };
 

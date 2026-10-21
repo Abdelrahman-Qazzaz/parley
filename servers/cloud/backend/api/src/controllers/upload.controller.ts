@@ -106,8 +106,9 @@ export const handleYoutubeUpload = authed.createHandlers(
     const audioUploadId: UploadId = randomUUID();
 
     // Created queued with placeholder metadata. When asked to, the fetcher tries
-    // the video's captions first and sends them to the worker; otherwise it
-    // writes audio under `audioUploadId` for the worker to transcribe.
+    // the video's captions first and sends them back as the transcript;
+    // otherwise it writes audio under `audioUploadId` and queues it to be
+    // transcribed.
     await data.jobs.createYoutubeAudioJob({
       audioUploadId,
       userId,

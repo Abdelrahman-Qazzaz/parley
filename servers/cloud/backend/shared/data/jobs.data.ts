@@ -8,9 +8,8 @@ import { attachments } from "./attachments.data";
 import { storageLedger } from "./storageLedger.data";
 
 /**
- * Both process types read and write this table — the API on the request path,
- * the worker as it moves a job through its states — so this lives in `shared/`
- * rather than under either service.
+ * The API reads and writes this table both on the request path and as
+ * transcription moves a job through its states.
  *
  * Types are derived from the schema rather than imported from the API's zod
  * layer: `shared/` must not depend on a service.

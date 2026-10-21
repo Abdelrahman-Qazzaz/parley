@@ -9,7 +9,6 @@ from contract import _Contract
 FULL_CONTRACT = {
     "queues": {
         "TRANSCRIBE": "transcribe",
-        "TRANSCRIBE_DONE": "transcribe_done",
         "YT_FETCH": "yt_fetch",
         "YT_FETCH_FAILED": "yt_fetch_failed",
         "CAPTION_TRANSCRIPT": "caption_transcript",

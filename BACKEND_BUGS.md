@@ -12,13 +12,7 @@ Each upload URL records a pending object, and storage accepts one file on it: up
 
 ## Low
 
-### 2. A lost `transcribe_done` leaves the user's screen out of date
-
-`backend/transcribe-worker/transcribeJob.ts:158`
-
-If publishing `transcribe_done` fails after the transcript is saved, `announceCompletion` logs it and the message is done; nothing publishes it again. While its socket stays connected, the client only refetches a job when it receives that event, so the source keeps showing "transcribing" until a reload or a socket reconnect. A lost publish without the connection dropping (which exits the process) should be rare.
-
-### 3. A job whose process dies before publishing stays queued
+### 2. A job whose process dies before publishing stays queued
 
 `backend/shared/audioTranscription.ts:32`, `backend/api/src/controllers/upload.controller.ts:114`
 
