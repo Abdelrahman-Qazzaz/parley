@@ -7,8 +7,24 @@ export const WORKOS_REDIRECT_URI = new URL(
   getApiEnv().API_BASE_URL,
 ).toString();
 
+/**
+ * Where the SDK sends its requests, signing keys included: WorkOS itself
+ * unless WORKOS_API_BASE_URL points at the load test's stand-in. The SDK takes
+ * the address in parts rather than as a URL.
+ */
+function workosHostOptions(baseUrl: string | undefined) {
+  if (!baseUrl) return {};
+  const url = new URL(baseUrl);
+  return {
+    apiHostname: url.hostname,
+    https: url.protocol === "https:",
+    ...(url.port ? { port: Number(url.port) } : {}),
+  };
+}
+
 const client = new WorkOS(getApiEnv().WORKOS_API_KEY, {
   clientId: getApiEnv().WORKOS_CLIENT_ID,
+  ...workosHostOptions(getApiEnv().WORKOS_API_BASE_URL),
 });
 
 /** Startup health check: fails if WorkOS is unreachable or rejects the API key. */

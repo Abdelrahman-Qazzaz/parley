@@ -39,13 +39,49 @@ describe("apiEnvSchema", () => {
     expect(result.success).toBe(false);
   });
 
-  it("rejects non-HTTPS UPSTASH_REDIS_REST_URL", () => {
+  it("rejects non-HTTPS UPSTASH_REDIS_REST_URL in production", () => {
     const result = apiEnvSchema.safeParse({
       ...validApi,
+      NODE_ENV: "production",
       UPSTASH_REDIS_REST_URL: "http://example.upstash.io",
     });
     expect(result.success).toBe(false);
   });
+
+  it("accepts the load test's plain-HTTP Redis outside production", () => {
+    const result = apiEnvSchema.safeParse({
+      ...validApi,
+      UPSTASH_REDIS_REST_URL: "http://srh",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  const loadtestOverrides = {
+    OPENROUTER_BASE_URL: "http://mocks:4000/openrouter",
+    DEEPGRAM_BASE_URL: "http://mocks:4000/deepgram",
+    WORKOS_API_BASE_URL: "http://mocks:4000/workos",
+    RATE_LIMIT_MULTIPLIER: "1000",
+  };
+
+  it("accepts the load-test overrides outside production", () => {
+    const result = apiEnvSchema.safeParse({
+      ...validApi,
+      ...loadtestOverrides,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it.each(Object.entries(loadtestOverrides))(
+    "refuses %s in production",
+    (key, value) => {
+      const result = apiEnvSchema.safeParse({
+        ...validApi,
+        NODE_ENV: "production",
+        [key]: value,
+      });
+      expect(result.success).toBe(false);
+    },
+  );
 
   it.each(["CLIENT_URL", "API_BASE_URL"] as const)(
     "requires %s rather than defaulting to localhost",
@@ -61,6 +97,15 @@ describe("baseEnvSchema", () => {
   it("accepts a valid base env — all the worker needs", () => {
     const result = baseEnvSchema.safeParse(validBase);
     expect(result.success).toBe(true);
+  });
+
+  it("refuses the worker's load-test overrides in production", () => {
+    const result = baseEnvSchema.safeParse({
+      ...validBase,
+      NODE_ENV: "production",
+      DEEPGRAM_BASE_URL: "http://mocks:4000/deepgram",
+    });
+    expect(result.success).toBe(false);
   });
 
   it("requires the same base vars the API does", () => {

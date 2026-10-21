@@ -8,6 +8,7 @@ import {
   type RateLimitName,
 } from "../rateLimit/policies";
 import type { AuthEnv } from "./auth.middleware";
+import { getApiEnv } from "../../../shared/env";
 
 const rateLimitMessage = {
   message: "Too many requests, please try again later.",
@@ -62,9 +63,14 @@ const stores: MemoryStore[] = [];
  * The API runs as one instance, so the counts are exact and no request waits
  * on a round trip to a shared store. With several instances each would count
  * on its own; see MESSAGE_LATENCY.md before scaling out.
+ *
+ * RATE_LIMIT_MULTIPLIER raises every budget for the load test, which would
+ * otherwise measure mostly 429s; production refuses to start with it set.
  */
 function createLimiter(name: RateLimitName) {
-  const { limit, windowMs, key } = RATE_LIMIT_POLICIES[name];
+  const { windowMs, key } = RATE_LIMIT_POLICIES[name];
+  const limit =
+    RATE_LIMIT_POLICIES[name].limit * (getApiEnv().RATE_LIMIT_MULTIPLIER ?? 1);
   const store = new MemoryStore();
   stores.push(store);
 

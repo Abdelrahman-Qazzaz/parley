@@ -29,6 +29,8 @@ const ENTRYPOINTS = {
   // without drizzle-kit (a devDependency) being present at runtime.
   migrate: "scripts/migrate.ts",
   baseline: "scripts/baseline.ts",
+  // Creates the buckets in the load test's local Supabase, which starts empty.
+  "push-storage": "scripts/pushStorage.ts",
 } as const;
 
 const results = await Promise.all(
