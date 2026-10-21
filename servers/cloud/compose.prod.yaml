@@ -1,0 +1,79 @@
+# The server's differences from the local stack, layered on compose.yaml:
+#
+#   docker compose -f compose.yaml -f compose.prod.yaml ...
+#
+# deploy/deploy.sh runs it on the server; deploy/README.md covers the server
+# itself. What changes:
+#
+# - Images come from GHCR, built by .github/workflows/deploy.yml, rather than
+#   being built here: the server would be slow at it and could run out of
+#   memory doing it.
+# - The API publishes no port. Docker's published ports skip the server's
+#   firewall, so the only way in is the shared Caddy proxy (deploy/proxy/),
+#   which reaches the API as parley-api on the external `proxy` network.
+# - The public URLs come from PARLEY_DOMAIN, the one place the domain is set,
+#   so WorkOS's callback and the fetcher's contract can't disagree with it.
+# - Every container has a memory limit, so one runaway process can't starve
+#   the rest of the box, which other projects share.
+
+x-cloud-image: &cloud-image ghcr.io/abdelrahman-qazzaz/parley-cloud:${IMAGE_TAG:?set IMAGE_TAG}
+
+services:
+  rabbitmq:
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+
+  migrate:
+    build: !reset null
+    image: *cloud-image
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+
+  api:
+    build: !reset null
+    image: *cloud-image
+    ports: !reset []
+    environment:
+      # Fixed, because Caddy dials it (deploy/parley.caddy).
+      - PORT=3001
+      - CLIENT_URL=https://${PARLEY_DOMAIN:?set PARLEY_DOMAIN}
+      - API_BASE_URL=https://${PARLEY_DOMAIN:?set PARLEY_DOMAIN}
+    networks:
+      default: {}
+      proxy:
+        # Unique across the server: other projects' services share this
+        # network, and plenty of them will be called `api`.
+        aliases: [parley-api]
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  transcribe-worker:
+    build: !reset null
+    image: *cloud-image
+    deploy:
+      resources:
+        limits:
+          memory: 768m
+
+  youtube-fetcher:
+    build: !reset null
+    image: ghcr.io/abdelrahman-qazzaz/parley-youtube-fetcher:${IMAGE_TAG:?set IMAGE_TAG}
+    environment:
+      # The API's fixed port, above, whatever PORT the environment carries.
+      - API_BASE_URL=http://api:3001
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+networks:
+  proxy:
+    # Created by deploy/provision.sh, so the proxy and each project can start
+    # in any order.
+    external: true

@@ -117,7 +117,7 @@ describe("rate limiting", () => {
     expect(mockGetAuthSessionFromCode).toHaveBeenCalledTimes(20);
   });
 
-  describe("keyed on the client IP Railway reports in X-Real-IP", () => {
+  describe("keyed on the client IP Caddy reports in X-Real-IP", () => {
     const callback =
       (headers: Record<string, string>) =>
       (app: Awaited<ReturnType<typeof createApp>>) =>

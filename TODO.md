@@ -6,7 +6,7 @@ items are in [MESSAGE_LATENCY.md](MESSAGE_LATENCY.md).
 ## Message-creation latency
 
 1. **Measure first.** Wrap `prepareTurn` in `withPreparationMetrics` again so
-   the timing already in the code logs. The cost of one Railway → Supabase
+   the timing already in the code logs. The cost of one server → Supabase
    database round trip decides whether #6 is worth doing.
 2. **#4:** on an edit, delete the dropped images from storage after the
    stream starts, not before.
@@ -29,16 +29,6 @@ items are in [MESSAGE_LATENCY.md](MESSAGE_LATENCY.md).
 
 ## From earlier sessions
 
-- **Spoof test after the next API deploy.** The auth limits key on
-  `X-Real-IP`, which assumes clients can't set it. Temporarily log only
-  `x-real-ip`, `x-forwarded-for`, `fastly-client-ip` and `x-railway-edge`
-  (never all headers: that logs cookies). Get your IP from
-  `curl https://ifconfig.me`, then run
-  `curl -H "X-Forwarded-For: 1.2.3.4" -H "X-Real-IP: 1.2.3.4" https://<api>/health`.
-  It passes if `x-real-ip` is your real IP and never `1.2.3.4`. If
-  `fastly-client-ip` is present, check `x-real-ip` isn't a Fastly address.
-  Repeat about a week later; Railway's routing has alternated on that
-  timescale. If it fails, `getClientIpKey` has to change.
 - **Queue publish gap.** A process that dies between committing a job's rows
   and publishing its work leaves the job `queued` with nothing coming for it.
   (A publish the broker refuses already fails the job.) Only worth fixing if

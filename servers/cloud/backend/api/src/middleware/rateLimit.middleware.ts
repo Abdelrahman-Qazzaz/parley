@@ -14,16 +14,16 @@ const rateLimitMessage = {
 };
 
 /**
- * The client's IP, as Railway's edge proxy reports it in X-Real-IP: the one
- * client-IP header Railway documents, and one it doesn't let clients set.
- * The socket's peer is Railway's proxy for every request, so keying on it
- * would put every user in one bucket.
+ * The client's IP, as the server's Caddy proxy reports it in X-Real-IP
+ * (servers/cloud/deploy/parley.caddy). Caddy sets the header to the address
+ * that connected to it, replacing whatever the client sent, and in
+ * production the API publishes no port of its own, so every request comes
+ * through Caddy. The socket's peer is Caddy for every request, so keying on
+ * it would put every user in one bucket.
  *
- * With Railway's CDN in the path, X-Real-IP has been seen holding the CDN
- * edge's address instead; that over-limits users sharing an edge, but never
- * lets a client pick its own key. A value that isn't a single IP (a
- * duplicated header arrives joined with ", ") isn't trusted. Without Railway
- * in front, as in local development, the socket address is the client.
+ * A value that isn't a single IP (a duplicated header arrives joined with
+ * ", ") isn't trusted. Without Caddy in front, as in local development, the
+ * socket address is the client.
  */
 function getClientIpKey(c: Context): string {
   const realIp = c.req.header("x-real-ip")?.trim();

@@ -1,6 +1,7 @@
-# Runs the whole backend locally, and doubles as the reference topology for
-# whichever platform this is deployed to: one migrate one-shot that must finish
-# first, then the API, the worker (scale this one), and the YouTube fetcher.
+# Runs the whole backend locally, and is the production topology too:
+# compose.prod.yaml layers the server's differences on top (see deploy/). A
+# RabbitMQ broker, one migrate one-shot that must finish first, then the API,
+# the worker (scale this one), and the YouTube fetcher.
 #
 #   npm run stack   (from the repo root: doppler run -- docker compose up)
 #
@@ -10,13 +11,42 @@
 # paste into whichever host you deploy to.
 #
 # Postgres, Redis and object storage are managed services (Supabase, Upstash)
-# and are not started here. RabbitMQ is whatever MQ_URL points at — if that is
-# a broker on your own machine, use host.docker.internal rather than localhost,
-# which inside a container means the container.
+# and are not started here. RabbitMQ is: the services reach it over the compose
+# network, so Doppler's MQ_URL, which points outside, is replaced below.
 
 name: parley
 
+# The broker's URL inside the compose network. RABBITMQ_PASSWORD falls back to
+# a fixed one for the local stack; production requires it (deploy/deploy.sh).
+# Keep it to letters and digits, since it sits in a URL unescaped.
+x-mq-url: &mq-url MQ_URL=amqp://parley:${RABBITMQ_PASSWORD:-parley}@rabbitmq:5672
+
 services:
+  # Messages and queues survive restarts and redeploys on the named volume:
+  # every publisher marks its messages persistent and waits for the confirm.
+  # The app declares its own queues at startup, so a fresh volume needs no
+  # setup. The user and password apply only when the volume is first created;
+  # changing RABBITMQ_PASSWORD later needs `rabbitmqctl change_password`.
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    hostname: rabbitmq # names the data directory, which must stay put
+    environment:
+      - RABBITMQ_DEFAULT_USER=parley
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-parley}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    ports:
+      # The management UI, on loopback only. On the server, reach it through
+      # an SSH tunnel: ssh -L 15672:127.0.0.1:15672 <server>.
+      - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_port_connectivity"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
   # Must complete before anything that touches the database starts. Needs only
   # DATABASE_URL, not the application's other secrets.
   migrate:
@@ -37,7 +67,7 @@ services:
     command: ["node", "dist/api.js"]
     environment:
       - DATABASE_URL
-      - MQ_URL
+      - *mq-url
       - SUPABASE_URL
       - SUPABASE_SERVICE_ROLE_KEY
       - OPENROUTER_API_KEY
@@ -54,6 +84,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     healthcheck:
       # `node -e` rather than curl: the alpine image has no curl, and fetch is
       # global on Node 22.
@@ -80,7 +112,7 @@ services:
     command: ["node", "dist/transcribe-worker.js"]
     environment:
       - DATABASE_URL
-      - MQ_URL
+      - *mq-url
       - SUPABASE_URL
       - SUPABASE_SERVICE_ROLE_KEY
       - OPENROUTER_API_KEY
@@ -88,6 +120,8 @@ services:
     depends_on:
       migrate:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
 
   # Reads queue and bucket names from the API's /contract at boot, so it waits
@@ -96,7 +130,7 @@ services:
     build:
       context: ./youtube-fetcher
     environment:
-      - MQ_URL
+      - *mq-url
       - SUPABASE_URL
       - SUPABASE_SERVICE_ROLE_KEY
       # Deliberately not the API_BASE_URL the API itself uses: that one is the
@@ -106,4 +140,9 @@ services:
     depends_on:
       api:
         condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  rabbitmq-data:
