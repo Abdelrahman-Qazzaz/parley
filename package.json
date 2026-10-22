@@ -25,7 +25,7 @@
     "pre-commit": "npx lint-staged"
   },
   "devDependencies": {
-    "concurrently": "^9.2.1",
+    "concurrently": "^9.2.5",
     "knip": "^6.29.0",
     "lint-staged": "^17.3.0",
     "mise": "2026.8.6",
