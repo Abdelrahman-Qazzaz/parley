@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { createApp } from "../../api/app";
-import { events } from "../../api/src/events";
+import { createApp } from "../../src/app";
+import { events } from "../../src/events";
 import { sessionCookieHeader } from "../helpers/session";
 
 /** Opens /events as `userId` and reads it chunk by chunk, as text. */

@@ -31,19 +31,19 @@ const {
 const { mockListChatModels } = vi.hoisted(() => ({
   mockListChatModels: vi.fn(),
 }));
-vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
+vi.mock("../../src/ai/ai_chat_client", async (importActual) => {
   // importActual is the correct way to get real values inside vi.mock
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_chat_client")>();
+    await importActual<typeof import("../../src/ai/ai_chat_client")>();
   return {
     ...actual,
     chat: { ...actual.chat, listModels: mockListChatModels },
   };
 });
 
-vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
+vi.mock("../../src/ai/ai_transcribe_client", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_transcribe_client")>();
+    await importActual<typeof import("../../src/ai/ai_transcribe_client")>();
   return {
     ...actual, // preserves DEFAULT_TRANSCRIBE_MODEL
     transcription: {
@@ -53,7 +53,7 @@ vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
   };
 });
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: {
     insert: mockInsert,
     update: mockUpdate,
@@ -72,7 +72,7 @@ vi.mock("../../shared/db", async () => ({
 // The ledger's SQL is covered by the integration tests; here it's the
 // decisions made around it. A confirm that goes through runs its writes
 // against the same insert mock as everything else.
-vi.mock("../../shared/data/storageLedger.data", () => ({
+vi.mock("../../src/data/storageLedger.data", () => ({
   storageLedger: {
     recordPendingUpload: ledger.recordPendingUpload,
     recordConfirmedObjects: ledger.recordConfirmedObjects,
@@ -94,7 +94,7 @@ vi.mock("../../shared/data/storageLedger.data", () => ({
   },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   // Literals (not the top-level consts): vi.mock factories can run during
   // import evaluation, before this module's own bindings initialize.
   AUDIO_BUCKET: "Audio",
@@ -105,7 +105,7 @@ vi.mock("../../shared/storage/bucket", () => ({
   },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 7 * 24 * 60 * 60,
   sign: {
     url: vi.fn(),
@@ -113,7 +113,7 @@ vi.mock("../../shared/storage/sign", () => ({
   },
 }));
 
-vi.mock("../../shared/message-queue/messageQueue", () => ({
+vi.mock("../../src/message-queue/messageQueue", () => ({
   mq: {
     queues: {
       TRANSCRIBE: "transcribe",
@@ -123,7 +123,7 @@ vi.mock("../../shared/message-queue/messageQueue", () => ({
   },
 }));
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 async function postJson(path: string, body: unknown, userId = "user_01") {

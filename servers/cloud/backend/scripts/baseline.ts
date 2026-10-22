@@ -20,7 +20,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import postgres from "postgres";
-import { drizzleEnv } from "../shared/env";
+import { getDatabaseUrl } from "../src/env";
 import { MIGRATIONS_FOLDER } from "./migrations";
 
 type JournalEntry = { idx: number; tag: string; when: number };
@@ -52,7 +52,7 @@ function expectedColumns(newest: JournalEntry): string[] {
   );
 }
 
-const client = postgres(drizzleEnv.DATABASE_URL, { max: 1, prepare: false });
+const client = postgres(getDatabaseUrl(), { max: 1, prepare: false });
 
 try {
   const entries = readJournal();

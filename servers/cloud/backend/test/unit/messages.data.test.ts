@@ -39,32 +39,32 @@ const transaction = {
   update: mockUpdate,
 };
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { transaction: mockTransaction },
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-vi.mock("../../shared/data/images.data", () => ({
+vi.mock("../../src/data/images.data", () => ({
   linkImagesToMessage: vi.fn(),
   images: {
     deleteOwnedUnlinkedUnreservedImageAttachments: mockDeleteImageAttachments,
   },
 }));
 
-vi.mock("../../shared/data/conversations.data", () => ({
+vi.mock("../../src/data/conversations.data", () => ({
   conversations: {
     completeConversationTurn: mockCompleteConversationTurn,
   },
 }));
 
-vi.mock("../../shared/data/transcripts.data", () => ({
+vi.mock("../../src/data/transcripts.data", () => ({
   linkTranscriptionsToMessage: mockLinkTranscriptions,
   transcripts: {
     findMessageTranscriptAttachments: vi.fn(),
   },
 }));
 
-import { messages } from "../../shared/data/messages.data";
+import { messages } from "../../src/data/messages.data";
 
 function returnLockedConversation(rows: unknown[]) {
   mockSelect.mockReturnValueOnce({

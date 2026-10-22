@@ -6,7 +6,7 @@
       "project": []
     },
     "servers/cloud/backend": {
-      "entry": ["api/index.ts", "drizzle.config.ts", "test/**/*.test.ts"],
+      "entry": ["src/index.ts", "drizzle.config.ts", "test/**/*.test.ts"],
       "project": ["**/*.ts"],
       // Runs inside the `doppler run -- tsx …` dev script, which knip can't
       // see through to resolve the binary.

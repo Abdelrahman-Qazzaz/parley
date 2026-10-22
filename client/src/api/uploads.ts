@@ -11,7 +11,7 @@ export type { UploadedImage };
 
 /**
  * Wire names for the request fields, mirroring the field names the servers'
- * upload schemas read (servers/cloud/backend/api/src/schema/upload.schema.ts,
+ * upload schemas read (servers/cloud/backend/src/schema/upload.schema.ts,
  * and FORM_KEYS in servers/local/shared/keys.ts). A field the server doesn't
  * recognise is silently dropped by its validator, so these have to match exactly.
  */

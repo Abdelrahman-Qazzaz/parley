@@ -1,4 +1,4 @@
-"""Fail-fast preflight, mirroring backend/shared/preflight.ts: run every
+"""Fail-fast preflight, mirroring backend/src/startup.ts: run every
 health check and abort startup if any dependency is unavailable. Unlike the
 backend's concurrent Promise.allSettled, checks run sequentially — but every
 failure is still collected so one boot reports all unavailable services."""

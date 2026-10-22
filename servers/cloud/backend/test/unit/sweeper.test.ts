@@ -7,22 +7,22 @@ const { mockWithAdvisoryLock, mockFindLedgerEntries, mockDeleteObjects } =
     mockDeleteObjects: vi.fn(),
   }));
 
-vi.mock("../../shared/data/advisoryLock.data", () => ({
+vi.mock("../../src/data/advisoryLock.data", () => ({
   advisoryLock: {
     withAdvisoryLock: mockWithAdvisoryLock,
   },
 }));
-vi.mock("../../shared/data/storageLedger.data", () => ({
+vi.mock("../../src/data/storageLedger.data", () => ({
   storageLedger: {
     findLedgerEntries: mockFindLedgerEntries,
   },
 }));
-vi.mock("../../shared/uploads", () => ({
+vi.mock("../../src/uploads", () => ({
   UPLOAD_CONFIRM_WINDOW_MS: 2 * 60 * 60 * 1000,
   uploads: { deleteObjects: mockDeleteObjects },
 }));
 
-import { sweeper } from "../../shared/sweeper";
+import { sweeper } from "../../src/sweeper";
 
 const HOUR_MS = 60 * 60 * 1000;
 

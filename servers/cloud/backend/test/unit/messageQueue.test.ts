@@ -74,8 +74,8 @@ vi.mock("amqplib", async () => {
   };
 });
 
-import { DeadLetterError, mq } from "../../shared/message-queue/messageQueue";
-import { QUEUES } from "../../shared/message-queue/queues";
+import { DeadLetterError, mq } from "../../src/message-queue/messageQueue";
+import { QUEUES } from "../../src/message-queue/queues";
 
 const payload = {
   audioUploadId: "550e8400-e29b-41d4-a716-446655440000",

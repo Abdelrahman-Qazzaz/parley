@@ -1,7 +1,7 @@
 import { is } from "drizzle-orm";
 import { getTableConfig, PgTable } from "drizzle-orm/pg-core";
 import { describe, expect, it } from "vitest";
-import * as schema from "../../shared/db/schema";
+import * as schema from "../../src/db/schema";
 
 describe("schema", () => {
   // Supabase's Data API lets anyone holding the project's public (anon) key

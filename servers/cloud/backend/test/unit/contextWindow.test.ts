@@ -4,7 +4,7 @@ import {
   MAX_HISTORY_MESSAGES,
   admitHistory,
   countMessagesInContextWindow,
-} from "../../api/src/chat/contextWindow";
+} from "../../src/chat/contextWindow";
 
 function turn(name: string, contextCharCount: number, imageCount = 0) {
   return {

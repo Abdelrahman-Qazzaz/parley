@@ -16,14 +16,13 @@ const {
   mockgetChatModelData: vi.fn(),
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { select: mockSelect },
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-vi.mock("../../api/src/auth/auth", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/src/auth/auth")>();
+vi.mock("../../src/auth/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/auth/auth")>();
   return {
     ...actual,
     workos: {
@@ -33,17 +32,17 @@ vi.mock("../../api/src/auth/auth", async (importOriginal) => {
   };
 });
 
-vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
+vi.mock("../../src/ai/ai_chat_client", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_chat_client")>();
+    await importActual<typeof import("../../src/ai/ai_chat_client")>();
   return {
     ...actual, // preserves DEFAULT_MODELS, used at upload.schema import time
     getChatModelData: mockgetChatModelData,
   };
 });
 
-import { createApp } from "../../api/app";
-import { resetRateLimits } from "../../api/src/middleware/rateLimit.middleware";
+import { createApp } from "../../src/app";
+import { resetRateLimits } from "../../src/middleware/rateLimit.middleware";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 const audioUploadId = "550e8400-e29b-41d4-a716-446655440000";

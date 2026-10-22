@@ -7,7 +7,7 @@ import {
   MAX_AUDIO_BYTES,
   matchesBucketSettings,
   type BucketSettings,
-} from "../../shared/storage/schema";
+} from "../../src/storage/schema";
 
 describe("BUCKET_SETTINGS", () => {
   it("declares every bucket KINDS stores objects in", () => {

@@ -4,8 +4,8 @@ import { fileURLToPath } from "node:url";
 import helperImportOwner from "./eslint-rules/helperImportOwner.js";
 import publicModuleEntry from "./eslint-rules/publicModuleEntry.js";
 
-const sharedDirectory = (name) =>
-  fileURLToPath(new URL(`./shared/${name}`, import.meta.url));
+const srcDirectory = (name) =>
+  fileURLToPath(new URL(`./src/${name}`, import.meta.url));
 
 /**
  * Deliberately narrow: this lints module boundaries only, and does not extend
@@ -14,7 +14,7 @@ const sharedDirectory = (name) =>
 const dbClientRestriction = {
   patterns: [
     {
-      group: ["**/shared/db"],
+      group: ["**/db", "./db"],
       importNames: ["db"],
       message:
         "Table access belongs in a *.data.ts module — import a function from one instead of the db client. Schema imports (tables, enums, pingDb) are fine.",
@@ -22,7 +22,7 @@ const dbClientRestriction = {
     {
       group: ["**/data/*.data"],
       message:
-        "Import { data } from shared/data and call data.<table>.<operation>(), so the call reads as a database operation.",
+        "Import { data } from src/data and call data.<table>.<operation>(), so the call reads as a database operation.",
     },
   ],
 };
@@ -55,19 +55,19 @@ export default defineConfig([
         {
           modules: [
             {
-              directory: sharedDirectory("message-queue"),
+              directory: srcDirectory("message-queue"),
               entry: "messageQueue",
             },
-            { directory: sharedDirectory("storage"), entry: "index" },
-            { directory: sharedDirectory("cache"), entry: "index" },
-            { directory: sharedDirectory("ai"), entry: "index" },
+            { directory: srcDirectory("storage"), entry: "index" },
+            { directory: srcDirectory("cache"), entry: "index" },
+            { directory: srcDirectory("ai"), entry: "index" },
           ],
         },
       ],
     },
   },
   {
-    files: ["shared/**/*.data.ts"],
+    files: ["src/data/*.data.ts"],
     plugins: { "@typescript-eslint": tseslint.plugin },
     rules: {
       "no-restricted-imports": "off",
@@ -91,13 +91,13 @@ export default defineConfig([
   },
   {
     files: ["**/*.data.ts"],
-    ignores: ["shared/**/*.data.ts"],
+    ignores: ["src/data/*.data.ts"],
     rules: {
       "no-restricted-syntax": [
         "error",
         {
           selector: "Program",
-          message: "Data modules must live under backend/shared.",
+          message: "Data modules must live under backend/src/data.",
         },
       ],
     },

@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import { generateDrizzleJson, generateMigration } from "drizzle-kit/api";
 import { describe, expect, it } from "vitest";
-import * as schema from "../../shared/db/schema";
+import * as schema from "../../src/db/schema";
 import { MIGRATIONS_FOLDER } from "../../scripts/migrations";
 
 type Journal = { entries: { idx: number; tag: string }[] };

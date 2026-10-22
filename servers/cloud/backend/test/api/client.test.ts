@@ -18,7 +18,7 @@ vi.hoisted(async () => {
   process.env.CLIENT_DIR = dir;
 });
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
 
 async function get(urlPath: string) {
   return (await createApp()).request(`http://localhost${urlPath}`);

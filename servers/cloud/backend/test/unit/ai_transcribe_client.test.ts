@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { CACHE_KEYS } from "../../shared/cache/cacheKeys";
+import { CACHE_KEYS } from "../../src/cache/cacheKeys";
 
 const { mockModelsList, mockGetOrSetCache } = vi.hoisted(() => ({
   mockModelsList: vi.fn(),
@@ -14,7 +14,7 @@ vi.mock("@deepgram/sdk", () => ({
   },
 }));
 
-vi.mock("../../shared/cache/cache", () => ({
+vi.mock("../../src/cache/cache", () => ({
   cache: { getOrSet: mockGetOrSetCache },
 }));
 
@@ -25,7 +25,7 @@ import {
   DEFAULT_TRANSCRIBE_MODEL,
   getTranscribeModelData,
   transcription,
-} from "../../shared/ai/ai_transcribe_client";
+} from "../../src/ai/ai_transcribe_client";
 
 const sttResponse = {
   stt: [

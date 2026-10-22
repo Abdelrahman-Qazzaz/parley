@@ -6,19 +6,19 @@ const { mockListChatModels, mockListTranscribeModels } = vi.hoisted(() => ({
   mockListTranscribeModels: vi.fn(),
 }));
 
-vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
+vi.mock("../../src/ai/ai_chat_client", async (importActual) => {
   // importActual is the correct way to get real values inside vi.mock
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_chat_client")>();
+    await importActual<typeof import("../../src/ai/ai_chat_client")>();
   return {
     ...actual,
     chat: { ...actual.chat, listModels: mockListChatModels },
   };
 });
 
-vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
+vi.mock("../../src/ai/ai_transcribe_client", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_transcribe_client")>();
+    await importActual<typeof import("../../src/ai/ai_transcribe_client")>();
   return {
     ...actual,
     transcription: {
@@ -30,7 +30,7 @@ vi.mock("../../shared/ai/ai_transcribe_client", async (importActual) => {
 
 // Now this import gets the mocked module, with real DEFAULT_MODELS intact
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
 import { sessionCookieHeader } from "../helpers/session";
 
 const MODEL_ID = "openai/gpt-4o-mini";

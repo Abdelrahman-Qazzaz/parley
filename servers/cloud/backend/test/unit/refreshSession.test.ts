@@ -4,11 +4,11 @@ const { mockRefreshAuthSession } = vi.hoisted(() => ({
   mockRefreshAuthSession: vi.fn(),
 }));
 
-vi.mock("../../api/src/auth/auth", () => ({
+vi.mock("../../src/auth/auth", () => ({
   workos: { refreshAuthSession: mockRefreshAuthSession },
 }));
 
-import { refreshSession } from "../../api/src/auth/refreshSession";
+import { refreshSession } from "../../src/auth/refreshSession";
 
 const tokens = { accessToken: "access-2", refreshToken: "refresh-2" };
 let refreshToken = 0;

@@ -14,12 +14,12 @@ const { bucket, ledger } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({ bucket }));
-vi.mock("../../shared/data/storageLedger.data", () => ({
+vi.mock("../../src/storage/bucket", () => ({ bucket }));
+vi.mock("../../src/data/storageLedger.data", () => ({
   storageLedger: ledger,
 }));
 
-import { uploads } from "../../shared/uploads";
+import { uploads } from "../../src/uploads";
 
 const USER = "user_01";
 const HOUR_MS = 60 * 60 * 1000;

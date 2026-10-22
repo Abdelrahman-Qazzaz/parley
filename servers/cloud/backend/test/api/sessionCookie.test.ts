@@ -1,25 +1,25 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { Hono, type Context } from "hono";
-import { COOKIE_KEYS } from "../../shared/keys";
+import { COOKIE_KEYS } from "../../src/cookies/session";
 
 /**
  * The auth cookies' attributes decide whether login works at all, and they
  * are invisible until a browser silently drops the cookie. Pin them here.
  *
- * NODE_ENV is read through getApiEnv(), which caches on first call, so each
+ * NODE_ENV is read through getEnv(), which caches on first call, so each
  * case resets the module graph and re-imports rather than mutating the env of
  * an already-initialised module.
  */
 async function setCookieHeadersFor(
   nodeEnv: "production" | "development",
   act: (
-    cookies: typeof import("../../api/src/cookies/session"),
+    cookies: typeof import("../../src/cookies/session"),
     c: Context,
   ) => void,
 ): Promise<Record<string, string>> {
   vi.resetModules();
   process.env.NODE_ENV = nodeEnv;
-  const cookies = await import("../../api/src/cookies/session");
+  const cookies = await import("../../src/cookies/session");
 
   const app = new Hono();
   app.get("/", (c) => {
@@ -36,7 +36,7 @@ async function setCookieHeadersFor(
 }
 
 const setBoth = (
-  { setAuthCookies }: typeof import("../../api/src/cookies/session"),
+  { setAuthCookies }: typeof import("../../src/cookies/session"),
   c: Context,
 ) =>
   setAuthCookies(c, {

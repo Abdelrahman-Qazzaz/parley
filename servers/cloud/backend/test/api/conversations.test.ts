@@ -39,7 +39,7 @@ const {
   mockImageRows: vi.fn(),
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: {
     select: mockSelect,
     insert: mockInsert,
@@ -50,17 +50,17 @@ vi.mock("../../shared/db", async () => ({
 }));
 
 // Controllers release deleted objects through the upload module.
-vi.mock("../../shared/uploads", () => ({
+vi.mock("../../src/uploads", () => ({
   uploads: { deleteObjects: mockDeleteObjects },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   bucket: {
     delete: vi.fn(),
   },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 7 * 24 * 60 * 60,
   sign: {
     urls: vi.fn(),
@@ -69,8 +69,8 @@ vi.mock("../../shared/storage/sign", () => ({
 
 import { desc } from "drizzle-orm";
 // Resolves to the mocked module above, so these are the stub column names.
-import { ChatMessageAttachmentLinks, Conversations } from "../../shared/db";
-import { createApp } from "../../api/app";
+import { ChatMessageAttachmentLinks, Conversations } from "../../src/db";
+import { createApp } from "../../src/app";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 const conversationId = "550e8400-e29b-41d4-a716-446655440000";

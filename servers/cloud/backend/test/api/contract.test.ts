@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { createApp } from "../../api/app";
-import { QUEUES } from "../../shared/message-queue/queues";
-import { AUDIO_BUCKET, MAX_AUDIO_BYTES } from "../../shared/storage";
+import { createApp } from "../../src/app";
+import { QUEUES } from "../../src/message-queue/queues";
+import { AUDIO_BUCKET, MAX_AUDIO_BYTES } from "../../src/storage";
 
 describe("GET /contract", () => {
   it("serves the non-sensitive contract the youtube-fetcher reads at boot", async () => {

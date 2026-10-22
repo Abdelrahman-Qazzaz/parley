@@ -1,5 +1,5 @@
 """Fail-fast preflight for the fetcher, mirroring
-backend/api/startup.ts: aborts startup if any dependency is
+backend/src/startup.ts: aborts startup if any dependency is
 unavailable."""
 
 import bucket

@@ -27,14 +27,14 @@ const {
   },
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { insert: mockInsert },
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
 // The ledger's SQL is covered by the integration tests. A confirm that goes
 // through runs its write against the insert mock.
-vi.mock("../../shared/data/storageLedger.data", () => ({
+vi.mock("../../src/data/storageLedger.data", () => ({
   storageLedger: {
     recordPendingUpload: ledger.recordPendingUpload,
     findLedgerEntry: ledger.findLedgerEntry,
@@ -51,7 +51,7 @@ vi.mock("../../shared/data/storageLedger.data", () => ({
   },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   // Literals: vi.mock factories run before this module's own bindings exist.
   AUDIO_BUCKET: "Audio",
   MAX_AUDIO_BYTES: 50 * 1024 * 1024,
@@ -62,7 +62,7 @@ vi.mock("../../shared/storage/bucket", () => ({
   },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 7 * 24 * 60 * 60,
   sign: {
     url: mockCreateSignedUrl,
@@ -70,9 +70,9 @@ vi.mock("../../shared/storage/sign", () => ({
   },
 }));
 
-vi.mock("../../shared/data/images.data", async (importActual) => {
+vi.mock("../../src/data/images.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/images.data")>();
+    await importActual<typeof import("../../src/data/images.data")>();
   return {
     ...actual,
     images: {
@@ -84,7 +84,7 @@ vi.mock("../../shared/data/images.data", async (importActual) => {
   };
 });
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024;

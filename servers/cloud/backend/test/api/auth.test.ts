@@ -19,9 +19,8 @@ const {
   mockInsert: vi.fn(),
 }));
 
-vi.mock("../../api/src/auth/auth", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/src/auth/auth")>();
+vi.mock("../../src/auth/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/auth/auth")>();
   return {
     ...actual,
     workos: {
@@ -34,16 +33,16 @@ vi.mock("../../api/src/auth/auth", async (importOriginal) => {
   };
 });
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { insert: mockInsert },
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
 import { authedHeaders } from "../helpers/session";
 import { signAccessToken } from "../helpers/accessTokens";
-import { WORKOS_REDIRECT_URI } from "../../api/src/auth/auth";
-import { COOKIE_KEYS } from "../../shared/keys";
+import { WORKOS_REDIRECT_URI } from "../../src/auth/auth";
+import { COOKIE_KEYS } from "../../src/cookies/session";
 
 describe("GET /auth/me", () => {
   it("returns 401 without a session cookie", async () => {

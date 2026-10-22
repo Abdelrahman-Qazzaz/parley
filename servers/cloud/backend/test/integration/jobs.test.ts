@@ -18,10 +18,10 @@ const testState = vi.hoisted(() => ({
   client: null as Sql | null,
 }));
 
-vi.mock("../../shared/db", async () => {
+vi.mock("../../src/db", async () => {
   const postgres = (await import("postgres")).default;
   const { drizzle } = await import("drizzle-orm/postgres-js");
-  const schema = await import("../../shared/db/schema");
+  const schema = await import("../../src/db/schema");
   const client = postgres(
     testState.databaseUrl ?? "postgres://localhost/unused",
     {
@@ -37,8 +37,8 @@ vi.mock("../../shared/db", async () => {
   return { ...schema, db: drizzle(client, { schema }) };
 });
 
-import { AudioTranscriptionJobs, db, users } from "../../shared/db";
-import { jobs } from "../../shared/data/jobs.data";
+import { AudioTranscriptionJobs, db, users } from "../../src/db";
+import { jobs } from "../../src/data/jobs.data";
 
 const userId = "jobs-owner";
 

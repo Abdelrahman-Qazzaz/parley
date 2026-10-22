@@ -23,7 +23,7 @@ const external = Object.keys(dependencies)
   .flatMap((name) => [name, `${name}/*`]);
 
 const ENTRYPOINTS = {
-  api: "api/index.ts",
+  api: "src/index.ts",
   // Operational one-shots, bundled so they can be run from the same image
   // without drizzle-kit (a devDependency) being present at runtime.
   migrate: "scripts/migrate.ts",

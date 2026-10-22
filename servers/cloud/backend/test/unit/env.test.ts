@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { apiEnvSchema, baseEnvSchema } from "../../shared/env";
+import { envSchema, getDatabaseUrl } from "../../src/env";
 
-const validBase = {
+const validEnv = {
   DATABASE_URL: "postgres://localhost:5432/test",
   MQ_URL: "amqp://localhost",
   SUPABASE_URL: "https://example.supabase.co",
@@ -9,39 +9,31 @@ const validBase = {
   OPENROUTER_API_KEY: "test-key",
   DEEPGRAM_API_KEY: "test-key",
   NODE_ENV: "test" as const,
-};
-
-const validUpstash = {
   UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
   UPSTASH_REDIS_REST_TOKEN: "test-token",
-};
-
-const validApi = {
-  ...validBase,
-  ...validUpstash,
   WORKOS_API_KEY: "sk_test",
   WORKOS_CLIENT_ID: "client_test",
   CLIENT_URL: "http://localhost:5173",
   API_BASE_URL: "http://localhost:3001",
 };
 
-describe("apiEnvSchema", () => {
-  it("accepts valid api env", () => {
-    const result = apiEnvSchema.safeParse(validApi);
+describe("envSchema", () => {
+  it("accepts a valid env", () => {
+    const result = envSchema.safeParse(validEnv);
     expect(result.success).toBe(true);
   });
 
   it("rejects empty UPSTASH_REDIS_REST_TOKEN", () => {
-    const result = apiEnvSchema.safeParse({
-      ...validApi,
+    const result = envSchema.safeParse({
+      ...validEnv,
       UPSTASH_REDIS_REST_TOKEN: "",
     });
     expect(result.success).toBe(false);
   });
 
   it("rejects non-HTTPS UPSTASH_REDIS_REST_URL in production", () => {
-    const result = apiEnvSchema.safeParse({
-      ...validApi,
+    const result = envSchema.safeParse({
+      ...validEnv,
       NODE_ENV: "production",
       UPSTASH_REDIS_REST_URL: "http://example.upstash.io",
     });
@@ -49,8 +41,8 @@ describe("apiEnvSchema", () => {
   });
 
   it("accepts the load test's plain-HTTP Redis outside production", () => {
-    const result = apiEnvSchema.safeParse({
-      ...validApi,
+    const result = envSchema.safeParse({
+      ...validEnv,
       UPSTASH_REDIS_REST_URL: "http://srh",
     });
     expect(result.success).toBe(true);
@@ -64,8 +56,8 @@ describe("apiEnvSchema", () => {
   };
 
   it("accepts the load-test overrides outside production", () => {
-    const result = apiEnvSchema.safeParse({
-      ...validApi,
+    const result = envSchema.safeParse({
+      ...validEnv,
       ...loadtestOverrides,
     });
     expect(result.success).toBe(true);
@@ -74,8 +66,8 @@ describe("apiEnvSchema", () => {
   it.each(Object.entries(loadtestOverrides))(
     "refuses %s in production",
     (key, value) => {
-      const result = apiEnvSchema.safeParse({
-        ...validApi,
+      const result = envSchema.safeParse({
+        ...validEnv,
         NODE_ENV: "production",
         [key]: value,
       });
@@ -83,34 +75,24 @@ describe("apiEnvSchema", () => {
     },
   );
 
+  it("requires MQ_URL", () => {
+    const { MQ_URL: _omitted, ...withoutMq } = validEnv;
+    expect(envSchema.safeParse(withoutMq).success).toBe(false);
+  });
+
   it.each(["CLIENT_URL", "API_BASE_URL"] as const)(
     "requires %s rather than defaulting to localhost",
     (key) => {
-      const { [key]: _omitted, ...withoutUrl } = validApi;
-      const result = apiEnvSchema.safeParse(withoutUrl);
+      const { [key]: _omitted, ...withoutUrl } = validEnv;
+      const result = envSchema.safeParse(withoutUrl);
       expect(result.success).toBe(false);
     },
   );
 });
 
-describe("baseEnvSchema", () => {
-  it("accepts a valid base env", () => {
-    const result = baseEnvSchema.safeParse(validBase);
-    expect(result.success).toBe(true);
-  });
-
-  it("refuses the base load-test overrides in production", () => {
-    const result = baseEnvSchema.safeParse({
-      ...validBase,
-      NODE_ENV: "production",
-      DEEPGRAM_BASE_URL: "http://mocks:4000/deepgram",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("requires the same base vars the API does", () => {
-    const { MQ_URL: _omitted, ...withoutMq } = validBase;
-    const result = baseEnvSchema.safeParse(withoutMq);
-    expect(result.success).toBe(false);
+describe("getDatabaseUrl", () => {
+  // The migrate container is given DATABASE_URL and nothing else.
+  it("reads DATABASE_URL without needing the rest", () => {
+    expect(getDatabaseUrl()).toBe(process.env.DATABASE_URL);
   });
 });
