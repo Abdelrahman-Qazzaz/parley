@@ -1,10 +1,12 @@
 from pathlib import Path
 from types import SimpleNamespace
+from typing import ClassVar
 from unittest.mock import MagicMock
 
-import handlers
 import pytest
 import yt_dlp
+
+import handlers
 from contract import QueueName, _Queues, contract
 
 MAX_BYTES = 1000
@@ -41,9 +43,9 @@ class FakeYDL:
     """Stands in for yt_dlp.YoutubeDL: "downloads" by writing the preset
     files into the outtmpl directory. Tests override the class attributes."""
 
-    info: dict = {"filesize": 10}
-    files: dict[str, bytes] = {"audio.webm": b"x" * 10}
-    last: "FakeYDL | None" = None
+    info: ClassVar[dict] = {"filesize": 10}
+    files: ClassVar[dict[str, bytes]] = {"audio.webm": b"x" * 10}
+    last: ClassVar[FakeYDL | None] = None
 
     def __init__(self, options):
         self.options = options

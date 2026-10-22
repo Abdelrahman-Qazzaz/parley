@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 import logging
 import threading
+from collections.abc import Callable
 from concurrent.futures import Future
-from typing import Any, Callable
+from typing import Any
 
 import pika
-from env import env
+
 from contract import QueueName
+from env import env
 
 log = logging.getLogger(__name__)
 

@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock
 
-import bucket
 import pytest
+
+import bucket
 
 
 @pytest.fixture

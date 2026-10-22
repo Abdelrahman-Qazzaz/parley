@@ -19,7 +19,10 @@
   },
   "lint-staged": {
     "{servers/cloud/backend,servers/local,client,packages}/**/*.{css,html,js,json,md,ts,tsx,yaml,yml}": "prettier --write",
-    "servers/cloud/youtube-fetcher/**/*.py": "servers/cloud/youtube-fetcher/.venv/bin/ruff format"
+    "servers/cloud/youtube-fetcher/**/*.py": [
+      "servers/cloud/youtube-fetcher/.venv/bin/ruff check --fix",
+      "servers/cloud/youtube-fetcher/.venv/bin/ruff format"
+    ]
   },
   "simple-git-hooks": {
     "pre-commit": "npx lint-staged"

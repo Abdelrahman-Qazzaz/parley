@@ -5,12 +5,13 @@ import tempfile
 import time
 from pathlib import Path
 
-import bucket
 import yt_dlp
-from contract import contract
-from message_queue import mq
 from youtube_transcript_api import CouldNotRetrieveTranscript, YouTubeTranscriptApi
 from yt_dlp.extractor.youtube import YoutubeIE
+
+import bucket
+from contract import contract
+from message_queue import mq
 
 log = logging.getLogger(__name__)
 

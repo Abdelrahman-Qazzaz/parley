@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import NewType
 
 import httpx
+
 from env import env
 
 QueueName = NewType("QueueName", str)

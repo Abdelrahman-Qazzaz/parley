@@ -1,8 +1,9 @@
 import logging
 
+from supabase import Client, create_client
+
 from contract import contract
 from env import env
-from supabase import Client, create_client
 
 log = logging.getLogger(__name__)
 

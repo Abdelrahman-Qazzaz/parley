@@ -4,7 +4,7 @@ backend's concurrent Promise.allSettled, checks run sequentially — but every
 failure is still collected so one boot reports all unavailable services."""
 
 import logging
-from typing import Callable
+from collections.abc import Callable
 
 log = logging.getLogger(__name__)
 

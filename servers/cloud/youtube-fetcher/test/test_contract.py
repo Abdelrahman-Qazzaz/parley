@@ -1,7 +1,8 @@
 from unittest.mock import MagicMock
 
-import contract as contract_module
 import pytest
+
+import contract as contract_module
 from contract import _Contract
 
 # /contract serves every backend queue (backend/api/app.ts); the
