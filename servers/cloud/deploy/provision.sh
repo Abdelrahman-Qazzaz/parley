@@ -36,7 +36,9 @@ PasswordAuthentication no
 KbdInteractiveAuthentication no
 PermitRootLogin no
 CONF
-systemctl reload ssh
+# Newer Ubuntu starts sshd on demand, so it may not be running to reload. If
+# not, the next sign-in starts it with this config.
+systemctl try-reload-or-restart ssh
 
 # Firewall: SSH and the web. Docker's published ports bypass these rules, which
 # is why nothing but the proxy publishes one.
