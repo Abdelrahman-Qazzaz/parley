@@ -50,7 +50,7 @@ export const users = pgTable("users", {
     .defaultNow()
     .$onUpdate(() => new Date())
     .notNull(),
-});
+}).enableRLS();
 
 /** Stored attachments that can be linked to one or more chat messages. */
 export const Attachments = pgTable(
@@ -80,7 +80,7 @@ export const Attachments = pgTable(
       table.attachmentId,
     ),
   ],
-);
+).enableRLS();
 
 /** Transcription processing state for an audio attachment. */
 export const AudioTranscriptionJobs = pgTable("audio_transcription_jobs", {
@@ -108,7 +108,7 @@ export const AudioTranscriptionJobs = pgTable("audio_transcription_jobs", {
     .notNull(),
   // Model used to transcribe the audio. Null falls back to the default
   transcriptModelId: text("transcription_model_id"),
-});
+}).enableRLS();
 
 /** Chat conversations owned by a user. */
 export const Conversations = pgTable(
@@ -150,7 +150,7 @@ export const Conversations = pgTable(
       table.id,
     ),
   ],
-);
+).enableRLS();
 
 export const ChatMessages = pgTable(
   "chat_messages",
@@ -191,7 +191,7 @@ export const ChatMessages = pgTable(
       table.id,
     ),
   ],
-);
+).enableRLS();
 
 export const ChatMessageAttachmentLinks = pgTable(
   "chat_message_attachments",
@@ -216,7 +216,7 @@ export const ChatMessageAttachmentLinks = pgTable(
     ),
     index("chat_message_attachments_upload_idx").on(table.attachmentId),
   ],
-);
+).enableRLS();
 
 /** Attachments reserved by a turn until it is persisted or fails. */
 export const AttachmentTurnReservations = pgTable(
@@ -236,7 +236,7 @@ export const AttachmentTurnReservations = pgTable(
     }),
     index("attachment_turn_reservations_claim_idx").on(table.claimToken),
   ],
-);
+).enableRLS();
 
 /**
  * The transcript text a completed job produced, out of the job row so it isn't
@@ -253,7 +253,7 @@ export const TranscriptContents = pgTable("transcript_contents", {
     }),
   content: text("content").notNull(),
   charCount: integer("char_count").notNull(),
-});
+}).enableRLS();
 
 /**
  * Every object the bucket holds or is about to hold, so what nothing uses any
@@ -286,4 +286,4 @@ export const StorageLedger = pgTable(
       table.createdAt,
     ),
   ],
-);
+).enableRLS();
