@@ -7,7 +7,12 @@ import type {
 } from "amqplib";
 import { getBaseEnv } from "../env";
 import { logger, messageOf } from "@parley/shared/logger";
-import { QUEUES, type Queue, type QueuePayloads } from "./queues";
+import {
+  QUEUE_PAYLOAD_SCHEMAS,
+  QUEUES,
+  type Queue,
+  type QueuePayloads,
+} from "./queues";
 
 const log = logger.child({ component: "message-queue" });
 
@@ -186,10 +191,24 @@ async function deadLetter(
   broker.consumer.ack(message);
 }
 
+/** The message's payload, checked against its queue's schema. */
+function parsePayload<Q extends Queue>(
+  queue: Q,
+  message: ConsumeMessage,
+): QueuePayloads[Q] {
+  try {
+    return QUEUE_PAYLOAD_SCHEMAS[queue].parse(
+      JSON.parse(message.content.toString()),
+    ) as QueuePayloads[Q];
+  } catch (error) {
+    throw new DeadLetterError("Malformed payload", { cause: error });
+  }
+}
+
 /**
  * Runs the handler until it succeeds or runs out of attempts, pausing between
  * them. A message that fails every attempt, throws a DeadLetterError, or
- * isn't valid JSON is dead-lettered.
+ * isn't valid JSON of its queue's shape is dead-lettered.
  */
 async function handle<Q extends Queue>(
   broker: Broker,
@@ -200,11 +219,8 @@ async function handle<Q extends Queue>(
 ) {
   let payload: QueuePayloads[Q];
   try {
-    payload = JSON.parse(message.content.toString());
-  } catch (error) {
-    const malformed = new DeadLetterError("Malformed payload", {
-      cause: error,
-    });
+    payload = parsePayload(queue, message);
+  } catch (malformed) {
     await deadLetter(broker, queue, message, malformed);
     return;
   }

@@ -278,6 +278,23 @@ describe("consuming", () => {
     expect(broker.consumer!.ack).toHaveBeenCalledWith(message);
   });
 
+  it("dead-letters a payload that isn't its queue's shape without running the handler", async () => {
+    const handler = vi.fn();
+    const deliver = await consumeWith(handler);
+
+    // A field renamed on the publishing side.
+    const message = deliveryOf(
+      JSON.stringify({ uploadId: payload.audioUploadId }),
+    );
+    await deliver(message);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(failureReasons()).toEqual([
+      expect.stringMatching(/^Malformed payload: /),
+    ]);
+    expect(broker.consumer!.ack).toHaveBeenCalledWith(message);
+  });
+
   it("drops the message rather than requeueing it when dead-lettering fails", async () => {
     const deliver = await consumeWith(() => {
       throw new Error("database unavailable");

@@ -54,7 +54,7 @@ once there are several, each one's share comes from the load balancer.
 Each consumer also sets how many attempts a message gets. A handler fails an attempt by
 throwing, and the next attempt runs 2 seconds later in the same process.
 A message that fails its last attempt, throws a `DeadLetterError`, or isn't
-valid JSON is published to the `dead_letter` queue under its original queue's
+valid JSON of its queue's shape (the schemas in `queues.ts`) is published to the `dead_letter` queue under its original queue's
 name, with the reason in an `x-failure-reason` header, and then acked.
 Nothing is requeued, and nothing consumes `dead_letter`: replay by hand once
 the cause is fixed.
