@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gt, inArray, lt, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gt, lt, or, sql } from "drizzle-orm";
 import {
   Attachments,
   ChatMessageAttachmentLinks,
@@ -12,10 +12,6 @@ import { images } from "./images.data";
 import { conversations } from "./conversations.data";
 import { messageAttachmentLinks } from "./messageAttachmentLinks.data";
 import { attachments } from "./attachments.data";
-import {
-  transcripts,
-  type StoredTranscriptAttachment,
-} from "./transcripts.data";
 
 /**
  * The columns a message is exposed through — every read feeding `toMessageJson`
@@ -75,20 +71,6 @@ async function findConversationMessages(conversationId: string) {
       asc(ChatMessages.id),
     );
 }
-
-/** One history turn with everything the prompt is rebuilt from, grouped. */
-type ContextMessage = {
-  id: string;
-  role: MessageRow["role"];
-  content: string;
-  createdAt: Date;
-  transcripts: StoredTranscriptAttachment[];
-  images: {
-    imageUploadId: string;
-    signedUrl: string | null;
-    signedUrlExpiresAt: Date | null;
-  }[];
-};
 
 /**
  * A past turn that may go back into the prompt, with what it was sent with:
@@ -240,88 +222,6 @@ async function findContextHistory(input: {
   }
 
   return history;
-}
-
-async function hydrateContextMessages(
-  userId: string,
-  recentMessages: Omit<ContextMessage, "transcripts" | "images">[],
-): Promise<ContextMessage[]> {
-  if (recentMessages.length === 0) return [];
-  const messageIds = recentMessages.map((message) => message.id);
-
-  const [imageRows, transcriptionsByMessageId] = await Promise.all([
-    db
-      .select({
-        messageId: ChatMessageAttachmentLinks.messageId,
-        imageUploadId: Attachments.attachmentId,
-        imageSignedUrl: Attachments.signedUrl,
-        imageSignedUrlExpiresAt: Attachments.signedUrlExpiresAt,
-      })
-      .from(ChatMessageAttachmentLinks)
-      .innerJoin(
-        Attachments,
-        eq(Attachments.attachmentId, ChatMessageAttachmentLinks.attachmentId),
-      )
-      .where(
-        and(
-          eq(Attachments.userId, userId),
-          eq(Attachments.kind, "image"),
-          inArray(ChatMessageAttachmentLinks.messageId, messageIds),
-        ),
-      )
-      .orderBy(
-        asc(ChatMessageAttachmentLinks.messageId),
-        asc(ChatMessageAttachmentLinks.position),
-      ),
-    transcripts.findMessageTranscriptAttachments(userId, messageIds),
-  ]);
-
-  const imagesByMessageId = new Map<string, ContextMessage["images"]>();
-  for (const image of imageRows) {
-    if (!image.messageId) continue;
-    const images = imagesByMessageId.get(image.messageId) ?? [];
-    images.push({
-      imageUploadId: image.imageUploadId,
-      signedUrl: image.imageSignedUrl,
-      signedUrlExpiresAt: image.imageSignedUrlExpiresAt,
-    });
-    imagesByMessageId.set(image.messageId, images);
-  }
-
-  return recentMessages.map((message) => ({
-    ...message,
-    transcripts: transcriptionsByMessageId.get(message.id) ?? [],
-    images: imagesByMessageId.get(message.id) ?? [],
-  }));
-}
-
-/**
- * The tail of a conversation for model context, newest first so LIMIT keeps the
- * latest turns. Images and transcript metadata are loaded separately after the
- * limit, avoiding a cross-product when a message carries several of each.
- */
-async function findRecentMessagesWithContext(
-  userId: string,
-  conversationId: string,
-  limit: number,
-): Promise<ContextMessage[]> {
-  const recentMessages = await db
-    .select({
-      id: ChatMessages.id,
-      role: ChatMessages.role,
-      content: ChatMessages.content,
-      createdAt: ChatMessages.createdAt,
-    })
-    .from(ChatMessages)
-    .where(eq(ChatMessages.conversationId, conversationId))
-    .orderBy(
-      desc(ChatMessages.createdAt),
-      desc(ChatMessages.role),
-      desc(ChatMessages.id),
-    )
-    .limit(limit);
-
-  return hydrateContextMessages(userId, recentMessages);
 }
 
 async function createMessage(
@@ -544,7 +444,6 @@ async function persistAndUnclaimChatTurn(turn: {
 export const messages = {
   findConversationMessages,
   findContextHistory,
-  findRecentMessagesWithContext,
   deleteOwnedMessage,
   persistAndUnclaimChatTurn,
 };

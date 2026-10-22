@@ -4,7 +4,6 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at 371e3d2, which 
 
 ## Dead or test-only code
 
-- **`findRecentMessagesWithContext`, `hydrateContextMessages` and `ContextMessage`** (`shared/data/messages.data.ts:80`, `:334`, `:392`). Nothing calls them; `findCreateMessageHistory` (now `findContextHistory`) replaced them. The index comment in `shared/db/schema.ts:181` and a test comment in `test/api/messages.test.ts:208` still name the old function.
 - **Preparation metrics never run in production.** Only tests call `withPreparationMetrics`, so every `measurePreparation` in `shared/data/images.data.ts:135` just calls `run()`. Its extra arguments, including the `persistUrlsPromiseAllId` UUID minted on each call, make the image signing code harder to read and do nothing.
 - **Commented-out line** in `api/src/sockets/socketManager.ts:34`.
 

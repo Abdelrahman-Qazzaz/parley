@@ -211,7 +211,6 @@ const resolvedImage = {
   url: "https://bucket.test/diagram.png",
 };
 
-/** A history turn as findRecentMessagesWithContext hands it back, newest first. */
 /**
  * A past turn as the history query returns it. `imageUrls` stands in for its
  * images: each is stored already signed, under its own URL as its id, and the
