@@ -193,6 +193,21 @@ describe("POST /conversations", () => {
     expect(await res.json()).toEqual(row);
     expect(mockValues).toHaveBeenCalledWith({ userId, title: "My chat" });
   });
+  it("turns away a body over 1 MB before reading it", async () => {
+    const res = await (
+      await createApp()
+    ).request("http://localhost/conversations", {
+      method: "POST",
+      headers: {
+        ...(await authedHeaders(userId)),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ conversationTitle: "x".repeat(1024 * 1024) }),
+    });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ message: "Request body is too large" });
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
   it("creates a conversation without a body (title falls back to the DB default)", async () => {
     mockInsertReturning.mockResolvedValueOnce([
       rowOf({ ...row, title: "New conversation" }),

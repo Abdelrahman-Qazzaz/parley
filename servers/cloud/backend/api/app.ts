@@ -2,6 +2,7 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
@@ -19,6 +20,8 @@ import { requireAuth } from "./src/middleware/auth.middleware";
 import { AUDIO_BUCKET, MAX_AUDIO_BYTES } from "../shared/storage";
 import { verifyApiServices } from "./startup";
 import { mq } from "../shared/message-queue/messageQueue";
+
+const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 
 export async function createApp() {
   const env = getApiEnv();
@@ -38,6 +41,16 @@ export async function createApp() {
   // covered by tests, because buffering the reply stream would be invisible
   // here and obvious to every user.
   app.use("*", compress());
+  // Nothing has a reason to send more: a message is at most 50k characters,
+  // and files go straight to storage, never through here. Without a limit a
+  // request body is read whole into memory, however large.
+  app.use(
+    "*",
+    bodyLimit({
+      maxSize: MAX_REQUEST_BODY_BYTES,
+      onError: (c) => c.json({ message: "Request body is too large" }, 413),
+    }),
+  );
 
   // Every other answer the client gets is JSON with a `message`; an error no
   // handler caught is one too, and goes through the logger rather than
