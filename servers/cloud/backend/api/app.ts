@@ -5,6 +5,8 @@ import { Hono } from "hono";
 import { compress } from "hono/compress";
 import { cors } from "hono/cors";
 import { csrf } from "hono/csrf";
+import { HTTPException } from "hono/http-exception";
+import { logger } from "@parley/shared/logger";
 import { getApiEnv } from "../shared/env";
 import { jobsRouter } from "./src/routes/jobs.router";
 import { uploadRouter } from "./src/routes/upload.router";
@@ -36,6 +38,18 @@ export async function createApp() {
   // covered by tests, because buffering the reply stream would be invisible
   // here and obvious to every user.
   app.use("*", compress());
+
+  // Every other answer the client gets is JSON with a `message`; an error no
+  // handler caught is one too, and goes through the logger rather than
+  // Hono's console.error. An HTTPException carries its own response.
+  app.onError((error, c) => {
+    if (error instanceof HTTPException) return error.getResponse();
+    logger.error("Unhandled request error", error, {
+      method: c.req.method,
+      path: c.req.path,
+    });
+    return c.json({ message: "Internal server error" }, 500);
+  });
 
   await verifyApiServices();
 

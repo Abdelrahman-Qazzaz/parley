@@ -202,7 +202,8 @@ describe("POST /upload/audio", () => {
     const res = await postJson("/upload/audio", {});
 
     expect(res.status).toBe(500);
-    expect(await res.text()).not.toContain("storage.test");
+    // The same JSON shape as every other error, with nothing internal in it.
+    expect(await res.json()).toEqual({ message: "Internal server error" });
   });
 });
 

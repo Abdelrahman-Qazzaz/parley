@@ -16,15 +16,20 @@ export type AuthEnv = {
 export const requireAuth = createMiddleware<AuthEnv>(async (c, next) => {
   const token = getCookie(c, COOKIE_KEYS.session);
   if (!token) return c.json({ message: "Unauthorized" }, 401);
+
+  // Only the verification is the session's fault; whatever the route throws
+  // after it is the route's, and must not come back as a 401.
+  let session: Awaited<ReturnType<typeof verifyAccessToken>>;
   try {
-    const { userId, expiresAtEpochSeconds } = await verifyAccessToken(token);
-    c.set("userId", userId);
-    c.set("sessionExpiresAtEpochSeconds", expiresAtEpochSeconds);
-    await next();
+    session = await verifyAccessToken(token);
   } catch (error) {
     logger.debug("Session token verification failed", { error: String(error) });
     return c.json({ message: "Unauthorized" }, 401);
   }
+
+  c.set("userId", session.userId);
+  c.set("sessionExpiresAtEpochSeconds", session.expiresAtEpochSeconds);
+  await next();
 });
 
 /**
