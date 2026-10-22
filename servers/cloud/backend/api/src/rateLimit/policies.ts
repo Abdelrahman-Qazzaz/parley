@@ -33,6 +33,13 @@ export const RATE_LIMIT_POLICIES = {
 
   job: { limit: 100, windowMs: FIFTEEN_MINUTES_MS, key: "userId" },
   conversation: { limit: 100, windowMs: FIFTEEN_MINUTES_MS, key: "userId" },
+
+  /**
+   * Sending or editing a message: each one is a paid model call. It has its
+   * own budget rather than sharing the conversation one, so opening chats
+   * can't use up a user's turns and turns aren't only bounded by reads.
+   */
+  chatTurn: { limit: 50, windowMs: FIFTEEN_MINUTES_MS, key: "userId" },
   model: { limit: 100, windowMs: FIFTEEN_MINUTES_MS, key: "userId" },
 
   /**

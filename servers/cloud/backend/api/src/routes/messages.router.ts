@@ -1,18 +1,43 @@
 import { Hono } from "hono";
 import * as messagesController from "../controllers/messages.controller";
-import type { AuthEnv } from "../middleware/auth.middleware";
+import {
+  chatTurnRateLimiter,
+  conversationRateLimiter,
+} from "../middleware/rateLimit.middleware";
+import { requireAuth, type AuthEnv } from "../middleware/auth.middleware";
 import { httpCache } from "@parley/shared/cache.middleware";
 
+/**
+ * Mounted under /conversations/:conversationId/messages, ahead of the parent's
+ * middleware, so nothing here is reached by it: auth and every budget are
+ * declared below. Reading and deleting spend the conversation budget; sending
+ * and editing ask the model, so they spend the chat-turn one instead.
+ */
 export const messagesRouter = new Hono<AuthEnv>();
+
+messagesRouter.use("*", requireAuth);
 
 messagesRouter.get(
   "/",
+  conversationRateLimiter,
   httpCache({ revalidate: true }),
   ...messagesController.handleListMessages,
 );
 
-messagesRouter.delete("/:messageId", ...messagesController.handleDeleteMessage);
+messagesRouter.delete(
+  "/:messageId",
+  conversationRateLimiter,
+  ...messagesController.handleDeleteMessage,
+);
 
-messagesRouter.post("/", ...messagesController.handleCreateMessage);
+messagesRouter.post(
+  "/",
+  chatTurnRateLimiter,
+  ...messagesController.handleCreateMessage,
+);
 
-messagesRouter.patch("/:messageId", ...messagesController.handlePatchMessage);
+messagesRouter.patch(
+  "/:messageId",
+  chatTurnRateLimiter,
+  ...messagesController.handlePatchMessage,
+);

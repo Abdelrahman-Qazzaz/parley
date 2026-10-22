@@ -6,6 +6,10 @@ import { messagesRouter } from "./messages.router";
 
 export const conversationsRouter = new Hono<AuthEnv>();
 
+// Mounted above the use() below, so the messages router declares its own auth
+// and budgets — which is what keeps a model call off the conversation budget.
+conversationsRouter.route("/:conversationId/messages", messagesRouter);
+
 conversationsRouter.use("*", requireAuth, conversationRateLimiter);
 
 conversationsRouter.get(
@@ -32,5 +36,3 @@ conversationsRouter.delete(
   "/:conversationId",
   ...conversationsController.handleDeleteConversation,
 );
-
-conversationsRouter.route("/:conversationId/messages", messagesRouter);

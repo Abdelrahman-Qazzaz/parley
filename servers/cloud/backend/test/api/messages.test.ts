@@ -155,6 +155,7 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
 });
 
 import { createApp } from "../../api/app";
+import { resetRateLimits } from "../../api/src/middleware/rateLimit.middleware";
 import {
   MAX_CONTEXT_CHARS,
   MAX_RESPONSE_TOKENS,
@@ -265,6 +266,8 @@ function messageRequestBody(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Every case sends turns; none should spend another's chat-turn budget.
+  resetRateLimits();
   mockFindOwnedConversation.mockResolvedValue(ownedConversation);
   mockClaimConversationTurn.mockImplementation(
     (_userId, _conversationId, _lastMessageId, claimToken = "claim-token") =>

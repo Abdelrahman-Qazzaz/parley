@@ -92,6 +92,7 @@ export const authRefreshRateLimiter = createLimiter("authRefresh");
 
 export const jobRateLimiter = createLimiter("job");
 export const conversationRateLimiter = createLimiter("conversation");
+export const chatTurnRateLimiter = createLimiter("chatTurn");
 export const modelRateLimiter = createLimiter("model");
 export const imageReadRateLimiter = createLimiter("imageRead");
 export const uploadRateLimiter = createLimiter("upload");
