@@ -1,6 +1,6 @@
 # Load testing
 
-k6 against the whole cloud backend (API, transcription workers, Postgres,
+k6 against the whole cloud backend (the API, which also transcribes, Postgres,
 Storage, RabbitMQ, Redis), with every paid service swapped for a stand-in on
 this machine. A run costs nothing: no OpenRouter, Deepgram, Upstash, Supabase
 or WorkOS account is touched, and the API keys are fake, so a call that
@@ -38,8 +38,6 @@ Other knobs, as `-e NAME=value` after the script:
 To keep a run's numbers, add `--summary-export /results/<name>.json`; it lands
 in `results/` here (gitignored).
 
-More workers: `docker compose up -d --scale transcribe-worker=3`.
-
 The API is also on `localhost:3101` and the stand-ins on `localhost:4100`,
 off the dev ports, for poking at by hand.
 
@@ -58,7 +56,8 @@ the stack (`CHAT_TOKENS=300 docker compose up -d mocks`):
 
 `curl localhost:4100/loadtest/stats` shows how many calls each stand-in has
 answered. After a smoke run every service should have some, which is how you
-know nothing went elsewhere.
+know nothing went elsewhere. `transcriptions.peak` is the most transcriptions
+that ran at once, which the API caps at 40 to stay under Deepgram's 50.
 
 ### Rate limits
 
@@ -105,11 +104,9 @@ Besides k6's own metrics:
   everything the backend adds.
 - `transcription_time`: from confirming an upload to its transcript being
   stored, including queueing and the stand-in's `TRANSCRIBE_MS`.
-- One worker transcribes one file at a time, about 10 a minute at the
-  default `TRANSCRIBE_MS`. `load` sends more than that, so with a single
-  worker `transcription_time` climbs until k6 gives up at 2 minutes and
-  `transcript stored` fails. With `--scale transcribe-worker=4` it holds at
-  about 6 s.
+- The API transcribes up to 40 files at once, about 480 a minute at the
+  default `TRANSCRIBE_MS`. Past that, uploads wait in the queue and
+  `transcription_time` climbs.
 - `GET /events` requests always "fail": k6 can't read a stream, so each open
   tab's request waits out its timeout. Only the `users` scenario counts toward
   the failure threshold.

@@ -102,7 +102,7 @@ decides when the rate limits above have to move.
 connected to it (`socket.join(userId)` in
 `api/src/sockets/socketManager.ts`). Job updates arrive on RabbitMQ work
 queues (`api/index.ts:23-41`), and a work queue hands each message to one
-consumer. With two replicas, instance A can consume `transcribe_done` for a
+consumer. With two replicas, instance A can finish a transcription for a
 user whose socket is on instance B, and A's `io.to(userId).emit(...)`
 reaches nobody.
 
@@ -121,9 +121,8 @@ there, so use a fanout exchange:
   without that user's socket do nothing.
 - Work that must happen once stays on a work queue. `yt_fetch_failed` marks
   the job failed, so one instance still consumes it, does that, and then
-  publishes to the fanout. `transcribe_done` is only a notification (the
-  worker has already saved the transcript), so the worker can publish it to
-  the fanout directly.
+  publishes to the fanout. A transcription works the same way: the instance
+  that saved the transcript publishes the update to the fanout.
 
 The standard alternative is Socket.IO's Redis adapter, which makes
 `io.to(room).emit` reach every instance by itself. It needs a TCP Redis

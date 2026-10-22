@@ -24,7 +24,6 @@ const external = Object.keys(dependencies)
 
 const ENTRYPOINTS = {
   api: "api/index.ts",
-  "transcribe-worker": "transcribe-worker/index.ts",
   // Operational one-shots, bundled so they can be run from the same image
   // without drizzle-kit (a devDependency) being present at runtime.
   migrate: "scripts/migrate.ts",

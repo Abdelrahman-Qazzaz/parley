@@ -36,7 +36,6 @@ servers/cloud/backend/api/src/routes/*
 servers/cloud/backend/api/src/sockets/*
 servers/cloud/backend/api/src/utils/*
 servers/cloud/backend/api/src/*
-servers/cloud/backend/transcribe-worker/*
 servers/cloud/backend/scripts/*
 servers/cloud/backend/test/*
 servers/cloud/backend/*

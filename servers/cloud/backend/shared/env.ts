@@ -97,7 +97,7 @@ const baseEnvObject = z.object({
   DEEPGRAM_BASE_URL: z.string().url().optional(),
 });
 
-/** Shared by API, worker, and Drizzle. Exported for its own unit test. */
+/** What shared/ modules read. Exported for its own unit test. */
 export const baseEnvSchema = baseEnvObject.superRefine(
   rejectLoadtestOverridesInProduction,
 );

@@ -1,11 +1,8 @@
-`npm run dev` starts the API and transcribe worker together.
+`npm run dev` starts the API, which also runs transcription.
 
-- API only: `npm run dev:api`
-- Transcribe worker only: `npm run dev:transcribe-worker`
-
-Use Debugger: (API port: 9229, worker port: 9230) (debuggers attached to these ports in devcontainer)
+Use Debugger: (API port: 9229) (debugger attached to this port in devcontainer)
 
 1. Open chrome://inspect
-2. Configure → add 127.0.0.1:9229 and 127.0.0.1:9230
+2. Configure → add 127.0.0.1:9229
 3. Click "inspect" under Remote Target
 4. use keyword "debugger" instead of breakpoints

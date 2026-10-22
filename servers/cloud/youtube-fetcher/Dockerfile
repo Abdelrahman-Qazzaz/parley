@@ -2,7 +2,7 @@
 
 # yt-dlp declares no postprocessors in handlers.py, so it never shells out and
 # this image does not need ffmpeg — the audio is uploaded in whatever format
-# was downloaded and the transcribe worker reads the content type.
+# was downloaded and transcription reads the content type.
 
 FROM python:3.14-slim AS runtime
 ENV PYTHONUNBUFFERED=1 \

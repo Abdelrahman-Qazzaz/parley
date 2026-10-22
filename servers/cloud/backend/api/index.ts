@@ -5,7 +5,12 @@ import { events } from "./src/events";
 
 import { mq } from "../shared/message-queue/messageQueue";
 import { data } from "../shared/data";
+import { sweeper } from "../shared/sweeper";
 import { onShutdown } from "@parley/shared/shutdown";
+import {
+  getTranscriptionConcurrency,
+  handleTranscribeJob,
+} from "./src/transcribeJob";
 
 import { serve } from "@hono/node-server";
 import { createApp } from "./app";
@@ -31,13 +36,21 @@ const server = serve({
   serverOptions: { keepAliveTimeout: KEEP_ALIVE_TIMEOUT_MS },
 });
 
-await mq.consume(
-  mq.queues.TRANSCRIBE_DONE,
-  ({ audioUploadId, userId }) => {
-    events.send(userId, "jobUpdated", { audioUploadId });
-  },
-  { attempts: 1 },
-);
+/**
+ * Every attempt at an audio job can be a billed Deepgram call (which retries
+ * once on its own), so a failed job gets one more try, not several.
+ */
+const TRANSCRIBE_ATTEMPTS = 2;
+
+await mq.consume(mq.queues.TRANSCRIBE, handleTranscribeJob, {
+  attempts: TRANSCRIBE_ATTEMPTS,
+  prefetch: await getTranscriptionConcurrency(),
+});
+// Captions are stored as they arrive, with no Deepgram call, so one at a time
+// keeps up.
+await mq.consume(mq.queues.CAPTION_TRANSCRIPT, handleTranscribeJob, {
+  attempts: TRANSCRIBE_ATTEMPTS,
+});
 // youtube-fetcher couldn't download/upload the audio: mark the job failed and
 // notify the user. The row was created by POST /upload/youtube.
 await mq.consume(
@@ -52,8 +65,18 @@ await mq.consume(
   { attempts: 2 },
 );
 
+// Every instance schedules it; the sweep's own lock keeps them from
+// overlapping.
+const stopSweeper = sweeper.schedule();
+
 /**
  * Stop taking work, then let go of the connections.
+ *
+ * Transcriptions in progress get the grace period to finish rather than
+ * paying Deepgram twice for them. Abandoning one would still be correct: its
+ * delivery goes unacked and the next process reclaims the job under a new
+ * claim token, so a transcription that outlasts the grace is simply
+ * redelivered.
  *
  * A reply streaming when this fires is not lost: the model run is deliberately
  * decoupled from the response stream, so the turn still completes and is
@@ -61,10 +84,13 @@ await mq.consume(
  * covered by its lease, so even a hard kill frees the conversation rather than
  * locking it.
  */
-onShutdown(async () => {
-  await mq.stopConsuming();
-  // An open event stream would hold the server open until it ended.
-  await events.close();
-  await new Promise<void>((resolve) => server.close(() => resolve()));
-  await mq.close();
-});
+onShutdown(
+  async () => {
+    await Promise.all([mq.stopConsuming(), stopSweeper()]);
+    // An open event stream would hold the server open until it ended.
+    await events.close();
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+    await mq.close();
+  },
+  { graceMs: 30_000 },
+);

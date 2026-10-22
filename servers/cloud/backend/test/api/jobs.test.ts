@@ -54,7 +54,6 @@ vi.mock("../../shared/ai/ai_transcribe_client", () => ({
 vi.mock("../../shared/message-queue/messageQueue", () => {
   const queues = {
     TRANSCRIBE: "transcribe",
-    TRANSCRIBE_DONE: "transcribe_done",
     YT_FETCH: "yt_fetch",
     YT_FETCH_FAILED: "yt_fetch_failed",
   } as const;
