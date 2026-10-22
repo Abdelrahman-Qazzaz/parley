@@ -8,13 +8,11 @@ export const modelsRouter = new Hono<AuthEnv>();
 
 modelsRouter.use("*", requireAuth, modelRateLimiter);
 
-modelsRouter.use(
-  "*",
-  httpCache({
-    maxAgeSeconds: 300,
-    staleWhileRevalidateSeconds: 86_400,
-  }),
-);
+// Revalidated every time, never served stale: the client already keeps the
+// catalog for an hour, and a browser that answered from a stale copy would have
+// it keep that copy for the hour too, missing whatever a deploy added to it.
+// An unchanged catalog costs a 304 with no body.
+modelsRouter.use("*", httpCache({ revalidate: true }));
 modelsRouter.get("/chat", ...modelsController.handleGetModels);
 modelsRouter.get(
   "/transcription",

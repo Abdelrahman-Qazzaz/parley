@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
 import {
   describeModel,
+  describePricing,
   meetsRequirements,
+  priceTier,
   providerSlug,
   type ChatModel,
   type MessageRequirements,
+  type ModelPricing,
 } from "../../api/models";
 import { fuzzyScoreAny } from "../../lib/fuzzy";
 import { Icon } from "../ui/Icon";
@@ -33,6 +36,46 @@ function formatContext(tokens: number | null): string | null {
   if (!tokens) return null;
   if (tokens >= 1_000_000) return `${(tokens / 1_000_000).toFixed(1)}M`;
   return `${Math.round(tokens / 1000)}K`;
+}
+
+/**
+ * The model's price tier as dollar signs, the ones it doesn't reach dimmed,
+ * with the exact price on hover. Nothing for a model with no per-token price.
+ */
+function PriceTier({ pricing }: { pricing: ModelPricing | null }) {
+  const tier = priceTier(pricing);
+  if (!pricing || !tier) return null;
+  const exact = describePricing(pricing);
+
+  if (tier.kind === "free") {
+    return (
+      <span
+        title={exact}
+        className="shrink-0 font-mono text-[10px] text-signal"
+      >
+        free
+      </span>
+    );
+  }
+  return (
+    <span
+      title={exact}
+      aria-label={`Price: ${exact}`}
+      className="shrink-0 font-mono text-[11px] tracking-tight"
+    >
+      <span aria-hidden className="text-muted">
+        {"$".repeat(tier.dollars)}
+      </span>
+      <span aria-hidden className="text-faint opacity-50">
+        {"$".repeat(3 - tier.dollars)}
+      </span>
+      {tier.premium && (
+        <span aria-hidden className="text-muted">
+          +
+        </span>
+      )}
+    </span>
+  );
 }
 
 export function ModelPicker({
@@ -148,6 +191,7 @@ export function ModelPicker({
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-2">
             <span className="truncate text-sm text-ink">{entry.name}</span>
+            <PriceTier pricing={entry.model.pricing} />
           </span>
           <span className="mt-0.5 flex items-center gap-2 font-mono text-[10px] text-faint">
             <span className="truncate">{entry.id}</span>

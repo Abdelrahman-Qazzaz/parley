@@ -100,7 +100,9 @@ describe("GET /models/chat", () => {
     const tag = first.headers.get("ETag");
     expect(first.status).toBe(200);
     expect(tag).toBeTruthy();
-    expect(first.headers.get("Cache-Control")).toContain("max-age=300");
+    // Never served from a stale copy: a deploy's catalog reaches the client
+    // the next time it asks.
+    expect(first.headers.get("Cache-Control")).toBe("private, no-cache");
 
     const second = await app.request("http://localhost/models/chat", {
       headers: { Cookie: cookie, "If-None-Match": tag as string },
@@ -109,7 +111,7 @@ describe("GET /models/chat", () => {
     expect(second.status).toBe(304);
     expect(await second.text()).toBe("");
     // The header has to survive onto the 304, or the browser stops caching.
-    expect(second.headers.get("Cache-Control")).toContain("max-age=300");
+    expect(second.headers.get("Cache-Control")).toBe("private, no-cache");
   });
 
   it("returns RateLimit draft-6 headers on success", async () => {

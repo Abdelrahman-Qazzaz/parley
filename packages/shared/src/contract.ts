@@ -111,6 +111,17 @@ export type ChatModel = {
   contextTokens: number | null;
   /** Whether a turn may carry images. */
   acceptsImages: boolean;
+  /**
+   * What it charges, or null when that isn't a price per token: a router
+   * whose price depends on the model it picks, or a subscription.
+   */
+  pricing: ModelPricing | null;
+};
+
+/** A chat model's price, in US dollars per million tokens. */
+export type ModelPricing = {
+  inputPerMillionTokens: number;
+  outputPerMillionTokens: number;
 };
 
 /** A transcription model, whichever provider serves it. */

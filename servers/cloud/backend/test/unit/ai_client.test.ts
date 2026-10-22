@@ -32,6 +32,7 @@ const sampleModel = {
   name: "GPT-4o Mini",
   contextTokens: 128000,
   acceptsImages: true,
+  pricing: { inputPerMillionTokens: 0.15, outputPerMillionTokens: 0.6 },
 };
 
 const openRouterListModel = {
@@ -83,6 +84,13 @@ describe("listChatModels", () => {
               inputModalities: ["text"],
             },
           },
+          // A router: what it charges depends on the model it picks.
+          {
+            ...openRouterListModel,
+            id: "openrouter/auto",
+            name: "Auto Router",
+            pricing: { prompt: "-1", completion: "-1" },
+          },
         ],
       },
     });
@@ -94,6 +102,14 @@ describe("listChatModels", () => {
         name: "Text only",
         contextTokens: null,
         acceptsImages: false,
+        pricing: { inputPerMillionTokens: 0.15, outputPerMillionTokens: 0.6 },
+      },
+      {
+        id: "openrouter/auto",
+        name: "Auto Router",
+        contextTokens: 128000,
+        acceptsImages: true,
+        pricing: null,
       },
     ]);
     // Only text-output models are relevant here; transcription is Deepgram's.

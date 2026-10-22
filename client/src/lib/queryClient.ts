@@ -73,6 +73,6 @@ export const persistOptions = {
   }),
   maxAge: 24 * 60 * 60 * 1000,
   // Bump when a cached shape changes, to drop entries written by an older build.
-  buster: "v2",
+  buster: "v3",
   dehydrateOptions: { shouldDehydrateQuery: shouldPersist },
 };

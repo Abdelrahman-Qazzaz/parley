@@ -2,9 +2,13 @@ import { getBaseEnv } from "../env";
 import { OpenRouter } from "@openrouter/sdk";
 
 import { CACHE_KEYS, cache } from "../cache";
-import type { ChatContentItems, ChatRequest } from "@openrouter/sdk/models";
+import type {
+  ChatContentItems,
+  ChatRequest,
+  PublicPricing,
+} from "@openrouter/sdk/models";
 import { withTimeout } from "@parley/shared/withTimeout";
-import type { ChatModel } from "@parley/shared/contract";
+import type { ChatModel, ModelPricing } from "@parley/shared/contract";
 
 const client = new OpenRouter({
   apiKey: getBaseEnv().OPENROUTER_API_KEY,
@@ -154,6 +158,26 @@ async function complete(
   );
 }
 
+/**
+ * OpenRouter's per-token USD price as dollars per million tokens, rounded to
+ * a millionth of a dollar to drop the float noise of scaling up. Null for a
+ * price that isn't one: its routers list -1, since what they charge depends
+ * on the model they pick.
+ */
+function perMillionTokens(perToken: string): number | null {
+  const price = Number(perToken);
+  if (!Number.isFinite(price) || price < 0) return null;
+  return Math.round(price * 1e12) / 1e6;
+}
+
+function toPricing(pricing: PublicPricing): ModelPricing | null {
+  const inputPerMillionTokens = perMillionTokens(pricing.prompt);
+  const outputPerMillionTokens = perMillionTokens(pricing.completion);
+  if (inputPerMillionTokens === null || outputPerMillionTokens === null)
+    return null;
+  return { inputPerMillionTokens, outputPerMillionTokens };
+}
+
 async function fetchChatModels(): Promise<ChatModel[]> {
   // Only models that answer in text: every one listed is a chat model.
   // Transcription is served by Deepgram.
@@ -165,6 +189,7 @@ async function fetchChatModels(): Promise<ChatModel[]> {
     name: model.name,
     contextTokens: model.contextLength,
     acceptsImages: model.architecture.inputModalities.includes("image"),
+    pricing: toPricing(model.pricing),
   }));
 }
 
