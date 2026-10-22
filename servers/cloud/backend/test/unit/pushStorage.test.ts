@@ -3,7 +3,7 @@ import {
   AUDIO_BUCKET,
   BUCKET_SETTINGS,
   IMAGE_BUCKET,
-} from "../../shared/storage/schema";
+} from "../../src/storage/schema";
 
 const AUDIO_SETTINGS = BUCKET_SETTINGS[AUDIO_BUCKET];
 const IMAGE_SETTINGS = BUCKET_SETTINGS[IMAGE_BUCKET];
@@ -14,7 +14,7 @@ const bucket = vi.hoisted(() => ({
   updateSettings: vi.fn(),
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({ bucket }));
+vi.mock("../../src/storage/bucket", () => ({ bucket }));
 
 /** The script does its work when imported, like scripts/migrate.ts. */
 async function runScript() {

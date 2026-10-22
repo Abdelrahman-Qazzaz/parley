@@ -12,6 +12,7 @@ EnvKey = Literal[
     "API_BASE_URL",
 ]
 
+
 class _Env:
     REQUIRED_VARS: tuple[EnvKey, ...] = (
         "MQ_URL",
@@ -49,15 +50,10 @@ class _Env:
         )
 
     def verify(self):
-        missing = [
-            var for var in self.REQUIRED_VARS
-            if getattr(self, var) is None
-        ]
+        missing = [var for var in self.REQUIRED_VARS if getattr(self, var) is None]
 
         if missing:
-            raise RuntimeError(
-                f"Missing environment variables: {', '.join(missing)}"
-            )
+            raise RuntimeError(f"Missing environment variables: {', '.join(missing)}")
 
     def get(self, key: EnvKey) -> str:
         return getattr(self, key)

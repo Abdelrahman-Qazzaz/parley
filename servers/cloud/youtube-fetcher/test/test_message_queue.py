@@ -2,9 +2,10 @@ import json
 from concurrent.futures import TimeoutError
 from unittest.mock import MagicMock
 
-import message_queue
 import pika
 import pytest
+
+import message_queue
 from message_queue import MQ
 
 

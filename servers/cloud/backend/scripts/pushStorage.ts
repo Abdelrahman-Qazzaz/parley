@@ -1,14 +1,10 @@
 /**
- * Makes the storage buckets match BUCKET_SETTINGS in shared/storage/schema.ts:
+ * Makes the storage buckets match BUCKET_SETTINGS in src/storage/schema.ts:
  * creates each one that's missing, and updates any other to its declared
  * settings. The storage counterpart of `npm run db`, which does the same for
  * the tables.
  */
-import {
-  BUCKET_SETTINGS,
-  bucket,
-  matchesBucketSettings,
-} from "../shared/storage";
+import { BUCKET_SETTINGS, bucket, matchesBucketSettings } from "../src/storage";
 
 for (const [name, declared] of Object.entries(BUCKET_SETTINGS)) {
   const live = await bucket.readSettings(name);

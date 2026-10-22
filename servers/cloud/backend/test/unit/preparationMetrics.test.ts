@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   measurePreparation,
   withPreparationMetrics,
-} from "../../shared/preparationMetrics";
+} from "../../src/preparationMetrics";
 
 describe("preparation metrics", () => {
   it("keeps nested operations scoped to their request while requests overlap", async () => {

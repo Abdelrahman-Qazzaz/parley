@@ -25,18 +25,18 @@ const {
   };
 });
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { transaction: mockTransaction, select: mockSelect },
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-vi.mock("../../shared/data/jobs.data", () => ({
+vi.mock("../../src/data/jobs.data", () => ({
   jobs: {
     completeAudioJob: mockCompleteAudioJob,
   },
 }));
 
-import { transcripts } from "../../shared/data/transcripts.data";
+import { transcripts } from "../../src/data/transcripts.data";
 
 describe("findTranscripts", () => {
   it("returns without querying when no uploads were requested", async () => {

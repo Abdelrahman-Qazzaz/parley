@@ -324,7 +324,8 @@ export async function chatAI(
 /**
  * The models Claude Code runs, by the aliases it resolves to the newest of
  * each family, so the list doesn't go stale as models are released. Whether
- * the user's plan includes one only shows when it's used.
+ * the user's plan includes one only shows when it's used. None has a price:
+ * the user's Claude subscription covers them.
  */
 const CHAT_MODELS: readonly ChatModel[] = [
   {
@@ -332,18 +333,21 @@ const CHAT_MODELS: readonly ChatModel[] = [
     name: "Claude Opus",
     contextTokens: 200_000,
     acceptsImages: true,
+    pricing: null,
   },
   {
     id: "sonnet",
     name: "Claude Sonnet",
     contextTokens: 200_000,
     acceptsImages: true,
+    pricing: null,
   },
   {
     id: "haiku",
     name: "Claude Haiku",
     contextTokens: 200_000,
     acceptsImages: true,
+    pricing: null,
   },
 ];
 

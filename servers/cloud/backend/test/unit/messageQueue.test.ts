@@ -74,8 +74,8 @@ vi.mock("amqplib", async () => {
   };
 });
 
-import { DeadLetterError, mq } from "../../shared/message-queue/messageQueue";
-import { QUEUES } from "../../shared/message-queue/queues";
+import { DeadLetterError, mq } from "../../src/message-queue/messageQueue";
+import { QUEUES } from "../../src/message-queue/queues";
 
 const payload = {
   audioUploadId: "550e8400-e29b-41d4-a716-446655440000",
@@ -269,6 +269,23 @@ describe("consuming", () => {
     const deliver = await consumeWith(handler);
 
     const message = deliveryOf("{not json");
+    await deliver(message);
+
+    expect(handler).not.toHaveBeenCalled();
+    expect(failureReasons()).toEqual([
+      expect.stringMatching(/^Malformed payload: /),
+    ]);
+    expect(broker.consumer!.ack).toHaveBeenCalledWith(message);
+  });
+
+  it("dead-letters a payload that isn't its queue's shape without running the handler", async () => {
+    const handler = vi.fn();
+    const deliver = await consumeWith(handler);
+
+    // A field renamed on the publishing side.
+    const message = deliveryOf(
+      JSON.stringify({ uploadId: payload.audioUploadId }),
+    );
     await deliver(message);
 
     expect(handler).not.toHaveBeenCalled();

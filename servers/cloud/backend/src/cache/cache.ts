@@ -1,0 +1,147 @@
+import { getRedisClient, pingRedis } from "./redis";
+import { logger } from "@parley/shared/logger";
+import { tryCatch } from "@parley/shared/try-catch";
+import { CACHE_KEYS, type CacheKey } from "./cacheKeys";
+
+/**
+ * The fixed set of cache entries. Each carries its Redis key and the two TTLs
+ * that govern it: how long Redis holds the value, and how long a process serves
+ * it from memory before consulting Redis again. The memo TTL stays far under the
+ * Redis TTL, so the in-process copy is never the staler of the two; each process
+ * holds its own. A day-long Redis entry keeps a newly listed model from waiting
+ * on a hand-bumped key version.
+ */
+const CACHE_ENTRIES = {
+  [CACHE_KEYS.openRouterModels]: {
+    redisKey: "models:v11",
+    redisTtlSeconds: 24 * 60 * 60,
+    memoTtlMs: 5 * 60 * 1000,
+  },
+  [CACHE_KEYS.deepgramTranscribeModels]: {
+    redisKey: "transcribe-models:v1",
+    redisTtlSeconds: 24 * 60 * 60,
+    memoTtlMs: 5 * 60 * 1000,
+  },
+} as const satisfies Record<
+  CacheKey,
+  {
+    redisKey: string;
+    redisTtlSeconds: number;
+    memoTtlMs: number;
+  }
+>;
+
+const memo = new Map<CacheKey, { data: unknown; expiresAt: number }>();
+const inFlight = new Map<CacheKey, Promise<unknown>>();
+
+/**
+ * Serves the in-process memo until it expires, otherwise reads Redis (whose hit
+ * repopulates the memo). Returns null on a miss or a Redis read failure — the
+ * miss every caller expects.
+ */
+export async function getCache<T>(name: CacheKey): Promise<T | null> {
+  const entry = CACHE_ENTRIES[name];
+
+  const memoized = memo.get(name);
+  if (memoized && memoized.expiresAt > Date.now()) return memoized.data as T;
+
+  const { data, error } = await tryCatch(
+    getRedisClient().get<T>(entry.redisKey),
+  );
+  if (error) {
+    logger.error("Cache read failed", error, { cacheKey: entry.redisKey });
+    return null;
+  }
+  if (data != null) {
+    memo.set(name, { data, expiresAt: Date.now() + entry.memoTtlMs });
+    return data;
+  }
+  return null;
+}
+
+/**
+ * Writes both tiers under the entry's fixed TTLs. A Redis failure is logged, not
+ * thrown: the memo still holds the fresh value for this process.
+ *
+ * Exported for the cache's own tests; callers go through cache.getOrSet.
+ */
+export async function setCache<T>(name: CacheKey, data: T): Promise<void> {
+  const entry = CACHE_ENTRIES[name];
+  memo.set(name, { data, expiresAt: Date.now() + entry.memoTtlMs });
+
+  const { error } = await tryCatch(
+    getRedisClient().set(entry.redisKey, data, { ex: entry.redisTtlSeconds }),
+  );
+  if (error)
+    logger.error("Cache write failed", error, { cacheKey: entry.redisKey });
+}
+
+/**
+ * The read-through path: the in-process memo, then Redis, then `fetch`.
+ *
+ * With `serveStale`, only a process's first read waits on those. Once the
+ * memo holds a value it is returned at once: when it has expired, it is
+ * served as it is while a refresh runs in the background, so the request that
+ * finds it expired doesn't pay for the refresh. A refresh that fails leaves
+ * the old value in place, and the next read starts another. Without it, a
+ * read that finds the memo expired waits for the refresh.
+ */
+export async function getOrSetCache<T>(
+  name: CacheKey,
+  fetch: () => Promise<T>,
+  { serveStale = false }: { serveStale?: boolean } = {},
+): Promise<T> {
+  const memoized = memo.get(name);
+  if (memoized && memoized.expiresAt > Date.now()) return memoized.data as T;
+  if (!memoized || !serveStale) return refresh(name, fetch);
+
+  // if accepts stale, run the refresh in background while immediately returning stale memozied.
+  refresh(name, fetch).catch((error: unknown) =>
+    logger.error("Cache refresh failed", error, {
+      cacheKey: CACHE_ENTRIES[name].redisKey,
+    }),
+  );
+  return memoized.data as T;
+}
+
+/**
+ * Reads Redis, then `fetch` on a miss, writing both tiers. Callers that
+ * refresh together share one run per process instead of each starting their
+ * own — the difference between one catalog fetch and one per request whenever
+ * Redis is unreachable and every read reports a miss. The shared run is
+ * dropped once it settles, so a failed fetch is retried rather than handed to
+ * every later caller.
+ */
+function refresh<T>(name: CacheKey, fetch: () => Promise<T>): Promise<T> {
+  const pending = inFlight.get(name);
+  if (pending) return pending as Promise<T>;
+
+  // Nothing is awaited between reading and writing inFlight, so no two
+  // callers can both find it empty.
+  const refreshed = (async () => {
+    const hit = await getCache<T>(name);
+    if (hit != null) return hit;
+
+    const data = await fetch();
+    void setCache(name, data);
+    return data;
+  })().finally(() => inFlight.delete(name));
+
+  inFlight.set(name, refreshed);
+  return refreshed;
+}
+
+/** Test-only: drops the in-process state so cases don't leak entries into each other. */
+export function resetCacheMemo() {
+  memo.clear();
+  inFlight.clear();
+}
+
+/**
+ * Two tiers: an in-process memo in front of Redis. getCache, setCache and
+ * resetCacheMemo stay out of it: they're for the cache's own tests.
+ */
+export const cache = {
+  getOrSet: getOrSetCache,
+  ping: pingRedis,
+};

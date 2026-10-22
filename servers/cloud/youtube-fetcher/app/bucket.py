@@ -1,8 +1,9 @@
 import logging
 
+from supabase import Client, create_client
+
 from contract import contract
 from env import env
-from supabase import Client, create_client
 
 log = logging.getLogger(__name__)
 
@@ -22,7 +23,7 @@ def ping_bucket() -> None:
 
 def _object_path(user_id: str, kind: str, storage_object_id: str) -> str:
     """Storage key "<userId>/<kind>/<storageObjectId>". Mirrors objectPath in
-    backend/shared/storage/bucket.ts so both services agree on the layout, and owner
+    backend/src/storage/bucket.ts so both services agree on the layout, and owner
     and kind both stay structural. Keep them in sync."""
     return f"{user_id}/{kind}/{storage_object_id}"
 

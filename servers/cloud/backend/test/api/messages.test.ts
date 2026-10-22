@@ -40,9 +40,9 @@ const {
   mockUnclaimAttachments: vi.fn(),
 }));
 
-vi.mock("../../shared/data/attachments.data", async (importActual) => {
+vi.mock("../../src/data/attachments.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/attachments.data")>();
+    await importActual<typeof import("../../src/data/attachments.data")>();
   return {
     ...actual,
     attachments: {
@@ -58,14 +58,14 @@ vi.mock("../../shared/data/attachments.data", async (importActual) => {
 // join queries behind the history loaders are a data-layer concern. The
 // table stubs stand in for the columns other controllers read at module scope
 // when createApp wires the whole app.
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: {},
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-vi.mock("../../shared/data/conversations.data", async (importActual) => {
+vi.mock("../../src/data/conversations.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/conversations.data")>();
+    await importActual<typeof import("../../src/data/conversations.data")>();
   return {
     ...actual,
     conversations: {
@@ -77,9 +77,9 @@ vi.mock("../../shared/data/conversations.data", async (importActual) => {
   };
 });
 
-vi.mock("../../shared/data/messages.data", async (importActual) => {
+vi.mock("../../src/data/messages.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/messages.data")>();
+    await importActual<typeof import("../../src/data/messages.data")>();
   return {
     ...actual,
     messages: {
@@ -92,9 +92,9 @@ vi.mock("../../shared/data/messages.data", async (importActual) => {
   };
 });
 
-vi.mock("../../shared/data/images.data", async (importActual) => {
+vi.mock("../../src/data/images.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/images.data")>();
+    await importActual<typeof import("../../src/data/images.data")>();
   return {
     ...actual,
     images: {
@@ -106,9 +106,9 @@ vi.mock("../../shared/data/images.data", async (importActual) => {
   };
 });
 
-vi.mock("../../shared/data/transcripts.data", async (importActual) => {
+vi.mock("../../src/data/transcripts.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/transcripts.data")>();
+    await importActual<typeof import("../../src/data/transcripts.data")>();
   return {
     ...actual,
     transcripts: {
@@ -121,17 +121,17 @@ vi.mock("../../shared/data/transcripts.data", async (importActual) => {
 });
 
 // Controllers release deleted objects through the upload module.
-vi.mock("../../shared/uploads", () => ({
+vi.mock("../../src/uploads", () => ({
   uploads: { deleteObjects: mockDeleteObjects },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   bucket: {
     delete: vi.fn(),
   },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 7 * 24 * 60 * 60,
   sign: {
     urls: vi.fn(),
@@ -140,9 +140,9 @@ vi.mock("../../shared/storage/sign", () => ({
 
 // buildUserTurn is the real one: what the model is handed for an image turn is
 // exactly what these tests are checking.
-vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
+vi.mock("../../src/ai/ai_chat_client", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_chat_client")>();
+    await importActual<typeof import("../../src/ai/ai_chat_client")>();
   return {
     ...actual,
     chat: {
@@ -154,14 +154,15 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
   };
 });
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
+import { resetRateLimits } from "../../src/middleware/rateLimit.middleware";
 import {
   MAX_CONTEXT_CHARS,
   MAX_RESPONSE_TOKENS,
-} from "../../api/src/chat/contextWindow";
-import { MAX_TRANSCRIPTS } from "../../api/src/schema/messages.schema";
+} from "../../src/chat/contextWindow";
+import { MAX_TRANSCRIPTS } from "../../src/schema/messages.schema";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
-import { type HistoryCandidate } from "../../shared/data/messages.data";
+import { type HistoryCandidate } from "../../src/data/messages.data";
 
 const conversationId = "550e8400-e29b-41d4-a716-446655440000";
 const messageId = "650e8400-e29b-41d4-a716-446655440111";
@@ -210,7 +211,6 @@ const resolvedImage = {
   url: "https://bucket.test/diagram.png",
 };
 
-/** A history turn as findRecentMessagesWithContext hands it back, newest first. */
 /**
  * A past turn as the history query returns it. `imageUrls` stands in for its
  * images: each is stored already signed, under its own URL as its id, and the
@@ -265,6 +265,8 @@ function messageRequestBody(body: unknown) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  // Every case sends turns; none should spend another's chat-turn budget.
+  resetRateLimits();
   mockFindOwnedConversation.mockResolvedValue(ownedConversation);
   mockClaimConversationTurn.mockImplementation(
     (_userId, _conversationId, _lastMessageId, claimToken = "claim-token") =>

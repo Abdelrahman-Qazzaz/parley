@@ -6,7 +6,7 @@ Scope: `backend/` on `main`. Written at 029e2de and rechecked at e8040ee, which 
 
 ### 1. Unconfirmed uploads can hold storage for hours
 
-`backend/shared/uploads.ts:20`, `backend/shared/sweeper.ts:12`, `backend/api/src/middleware/rateLimit.middleware.ts:125`
+`backend/src/uploads.ts:20`, `backend/src/sweeper.ts:12`, `backend/src/middleware/rateLimit.middleware.ts:125`
 
 Each upload URL records a pending object, and storage accepts one file on it: up to 50 MB of audio or 10 MB of image. An upload that is never confirmed stays until the sweep, which runs hourly and removes pending objects older than 3 hours, so each one lives 3 to 4 hours. Minting is limited to 30 URLs per user per 15 minutes, so in the 3 hours before its first uploads are swept one account can mint 360 URLs and park up to 18 GB of audio. The per-kind buckets cap how large each file can be, not how many are left unconfirmed, and nothing caps a user's pending uploads.
 
@@ -14,6 +14,6 @@ Each upload URL records a pending object, and storage accepts one file on it: up
 
 ### 2. A job whose process dies before publishing stays queued
 
-`backend/shared/audioTranscription.ts:32`, `backend/api/src/controllers/upload.controller.ts:114`
+`backend/src/audioTranscription.ts:32`, `backend/src/controllers/upload.controller.ts:114`
 
 A job's row is committed before its work is published to the queue. `publishOrFail` fails the job when the broker refuses the publish, but a process that dies between the commit and the publish leaves the job `queued` with no worker or fetcher coming for it, and nothing notices. A pass that republishes jobs left `queued` too long would recover them; it needs a threshold per source, since a YouTube job is legitimately `queued` for the whole download.

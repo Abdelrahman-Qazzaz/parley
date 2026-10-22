@@ -13,6 +13,9 @@ A monolith. Everything under `backend/` is a single npm package
 The Python YouTube fetcher (`servers/cloud/youtube-fetcher`) is the other
 process; the two talk only through RabbitMQ.
 
+The source is all in `src/`, entry point `src/index.ts`. `scripts/` holds the
+one-shots (migrate, baseline, push-storage) and `test/` the tests.
+
 ## Attachment vocabulary
 
 - **Attachment** is the stored database object. Use **upload** for uploading operations.
@@ -31,7 +34,7 @@ starting half-alive.
 
 ## Message queues
 
-Defined in `shared/message-queue/queues.ts`:
+Defined in `src/message-queue/queues.ts`:
 
 | Queue                | Producer → Consumer   | Payload                                                  |
 | -------------------- | --------------------- | -------------------------------------------------------- |
@@ -47,14 +50,14 @@ ones over the concurrency limit until there's room.
 Each consumer sets how many messages it works on at once,
 `mq.consume(queue, handler, { attempts, prefetch })`, 1 unless it says
 otherwise. `transcribe` takes `getTranscriptionConcurrency()`
-(`api/src/transcribeJob.ts`): 40, under the 50 transcriptions Deepgram runs at
+(`src/transcribeJob.ts`): 40, under the 50 transcriptions Deepgram runs at
 once for a project. Every API instance together has to stay under that, so
 once there are several, each one's share comes from the load balancer.
 
 Each consumer also sets how many attempts a message gets. A handler fails an attempt by
 throwing, and the next attempt runs 2 seconds later in the same process.
 A message that fails its last attempt, throws a `DeadLetterError`, or isn't
-valid JSON is published to the `dead_letter` queue under its original queue's
+valid JSON of its queue's shape (the schemas in `queues.ts`) is published to the `dead_letter` queue under its original queue's
 name, with the reason in an `x-failure-reason` header, and then acked.
 Nothing is requeued, and nothing consumes `dead_letter`: replay by hand once
 the cause is fixed.
@@ -128,7 +131,7 @@ Deploys build the database from the migrations in `drizzle/`, through the
 `migrate` one-shot (`dist/migrate.js`), never from `schema.ts` directly. So
 a change to `schema.ts` comes with its migration:
 
-1. Edit `shared/db/schema.ts`. `npm run db` (push) is fine for trying it on
+1. Edit `src/db/schema.ts`. `npm run db` (push) is fine for trying it on
    your own database.
 2. `npm run db:generate`, and commit the new file in `drizzle/` with the
    change. `test/unit/migrations.test.ts` fails until you do.

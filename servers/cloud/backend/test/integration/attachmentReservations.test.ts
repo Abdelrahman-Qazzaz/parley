@@ -18,10 +18,10 @@ const testState = vi.hoisted(() => ({
   client: null as Sql | null,
 }));
 
-vi.mock("../../shared/db", async () => {
+vi.mock("../../src/db", async () => {
   const postgres = (await import("postgres")).default;
   const { drizzle } = await import("drizzle-orm/postgres-js");
-  const schema = await import("../../shared/db/schema");
+  const schema = await import("../../src/db/schema");
   const client = postgres(
     testState.databaseUrl ?? "postgres://localhost/unused",
     {
@@ -37,11 +37,11 @@ vi.mock("../../shared/db", async () => {
   return { ...schema, db: drizzle(client, { schema }) };
 });
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   bucket: {},
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 604800,
   sign: {
     urls: vi.fn(),
@@ -55,10 +55,10 @@ import {
   Conversations,
   db,
   users,
-} from "../../shared/db";
-import { attachments } from "../../shared/data/attachments.data";
-import { images } from "../../shared/data/images.data";
-import { messages } from "../../shared/data/messages.data";
+} from "../../src/db";
+import { attachments } from "../../src/data/attachments.data";
+import { images } from "../../src/data/images.data";
+import { messages } from "../../src/data/messages.data";
 
 const userId = "reservation-owner";
 const imageUploadId = randomUUID();

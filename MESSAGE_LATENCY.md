@@ -30,7 +30,7 @@ and the chat UI treats the turn as finished at that point.
 ## Measure first
 
 `measurePreparation` already times each step of preparing a turn, but it
-only logs inside `withPreparationMetrics` (`shared/preparationMetrics.ts:22`),
+only logs inside `withPreparationMetrics` (`src/preparationMetrics.ts:22`),
 and nothing calls that since `d70ee27` merged the create and patch
 handlers. Wrapping `prepareTurn` in it again gives production numbers. The
 most useful one is a single server → Supabase database round trip, since
@@ -45,11 +45,11 @@ instance, so the counts are exact, and requests no longer wait on Upstash
 **Plan:** when the API scales out, move rate limiting into a load balancer.
 While there is one load balancer, it can count in memory too.
 
-**Built to move:** the limits live in `api/src/rateLimit/policies.ts` as
+**Built to move:** the limits live in `src/rateLimit/policies.ts` as
 plain data (a limit, a window, and whether the budget is per client IP or
 per user) with no Hono or storage code. Moving them means writing that table
 as the load balancer's config, then deleting
-`api/src/middleware/rateLimit.middleware.ts` and its uses in the routers.
+`src/middleware/rateLimit.middleware.ts` and its uses in the routers.
 The load balancer also needs to know which paths each limit covers:
 
 | Policy          | Paths                                                              |
@@ -66,7 +66,7 @@ The load balancer also needs to know which paths each limit covers:
 | `uploadConfirm` | `POST /upload/audio/confirm`, `POST /upload/image/confirm`         |
 | `imageRead`     | `GET /upload/image/:id`, `DELETE /upload/image/:id`                |
 
-The mounts live in `api/src/routes/*.router.ts`; recheck this table against
+The mounts live in `src/routes/*.router.ts`; recheck this table against
 them when the move happens.
 
 Things to settle before moving:
@@ -75,7 +75,7 @@ Things to settle before moving:
   ones counts per user, found from the session cookie. A load balancer can
   only do the same if it verifies the cookie's WorkOS access token itself.
   That needs no secret: it's standard JWT validation against WorkOS's
-  published keys, the same check `api/src/auth/accessToken.ts` makes.
+  published keys, the same check `src/auth/accessToken.ts` makes.
   Keyed on IP alone, users behind one address (an office, carrier NAT)
   share a budget, the problem the auth limits just got fixed for.
 - **The server's Caddy can be the load balancer.** It already sits in front
@@ -100,8 +100,8 @@ decides when the rate limits above have to move.
 
 **The problem** (PROBLEMS.md #6): each API instance only knows the sockets
 connected to it (`socket.join(userId)` in
-`api/src/sockets/socketManager.ts`). Job updates arrive on RabbitMQ work
-queues (`api/index.ts:23-41`), and a work queue hands each message to one
+`src/sockets/socketManager.ts`). Job updates arrive on RabbitMQ work
+queues (`src/index.ts:23-41`), and a work queue hands each message to one
 consumer. With two replicas, instance A can finish a transcription for a
 user whose socket is on instance B, and A's `io.to(userId).emit(...)`
 reaches nobody.
@@ -135,12 +135,12 @@ event type, the fanout is less to run.
 confirmed and saved on the attachment row, valid for 7 days
 (`IMAGE_URL_TTL_SECONDS`). Sending a message puts up to 8 recent images from
 history into the model's context, and a URL with less than an hour left
-(`SIGNED_URL_REFRESH_MARGIN_MS`, `shared/data/images.data.ts:48`) is signed
+(`SIGNED_URL_REFRESH_MARGIN_MS`, `src/data/images.data.ts:48`) is signed
 again before it's sent.
 
 **Why it's slow:** when that happens, these run one after another before
 the model call can start (`resolveImageAttachmentUrls`,
-`shared/data/images.data.ts:130`, called from `messages.data.ts:320`):
+`src/data/images.data.ts:130`, called from `messages.data.ts:320`):
 
 1. the history query,
 2. an HTTP request to Supabase Storage to sign the stale URLs,
@@ -158,7 +158,7 @@ round trip off; the signing call has to stay.
 ## 4. Storage delete before an edit streams
 
 On PATCH, `deleteMessageTail` runs after preparation and before the stream
-starts (`api/src/controllers/messages.controller.ts:561`). It ends with
+starts (`src/controllers/messages.controller.ts:561`). It ends with
 `deleteObjects` (`:404`), an HTTP request to Supabase Storage for the images
 that lost their last message.
 
@@ -177,7 +177,7 @@ that wasn't saved (`4334ef8`).
 
 ## 6. `persistAndUnclaimChatTurn` round trips
 
-`persistAndUnclaimChatTurn` (`shared/data/messages.data.ts:578`) takes about six round
+`persistAndUnclaimChatTurn` (`src/data/messages.data.ts:578`) takes about six round
 trips before `done`: begin, insert the user message, insert the assistant
 message and link the attachments, complete the turn on the conversation,
 delete the reservations, commit.

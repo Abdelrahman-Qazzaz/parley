@@ -5,12 +5,13 @@ import tempfile
 import time
 from pathlib import Path
 
-import bucket
 import yt_dlp
-from contract import contract
-from message_queue import mq
 from youtube_transcript_api import CouldNotRetrieveTranscript, YouTubeTranscriptApi
 from yt_dlp.extractor.youtube import YoutubeIE
+
+import bucket
+from contract import contract
+from message_queue import mq
 
 log = logging.getLogger(__name__)
 
@@ -37,7 +38,7 @@ PERMANENT_FAILURES = (
 )
 
 # Transcription derives the audio format from the stored content type
-# (backend/shared/ai/transcribe.ts) — it must be accurate, not just plausible.
+# (backend/src/ai/transcribe.ts) — it must be accurate, not just plausible.
 EXT_CONTENT_TYPES = {
     "webm": "audio/webm",
     "m4a": "audio/mp4",
@@ -231,6 +232,6 @@ def _fetch_and_upload(audio_upload_id: str, url: str, user_id: str) -> None:
         )
         log.info("Downloaded %s: %d bytes, %s", audio_upload_id, size, content_type)
         # upload_audio builds the "<userId>/audios/<storageObjectId>" key (same
-        # convention as direct uploads, backend/shared/storage/bucket.ts objectPath),
+        # convention as direct uploads, backend/src/storage/bucket.ts objectPath),
         # so transcription finds it and ownership stays structural.
         bucket.upload_audio(user_id, audio_upload_id, str(audio), content_type)

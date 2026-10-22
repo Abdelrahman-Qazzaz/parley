@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { CACHE_KEYS } from "../../shared/cache/cacheKeys";
-import { CLAIM_LEASE_MS } from "../../shared/data/conversations.data";
+import { CACHE_KEYS } from "../../src/cache/cacheKeys";
+import { CLAIM_LEASE_MS } from "../../src/data/conversations.data";
 
 const { mockGetOrSetCache, mockModelsList, mockChatSend } = vi.hoisted(() => ({
   mockGetOrSetCache: vi.fn(),
@@ -8,7 +8,7 @@ const { mockGetOrSetCache, mockModelsList, mockChatSend } = vi.hoisted(() => ({
   mockChatSend: vi.fn(),
 }));
 
-vi.mock("../../shared/cache/cache", () => ({
+vi.mock("../../src/cache/cache", () => ({
   cache: { getOrSet: mockGetOrSetCache },
 }));
 
@@ -22,7 +22,7 @@ vi.mock("@openrouter/sdk", () => ({
   },
 }));
 
-import { buildUserTurn, chat } from "../../shared/ai/ai_chat_client";
+import { buildUserTurn, chat } from "../../src/ai/ai_chat_client";
 
 const MODEL_ID = "openai/gpt-4o-mini";
 
@@ -32,6 +32,7 @@ const sampleModel = {
   name: "GPT-4o Mini",
   contextTokens: 128000,
   acceptsImages: true,
+  pricing: { inputPerMillionTokens: 0.15, outputPerMillionTokens: 0.6 },
 };
 
 const openRouterListModel = {
@@ -83,6 +84,13 @@ describe("listChatModels", () => {
               inputModalities: ["text"],
             },
           },
+          // A router: what it charges depends on the model it picks.
+          {
+            ...openRouterListModel,
+            id: "openrouter/auto",
+            name: "Auto Router",
+            pricing: { prompt: "-1", completion: "-1" },
+          },
         ],
       },
     });
@@ -94,6 +102,14 @@ describe("listChatModels", () => {
         name: "Text only",
         contextTokens: null,
         acceptsImages: false,
+        pricing: { inputPerMillionTokens: 0.15, outputPerMillionTokens: 0.6 },
+      },
+      {
+        id: "openrouter/auto",
+        name: "Auto Router",
+        contextTokens: 128000,
+        acceptsImages: true,
+        pricing: null,
       },
     ]);
     // Only text-output models are relevant here; transcription is Deepgram's.

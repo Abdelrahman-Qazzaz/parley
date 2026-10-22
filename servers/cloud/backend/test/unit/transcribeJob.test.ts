@@ -13,7 +13,7 @@ const mocks = vi.hoisted(() => ({
   sendEvent: vi.fn(),
 }));
 
-vi.mock("../../shared/data", () => ({
+vi.mock("../../src/data", () => ({
   data: {
     jobs: {
       claimAudioJob: mocks.claimAudioJob,
@@ -24,19 +24,19 @@ vi.mock("../../shared/data", () => ({
   },
 }));
 
-vi.mock("../../shared/ai/ai_transcribe_client", () => ({
+vi.mock("../../src/ai/ai_transcribe_client", () => ({
   DEFAULT_TRANSCRIBE_MODEL: "nova-3-general",
   transcription: { transcribe: mocks.transcribeAI },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({ sign: { url: mocks.signUrl } }));
+vi.mock("../../src/storage/sign", () => ({ sign: { url: mocks.signUrl } }));
 
-vi.mock("../../api/src/events", () => ({
+vi.mock("../../src/events", () => ({
   events: { send: mocks.sendEvent },
 }));
 
-import { handleTranscribeJob } from "../../api/src/transcribeJob";
-import { DeadLetterError } from "../../shared/message-queue/messageQueue";
+import { handleTranscribeJob } from "../../src/transcribeJob";
+import { DeadLetterError } from "../../src/message-queue/messageQueue";
 
 const audioInput = { audioUploadId } as const;
 const firstAttempt = { attempt: 1, lastAttempt: false, redelivered: false };

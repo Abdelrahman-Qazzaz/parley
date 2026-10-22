@@ -5,12 +5,12 @@ const { mockExecute } = vi.hoisted(() => ({
   mockExecute: vi.fn(),
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { execute: mockExecute },
-  ...(await import("../../shared/db/schema")),
+  ...(await import("../../src/db/schema")),
 }));
 
-import { messages } from "../../shared/data/messages.data";
+import { messages } from "../../src/data/messages.data";
 
 const createdAt = new Date("2026-08-31T00:00:00.000Z");
 

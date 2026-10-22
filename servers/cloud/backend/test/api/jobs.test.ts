@@ -14,14 +14,14 @@ const {
   mockDeleteObjects: vi.fn(),
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: {},
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-vi.mock("../../shared/data/jobs.data", async (importActual) => {
+vi.mock("../../src/data/jobs.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/jobs.data")>();
+    await importActual<typeof import("../../src/data/jobs.data")>();
   return {
     ...actual,
     jobs: {
@@ -33,9 +33,9 @@ vi.mock("../../shared/data/jobs.data", async (importActual) => {
   };
 });
 
-vi.mock("../../shared/data/transcripts.data", async (importActual) => {
+vi.mock("../../src/data/transcripts.data", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/data/transcripts.data")>();
+    await importActual<typeof import("../../src/data/transcripts.data")>();
   return {
     ...actual,
     transcripts: {
@@ -45,13 +45,13 @@ vi.mock("../../shared/data/transcripts.data", async (importActual) => {
   };
 });
 
-vi.mock("../../shared/ai/ai_transcribe_client", () => ({
+vi.mock("../../src/ai/ai_transcribe_client", () => ({
   DEFAULT_TRANSCRIBE_MODEL: "nova-3",
   getTranscribeModelData: vi.fn(),
   transcription: { isValidModel: vi.fn() },
 }));
 
-vi.mock("../../shared/message-queue/messageQueue", () => {
+vi.mock("../../src/message-queue/messageQueue", () => {
   const queues = {
     TRANSCRIBE: "transcribe",
     YT_FETCH: "yt_fetch",
@@ -64,22 +64,22 @@ vi.mock("../../shared/message-queue/messageQueue", () => {
   };
 });
 
-vi.mock("../../shared/uploads", () => ({
+vi.mock("../../src/uploads", () => ({
   uploads: { deleteObjects: mockDeleteObjects },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   bucket: {},
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 7 * 24 * 60 * 60,
   sign: {
     urls: vi.fn(),
   },
 }));
 
-import { createApp } from "../../api/app";
+import { createApp } from "../../src/app";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 const audioUploadId = "550e8400-e29b-41d4-a716-446655440000";

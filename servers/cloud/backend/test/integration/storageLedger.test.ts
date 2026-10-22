@@ -19,23 +19,23 @@ const testState = vi.hoisted(() => ({
   deleteFromBucket: vi.fn(),
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   bucket: {
     delete: testState.deleteFromBucket,
   },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 604800,
   sign: {
     urls: vi.fn(),
   },
 }));
 
-vi.mock("../../shared/db", async () => {
+vi.mock("../../src/db", async () => {
   const postgres = (await import("postgres")).default;
   const { drizzle } = await import("drizzle-orm/postgres-js");
-  const schema = await import("../../shared/db/schema");
+  const schema = await import("../../src/db/schema");
   const client = postgres(
     testState.databaseUrl ?? "postgres://localhost/unused",
     {
@@ -58,14 +58,14 @@ import {
   db,
   users,
   type Executor,
-} from "../../shared/db";
-import { attachments } from "../../shared/data/attachments.data";
-import { jobs } from "../../shared/data/jobs.data";
-import { images } from "../../shared/data/images.data";
-import { sweeper } from "../../shared/sweeper";
-import { uploads } from "../../shared/uploads";
-import { storageLedger } from "../../shared/data/storageLedger.data";
-import { advisoryLock } from "../../shared/data/advisoryLock.data";
+} from "../../src/db";
+import { attachments } from "../../src/data/attachments.data";
+import { jobs } from "../../src/data/jobs.data";
+import { images } from "../../src/data/images.data";
+import { sweeper } from "../../src/sweeper";
+import { uploads } from "../../src/uploads";
+import { storageLedger } from "../../src/data/storageLedger.data";
+import { advisoryLock } from "../../src/data/advisoryLock.data";
 
 const userId = "ledger-owner";
 const HOUR_MS = 60 * 60 * 1000;

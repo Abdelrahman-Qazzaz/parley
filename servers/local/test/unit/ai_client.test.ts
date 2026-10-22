@@ -101,18 +101,21 @@ describe("listChatModels", () => {
         name: "Claude Opus",
         contextTokens: 200_000,
         acceptsImages: true,
+        pricing: null,
       },
       {
         id: "sonnet",
         name: "Claude Sonnet",
         contextTokens: 200_000,
         acceptsImages: true,
+        pricing: null,
       },
       {
         id: "haiku",
         name: "Claude Haiku",
         contextTokens: 200_000,
         acceptsImages: true,
+        pricing: null,
       },
     ]);
   });

@@ -14,8 +14,7 @@
     "types": ["node"]
   },
   "include": [
-    "api/**/*.ts",
-    "shared/**/*.ts",
+    "src/**/*.ts",
     "scripts/**/*.ts",
     "drizzle.config.ts",
     "test/**/*.ts",

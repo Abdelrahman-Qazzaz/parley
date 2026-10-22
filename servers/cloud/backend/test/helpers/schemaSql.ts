@@ -3,7 +3,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 
 /**
- * The SQL that creates shared/db/schema.ts's tables, from `drizzle-kit
+ * The SQL that creates src/db/schema.ts's tables, from `drizzle-kit
  * export`, for the integration suites to run in their own schema.
  *
  * drizzle-kit's bin.cjs isn't an exported path, and the npm workspace
@@ -24,7 +24,7 @@ export function exportSchemaSql(): string {
       "--dialect",
       "postgresql",
       "--schema",
-      "./shared/db/schema.ts",
+      "./src/db/schema.ts",
     ],
     { encoding: "utf8" },
   );

@@ -17,11 +17,11 @@ import {
   getOrSetCache,
   setCache,
   resetCacheMemo,
-} from "../../shared/cache/cache";
-import { CACHE_KEYS } from "../../shared/cache/cacheKeys";
+} from "../../src/cache/cache";
+import { CACHE_KEYS } from "../../src/cache/cacheKeys";
 
-// OpenRouter's catalog maps to Redis key "models:v10" with a 24h Redis TTL.
-const REDIS_KEY = "models:v10";
+// OpenRouter's catalog maps to Redis key "models:v11" with a 24h Redis TTL.
+const REDIS_KEY = "models:v11";
 const MEMO_TTL_MS = 5 * 60 * 1000;
 
 beforeEach(() => {

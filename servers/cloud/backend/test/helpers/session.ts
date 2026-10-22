@@ -1,4 +1,4 @@
-import { COOKIE_KEYS } from "../../shared/keys";
+import { COOKIE_KEYS } from "../../src/cookies/session";
 import { signAccessToken } from "./accessTokens";
 
 export async function sessionCookieHeader(

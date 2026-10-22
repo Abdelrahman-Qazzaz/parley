@@ -6,7 +6,7 @@
   "scripts": {
     "build": "tsx scripts/build.ts",
     "start:api": "node dist/api.js",
-    "dev": "npm run --silent doppler -- tsx watch --inspect=9229 api/index.ts",
+    "dev": "npm run --silent doppler -- tsx watch --inspect=9229 src/index.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "db": "npm run --silent doppler -- drizzle-kit push",

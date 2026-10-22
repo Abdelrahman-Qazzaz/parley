@@ -39,7 +39,7 @@ const {
   mockImageRows: vi.fn(),
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: {
     select: mockSelect,
     insert: mockInsert,
@@ -50,17 +50,17 @@ vi.mock("../../shared/db", async () => ({
 }));
 
 // Controllers release deleted objects through the upload module.
-vi.mock("../../shared/uploads", () => ({
+vi.mock("../../src/uploads", () => ({
   uploads: { deleteObjects: mockDeleteObjects },
 }));
 
-vi.mock("../../shared/storage/bucket", () => ({
+vi.mock("../../src/storage/bucket", () => ({
   bucket: {
     delete: vi.fn(),
   },
 }));
 
-vi.mock("../../shared/storage/sign", () => ({
+vi.mock("../../src/storage/sign", () => ({
   IMAGE_URL_TTL_SECONDS: 7 * 24 * 60 * 60,
   sign: {
     urls: vi.fn(),
@@ -69,8 +69,8 @@ vi.mock("../../shared/storage/sign", () => ({
 
 import { desc } from "drizzle-orm";
 // Resolves to the mocked module above, so these are the stub column names.
-import { ChatMessageAttachmentLinks, Conversations } from "../../shared/db";
-import { createApp } from "../../api/app";
+import { ChatMessageAttachmentLinks, Conversations } from "../../src/db";
+import { createApp } from "../../src/app";
 import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 const conversationId = "550e8400-e29b-41d4-a716-446655440000";
@@ -192,6 +192,21 @@ describe("POST /conversations", () => {
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual(row);
     expect(mockValues).toHaveBeenCalledWith({ userId, title: "My chat" });
+  });
+  it("turns away a body over 1 MB before reading it", async () => {
+    const res = await (
+      await createApp()
+    ).request("http://localhost/conversations", {
+      method: "POST",
+      headers: {
+        ...(await authedHeaders(userId)),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ conversationTitle: "x".repeat(1024 * 1024) }),
+    });
+    expect(res.status).toBe(413);
+    expect(await res.json()).toEqual({ message: "Request body is too large" });
+    expect(mockInsert).not.toHaveBeenCalled();
   });
   it("creates a conversation without a body (title falls back to the DB default)", async () => {
     mockInsertReturning.mockResolvedValueOnce([

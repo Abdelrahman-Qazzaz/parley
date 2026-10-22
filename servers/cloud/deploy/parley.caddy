@@ -4,7 +4,7 @@
 __PARLEY_DOMAIN__ {
 	reverse_proxy parley-api:3001 {
 		# The API keys its auth rate limits on X-Real-IP (getClientIpKey in
-		# api/src/middleware/rateLimit.middleware.ts). This sets it rather
+		# src/middleware/rateLimit.middleware.ts). This sets it rather
 		# than adding to it: whatever the client sent is replaced by the
 		# address that actually connected.
 		header_up X-Real-IP {remote_host}
@@ -12,7 +12,7 @@ __PARLEY_DOMAIN__ {
 		# written, not when a buffer fills.
 		flush_interval -1
 		# Caddy closes an idle connection to the API before the API would
-		# (KEEP_ALIVE_TIMEOUT_MS in backend/api/index.ts), so it never sends a
+		# (KEEP_ALIVE_TIMEOUT_MS in backend/src/index.ts), so it never sends a
 		# request on one the API is closing. Its default is 2 minutes, which
 		# outlasts the API's; keep this under the API's.
 		transport http {

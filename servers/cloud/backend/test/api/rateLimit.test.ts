@@ -16,14 +16,13 @@ const {
   mockgetChatModelData: vi.fn(),
 }));
 
-vi.mock("../../shared/db", async () => ({
+vi.mock("../../src/db", async () => ({
   db: { select: mockSelect },
   ...(await import("../helpers/dbTableStubs")).tableStubs,
 }));
 
-vi.mock("../../api/src/auth/auth", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("../../api/src/auth/auth")>();
+vi.mock("../../src/auth/auth", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../src/auth/auth")>();
   return {
     ...actual,
     workos: {
@@ -33,18 +32,18 @@ vi.mock("../../api/src/auth/auth", async (importOriginal) => {
   };
 });
 
-vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
+vi.mock("../../src/ai/ai_chat_client", async (importActual) => {
   const actual =
-    await importActual<typeof import("../../shared/ai/ai_chat_client")>();
+    await importActual<typeof import("../../src/ai/ai_chat_client")>();
   return {
     ...actual, // preserves DEFAULT_MODELS, used at upload.schema import time
     getChatModelData: mockgetChatModelData,
   };
 });
 
-import { createApp } from "../../api/app";
-import { resetRateLimits } from "../../api/src/middleware/rateLimit.middleware";
-import { sessionCookieHeader } from "../helpers/session";
+import { createApp } from "../../src/app";
+import { resetRateLimits } from "../../src/middleware/rateLimit.middleware";
+import { authedHeaders, sessionCookieHeader } from "../helpers/session";
 
 const audioUploadId = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -184,5 +183,39 @@ describe("GET /models rate limiting", () => {
 
     expect((await models("user_01")).status).toBe(429);
     expect((await models("user_02")).status).not.toBe(429);
+  });
+});
+
+describe("chat turn rate limiting", () => {
+  const conversationId = "550e8400-e29b-41d4-a716-446655440000";
+
+  beforeEach(() => {
+    resetRateLimits();
+    vi.clearAllMocks();
+  });
+
+  // Each one is a paid model call, so it has a budget of its own. An empty
+  // body is a 400, but it has already spent the budget by then.
+  it("gives sending a budget of its own, apart from reading", async () => {
+    const app = await createApp();
+    const headers = await authedHeaders("user_01");
+    const send = () =>
+      app.request(`http://localhost/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { ...headers, "Content-Type": "application/json" },
+        body: "{}",
+      });
+
+    for (let i = 0; i < 50; i++) expect((await send()).status).toBe(400);
+    const res = await send();
+    expect(res.status).toBe(429);
+    expect(res.headers.get("RateLimit-Limit")).toBe("50");
+
+    const read = await app.request(
+      `http://localhost/conversations/${conversationId}`,
+      { headers },
+    );
+    expect(read.status).not.toBe(429);
+    expect(read.headers.get("RateLimit-Limit")).toBe("100");
   });
 });
