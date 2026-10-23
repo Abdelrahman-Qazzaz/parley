@@ -2,6 +2,26 @@
 # domain, copies this into the proxy's sites/, and reloads Caddy. Caddy gets
 # and renews the HTTPS certificate itself.
 __PARLEY_DOMAIN__ {
+	# Browser protections the API doesn't send itself:
+	# - HSTS: browsers only use HTTPS here from now on, so nobody on the network
+	#   can serve a plain-HTTP copy. No includeSubDomains, since the domain may
+	#   be a shared one such as the VPS's own vps.ovh.net name.
+	# - nosniff: a file is only ever run as the type the server says it is.
+	# - X-Frame-Options and frame-ancestors: no other site can show Parley
+	#   inside a frame and trick a signed-in user into clicking in it.
+	# - Referrer-Policy: other sites see where a visitor came from, not the
+	#   chat they were reading.
+	# - Permissions-Policy: the page can't ask for the camera, microphone or
+	#   location, which it never uses.
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Content-Security-Policy "frame-ancestors 'none'"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+	}
+
 	reverse_proxy parley-api:3001 {
 		# The API keys its auth rate limits on X-Real-IP (getClientIpKey in
 		# src/middleware/rateLimit.middleware.ts). This sets it rather
