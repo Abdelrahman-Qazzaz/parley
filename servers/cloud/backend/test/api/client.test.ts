@@ -46,6 +46,22 @@ describe("the built client", () => {
     expect(await res.text()).toContain("<title>app</title>");
   });
 
+  it("lets browsers keep its hashed assets for good", async () => {
+    const res = await get("/assets/app.js");
+
+    expect(res.headers.get("Cache-Control")).toBe(
+      "public, max-age=31536000, immutable",
+    );
+  });
+
+  it("has browsers check its page every time, so a deploy reaches them", async () => {
+    for (const urlPath of ["/", "/chat/550e8400-e29b-41d4-a716-446655440000"]) {
+      const res = await get(urlPath);
+
+      expect(res.headers.get("Cache-Control")).toBe("no-cache");
+    }
+  });
+
   it("leaves any other path to the API, which 404s one it doesn't have", async () => {
     const res = await get("/no/such/path");
 
@@ -57,5 +73,6 @@ describe("the built client", () => {
 
     // Signed out, so the API's own answer rather than the page.
     expect(res.status).toBe(401);
+    expect(res.headers.get("Cache-Control")).toBeNull();
   });
 });
