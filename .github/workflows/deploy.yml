@@ -91,12 +91,13 @@ jobs:
           printf '%s' "$GITHUB_TOKEN" |
           ssh "$SERVER" docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
+      # Through sh, since scp doesn't carry over an executable bit.
       - name: Deploy
         run: >
           ssh "$SERVER"
           IMAGE_TAG=${{ github.sha }}
           PARLEY_DOMAIN=${{ vars.PARLEY_DOMAIN }}
-          /opt/parley/deploy.sh
+          sh /opt/parley/deploy.sh
 
       - name: Log the server out of GHCR
         if: always()

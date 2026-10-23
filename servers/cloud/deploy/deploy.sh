@@ -3,7 +3,7 @@
 # copies this directory's files to /opt/parley and runs it over SSH, after
 # logging the server in to GHCR:
 #
-#   IMAGE_TAG=<git sha> PARLEY_DOMAIN=<domain> /opt/parley/deploy.sh
+#   IMAGE_TAG=<git sha> PARLEY_DOMAIN=<domain> sh /opt/parley/deploy.sh
 #
 # Secrets come from Doppler's prd config, read with the service token in
 # /etc/parley/doppler-token (README.md, "Set up the server").
