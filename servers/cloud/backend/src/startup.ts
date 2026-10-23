@@ -2,7 +2,6 @@ import { logger, messageOf } from "@parley/shared/logger";
 import { mq } from "./message-queue/messageQueue";
 import { pingDb } from "./db";
 import { bucket } from "./storage";
-import { cache } from "./cache";
 import { chat, transcription } from "./ai";
 import { workos } from "./auth/auth";
 import { UPLOAD_CONFIRM_WINDOW_MS } from "./uploads";
@@ -63,7 +62,6 @@ export function verifyApiServices(): Promise<void> {
       name: "Supabase Storage upload URLs",
       check: () => bucket.verifyUploadUrlLifetime(UPLOAD_CONFIRM_WINDOW_MS),
     },
-    { name: "Upstash Redis", check: cache.ping },
     { name: "WorkOS", check: workos.ping },
     { name: "OpenRouter", check: chat.ping },
     { name: "Deepgram", check: transcription.ping },

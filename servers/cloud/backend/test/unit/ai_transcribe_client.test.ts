@@ -57,6 +57,7 @@ describe("getTranscribeModelData", () => {
     expect(mockGetOrSetCache).toHaveBeenCalledWith(
       CACHE_KEYS.deepgramTranscribeModels,
       expect.any(Function),
+      { serveStale: true },
     );
     expect(mockModelsList).not.toHaveBeenCalled();
   });

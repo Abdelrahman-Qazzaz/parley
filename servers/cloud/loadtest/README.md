@@ -1,8 +1,8 @@
 # Load testing
 
 k6 against the whole cloud backend (the API, which also transcribes, Postgres,
-Storage, RabbitMQ, Redis), with every paid service swapped for a stand-in on
-this machine. A run costs nothing: no OpenRouter, Deepgram, Upstash, Supabase
+Storage, RabbitMQ), with every paid service swapped for a stand-in on
+this machine. A run costs nothing: no OpenRouter, Deepgram, Supabase
 or WorkOS account is touched, and the API keys are fake, so a call that
 escaped to a real provider would get a 401 rather than a bill.
 
@@ -67,14 +67,13 @@ isn't measuring 429s. To check the real limits are enforced:
 
 ## What it stands in for
 
-| Service    | Stand-in                                                              | How the app is pointed at it          |
-| ---------- | --------------------------------------------------------------------- | ------------------------------------- |
-| OpenRouter | `mocks/server.ts`: catalog, streamed chat, titles                     | `OPENROUTER_BASE_URL`                 |
-| Deepgram   | `mocks/server.ts`: catalog, transcription (downloads the audio first) | `DEEPGRAM_BASE_URL`                   |
-| WorkOS     | `mocks/server.ts`: signing keys, plus tokens for made-up users        | `WORKOS_API_BASE_URL`                 |
-| Upstash    | Redis behind serverless-redis-http                                    | `UPSTASH_REDIS_REST_URL` (plain HTTP) |
-| Supabase   | Supabase's own Postgres and Storage images                            | `DATABASE_URL`, `SUPABASE_URL`        |
-| RabbitMQ   | RabbitMQ                                                              | `MQ_URL`                              |
+| Service    | Stand-in                                                              | How the app is pointed at it   |
+| ---------- | --------------------------------------------------------------------- | ------------------------------ |
+| OpenRouter | `mocks/server.ts`: catalog, streamed chat, titles                     | `OPENROUTER_BASE_URL`          |
+| Deepgram   | `mocks/server.ts`: catalog, transcription (downloads the audio first) | `DEEPGRAM_BASE_URL`            |
+| WorkOS     | `mocks/server.ts`: signing keys, plus tokens for made-up users        | `WORKOS_API_BASE_URL`          |
+| Supabase   | Supabase's own Postgres and Storage images                            | `DATABASE_URL`, `SUPABASE_URL` |
+| RabbitMQ   | RabbitMQ                                                              | `MQ_URL`                       |
 
 Each override is read in the one place its client is built, and
 `shared/env.ts` refuses all of them when `NODE_ENV=production`, so none of this

@@ -74,15 +74,6 @@ function rejectLoadtestOverridesInProduction(
       message: "is a load-test override and can't be set in production",
     });
   }
-  // The load test's Redis stand-in speaks plain HTTP; Upstash never does.
-  const redisUrl = env.UPSTASH_REDIS_REST_URL;
-  if (typeof redisUrl === "string" && !redisUrl.startsWith("https://")) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["UPSTASH_REDIS_REST_URL"],
-      message: "UPSTASH_REDIS_REST_URL must use HTTPS",
-    });
-  }
 }
 
 /** Exported for its own unit test; the app reads env through getEnv. */
@@ -98,8 +89,6 @@ export const envSchema = z
     WORKOS_CLIENT_ID: z.string().min(1),
     CLIENT_URL: z.string().url(),
     API_BASE_URL: z.string().url(),
-    UPSTASH_REDIS_REST_URL: z.string().url(),
-    UPSTASH_REDIS_REST_TOKEN: z.string().min(1),
     NODE_ENV: nodeEnvSchema,
     PORT: z.coerce.number().int().positive().default(3001),
     /**

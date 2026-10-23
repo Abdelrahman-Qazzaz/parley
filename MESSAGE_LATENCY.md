@@ -148,8 +148,8 @@ there, so use a fanout exchange:
 
 The standard alternative is Socket.IO's Redis adapter, which makes
 `io.to(room).emit` reach every instance by itself. It needs a TCP Redis
-connection with pub/sub, and every emit costs Upstash commands. With one
-event type, the fanout is less to run.
+connection with pub/sub, a service the app no longer runs. With one event
+type, the fanout is less to run.
 
 ## 3. Re-signing week-old image URLs
 
