@@ -9,8 +9,6 @@ const validEnv = {
   OPENROUTER_API_KEY: "test-key",
   DEEPGRAM_API_KEY: "test-key",
   NODE_ENV: "test" as const,
-  UPSTASH_REDIS_REST_URL: "https://example.upstash.io",
-  UPSTASH_REDIS_REST_TOKEN: "test-token",
   WORKOS_API_KEY: "sk_test",
   WORKOS_CLIENT_ID: "client_test",
   CLIENT_URL: "http://localhost:5173",
@@ -23,29 +21,12 @@ describe("envSchema", () => {
     expect(result.success).toBe(true);
   });
 
-  it("rejects empty UPSTASH_REDIS_REST_TOKEN", () => {
+  it("rejects an empty key", () => {
     const result = envSchema.safeParse({
       ...validEnv,
-      UPSTASH_REDIS_REST_TOKEN: "",
+      OPENROUTER_API_KEY: "",
     });
     expect(result.success).toBe(false);
-  });
-
-  it("rejects non-HTTPS UPSTASH_REDIS_REST_URL in production", () => {
-    const result = envSchema.safeParse({
-      ...validEnv,
-      NODE_ENV: "production",
-      UPSTASH_REDIS_REST_URL: "http://example.upstash.io",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("accepts the load test's plain-HTTP Redis outside production", () => {
-    const result = envSchema.safeParse({
-      ...validEnv,
-      UPSTASH_REDIS_REST_URL: "http://srh",
-    });
-    expect(result.success).toBe(true);
   });
 
   const loadtestOverrides = {

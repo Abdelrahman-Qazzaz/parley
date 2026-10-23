@@ -107,25 +107,6 @@ services:
       storage:
         condition: service_healthy
 
-  # ---- Upstash Redis: a local Redis behind the REST API Upstash speaks
-
-  redis:
-    image: redis:7-alpine
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 2s
-      retries: 30
-
-  srh:
-    image: hiett/serverless-redis-http:0.0.10
-    environment:
-      SRH_MODE: env
-      SRH_TOKEN: loadtest
-      SRH_CONNECTION_STRING: redis://redis:6379
-    depends_on:
-      redis:
-        condition: service_healthy
-
   # ---- RabbitMQ
 
   rabbitmq:
@@ -237,8 +218,6 @@ services:
       CLIENT_URL: http://localhost:5173
       API_BASE_URL: http://api:3001
       PORT: 3001
-      UPSTASH_REDIS_REST_URL: http://srh:80
-      UPSTASH_REDIS_REST_TOKEN: loadtest
       # 1 measures the real limits; the default keeps k6 out of them.
       RATE_LIMIT_MULTIPLIER: ${RATE_LIMIT_MULTIPLIER:-1000}
     ports:
@@ -250,8 +229,6 @@ services:
         condition: service_completed_successfully
       rabbitmq:
         condition: service_healthy
-      srh:
-        condition: service_started
       mocks:
         condition: service_healthy
     healthcheck:

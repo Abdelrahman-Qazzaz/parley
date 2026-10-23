@@ -24,7 +24,6 @@
     "@openrouter/sdk": "^1.2.38",
     "@parley/shared": "*",
     "@supabase/supabase-js": "2.103.0",
-    "@upstash/redis": "1.38.0",
     "@workos-inc/node": "9.1.0",
     "amqplib": "1.0.3",
     "dotenv": "17.3.1",

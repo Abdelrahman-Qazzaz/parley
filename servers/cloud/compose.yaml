@@ -10,8 +10,8 @@
 # secrets off disk. Each service lists exactly what it needs, which is also the list to
 # paste into whichever host you deploy to.
 #
-# Postgres, Redis and object storage are managed services (Supabase, Upstash)
-# and are not started here. RabbitMQ is: the services reach it over the compose
+# Postgres and object storage are managed services (Supabase) and are not
+# started here. RabbitMQ is: the services reach it over the compose
 # network, so Doppler's MQ_URL, which points outside, is replaced below.
 
 name: parley
@@ -76,8 +76,6 @@ services:
       - WORKOS_CLIENT_ID
       - CLIENT_URL
       - API_BASE_URL
-      - UPSTASH_REDIS_REST_URL
-      - UPSTASH_REDIS_REST_TOKEN
       - PORT
     ports:
       - "${PORT:-3001}:${PORT:-3001}"

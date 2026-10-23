@@ -95,9 +95,12 @@ async function fetchTranscribeModelData(): Promise<TranscribeModelData> {
 
 /** Exported for tests that seed the catalog; callers use the namespace. */
 export function getTranscribeModelData(): Promise<TranscribeModelData> {
+  // Served stale while it refreshes, like the chat catalog, so no request
+  // waits on Deepgram once a process has loaded it.
   return cache.getOrSet(
     CACHE_KEYS.deepgramTranscribeModels,
     fetchTranscribeModelData,
+    { serveStale: true },
   );
 }
 
