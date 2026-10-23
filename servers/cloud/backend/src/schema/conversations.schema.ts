@@ -3,9 +3,8 @@ import type {
   CreateConversationBody,
   RenameConversationBody,
 } from "@parley/shared/contract";
+import { MAX_TITLE_LENGTH } from "@parley/shared/limits";
 import { takesBody } from "@parley/shared/takesBody";
-
-const MAX_TITLE_LENGTH = 200;
 
 export const conversationReqParamSchema = z.object({
   conversationId: z.string().uuid(),

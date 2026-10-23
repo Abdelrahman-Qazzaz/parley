@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { MAX_TITLE_LENGTH } from "@parley/shared/limits";
 import { Link } from "react-router-dom";
 import type { Conversation } from "../../api/conversations";
 import { useServer } from "../../hooks/server/useServer";
@@ -43,6 +44,7 @@ export function ConversationRow({
         <input
           autoFocus
           value={draftTitle}
+          maxLength={MAX_TITLE_LENGTH}
           onChange={(event) => setDraftTitle(event.target.value)}
           onBlur={submitRename}
           onKeyDown={(event) => {
@@ -79,7 +81,9 @@ export function ConversationRow({
         aria-label={`Actions for ${conversation.title}`}
         aria-expanded={menuOpen}
         className={`absolute right-1 top-1/2 -translate-y-1/2 rounded-md p-1 text-faint transition-opacity hover:bg-sunk hover:text-ink focus-visible:opacity-100 ${
-          menuOpen ? "opacity-100" : "opacity-0 group-hover/row:opacity-100"
+          menuOpen
+            ? "opacity-100"
+            : "opacity-0 pointer-coarse:opacity-100 group-hover/row:opacity-100"
         }`}
       >
         <Icon name="more" className="h-4 w-4" />
