@@ -353,13 +353,16 @@ async function unclaimAndResetAudioJob(
   return Boolean(row);
 }
 
-/** `error` is shown to the user, so it says what happened, not how. */
+/**
+ * `error` is shown to the user, so it says what happened, not how. Returns
+ * false when this worker lost ownership, as completeAudioJob does.
+ */
 async function failAudioJob(
   audioUploadId: UploadId,
   claimToken: string,
   error: string,
 ) {
-  await db
+  const [row] = await db
     .update(AudioTranscriptionJobs)
     .set({ status: "failed", error })
     .where(
@@ -368,7 +371,10 @@ async function failAudioJob(
         eq(AudioTranscriptionJobs.status, "processing"),
         eq(AudioTranscriptionJobs.claimToken, claimToken),
       ),
-    );
+    )
+    .returning({ audioUploadId: AudioTranscriptionJobs.audioUploadId });
+
+  return Boolean(row);
 }
 
 export const jobs = {
