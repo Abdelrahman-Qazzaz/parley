@@ -2,6 +2,7 @@ import { drizzle } from "drizzle-orm/postgres-js";
 import { sql as drizzleSql } from "drizzle-orm";
 import postgres from "postgres";
 import { getEnv } from "../env";
+import { DATABASE_POOL } from "./pool";
 import * as schema from "./schema";
 
 const databaseUrl = getEnv().DATABASE_URL;
@@ -16,7 +17,10 @@ if (new URL(databaseUrl).port === TRANSACTION_POOLER_PORT) {
   );
 }
 
-const client = postgres(databaseUrl, { fetch_types: false });
+const client = postgres(databaseUrl, {
+  fetch_types: false,
+  max: DATABASE_POOL.size,
+});
 
 // drizzle calls client.unsafe(query, params) without options, and postgres.js
 // defaults unsafe() to prepare: false no matter how the client is configured.
@@ -40,12 +44,13 @@ export const db = drizzle(preparingClient, { schema });
 export type Executor =
   typeof db | Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-const DATABASE_CONNECTION_COUNT_TO_WARM = 5;
-
-/** Startup health check: fails if the database is unreachable. */
+/**
+ * Startup health check: fails if the database is unreachable. Each concurrent
+ * query opens its own connection, which warms the pool.
+ */
 export async function pingDb(): Promise<void> {
   await Promise.all(
-    Array.from({ length: DATABASE_CONNECTION_COUNT_TO_WARM }, () =>
+    Array.from({ length: DATABASE_POOL.connectionsToWarm }, () =>
       db.execute(drizzleSql`select 1`),
     ),
   );
