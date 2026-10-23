@@ -18,12 +18,13 @@ function historyRow(
   partial: Partial<{
     messageId: string;
     role: "user" | "assistant";
-    content: string;
+    content: string | null;
     createdAt: string;
     attachmentId: string | null;
     attachmentKind: "image" | "audio" | null;
     signedUrl: string | null;
     signedUrlExpiresAt: string | null;
+    transcriptAudioUploadId: string | null;
     transcriptContent: string | null;
   }> = {},
 ) {
@@ -36,6 +37,7 @@ function historyRow(
     attachmentKind: null,
     signedUrl: null,
     signedUrlExpiresAt: null,
+    transcriptAudioUploadId: null,
     transcriptContent: null,
     ...partial,
   };
@@ -56,14 +58,18 @@ describe("findContextHistory", () => {
       historyRow({
         attachmentId: "audio-1",
         attachmentKind: "audio",
+        transcriptAudioUploadId: "audio-1",
         transcriptContent: "First transcript",
       }),
       historyRow({
+        content: null,
         attachmentId: "audio-2",
         attachmentKind: "audio",
+        transcriptAudioUploadId: "audio-2",
         transcriptContent: "Second transcript",
       }),
       historyRow({
+        content: null,
         attachmentId: "image-1",
         attachmentKind: "image",
         signedUrl: "old-url",
@@ -83,7 +89,7 @@ describe("findContextHistory", () => {
         role: "assistant",
         content: "Answer",
         createdAt,
-        transcriptContents: [],
+        transcripts: [],
         images: [],
       },
       {
@@ -91,7 +97,10 @@ describe("findContextHistory", () => {
         role: "user",
         content: "Question",
         createdAt,
-        transcriptContents: ["First transcript", "Second transcript"],
+        transcripts: [
+          { audioUploadId: "audio-1", content: "First transcript" },
+          { audioUploadId: "audio-2", content: "Second transcript" },
+        ],
         images: [
           {
             imageUploadId: "image-1",
@@ -119,5 +128,53 @@ describe("findContextHistory", () => {
     expect(query.sql).toContain("context_window_message_count");
     expect(query.sql).toContain("recent_messages as");
     expect(query.sql).not.toContain("current_turn");
+  });
+
+  it("fills in the text it was told it needn't send", async () => {
+    mockExecute.mockResolvedValueOnce([
+      historyRow({ messageId: "message-2", role: "assistant", content: null }),
+      historyRow({
+        content: null,
+        attachmentId: "audio-1",
+        attachmentKind: "audio",
+        transcriptAudioUploadId: "audio-1",
+      }),
+    ]);
+
+    const history = await messages.findContextHistory({
+      userId: "user-1",
+      conversationId: "conversation-1",
+      maximumMessageCount: 49,
+      knownText: {
+        messages: new Map([
+          ["message-1", "Known question"],
+          ["message-2", "Known answer"],
+        ]),
+        transcripts: new Map([["audio-1", "Known transcript"]]),
+      },
+    });
+
+    expect(history.map((message) => message.content)).toEqual([
+      "Known answer",
+      "Known question",
+    ]);
+    expect(history[1].transcripts).toEqual([
+      { audioUploadId: "audio-1", content: "Known transcript" },
+    ]);
+    const query = new PgDialect().sqlToQuery(mockExecute.mock.calls[0][0]);
+    expect(query.params).toContain('{"message-1","message-2"}');
+    expect(query.params).toContain('{"audio-1"}');
+  });
+
+  it("refuses to hand back a turn whose text it has nowhere to get", async () => {
+    mockExecute.mockResolvedValueOnce([historyRow({ content: null })]);
+
+    await expect(
+      messages.findContextHistory({
+        userId: "user-1",
+        conversationId: "conversation-1",
+        maximumMessageCount: 49,
+      }),
+    ).rejects.toThrow("History text missing for message-1");
   });
 });

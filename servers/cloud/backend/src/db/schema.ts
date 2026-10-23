@@ -159,6 +159,8 @@ export const ChatMessages = pgTable(
     // Which side of the chat wrote this row — mirrors the chat-completion API's
     // turn roles so history can be replayed to the model as-is.
     role: chatRoleEnum("role").notNull(),
+    // Written once: an edit deletes the message and saves a new one. Each API
+    // process caches it by id (src/chat/historyText.ts).
     content: text("content").notNull(),
     // Model that produced an assistant message; null for user messages.
     chosenModelId: text("chosen_model_id"),

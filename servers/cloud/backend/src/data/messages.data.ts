@@ -72,17 +72,20 @@ async function findConversationMessages(conversationId: string) {
     );
 }
 
+/** A transcript attached to a past turn, by the audio it was made from. */
+export type HistoryTranscript = { audioUploadId: string; content: string };
+
 /**
  * A past turn that may go back into the prompt, with what it was sent with:
- * its transcripts' text in link order, and its images as stored, so the
- * caller signs only the ones it keeps.
+ * its transcripts in link order, and its images as stored, so the caller
+ * signs only the ones it keeps.
  */
 export type HistoryCandidate = {
   id: string;
   role: MessageRow["role"];
   content: string;
   createdAt: Date;
-  transcriptContents: string[];
+  transcripts: HistoryTranscript[];
   images: {
     imageUploadId: string;
     signedUrl: string | null;
@@ -90,22 +93,58 @@ export type HistoryCandidate = {
   }[];
 };
 
+/**
+ * Text the caller already holds: message content by message id, transcript
+ * content by audio upload id. Both are written once and never changed, so a
+ * copy can't disagree with the table.
+ */
+export type KnownHistoryText = {
+  messages: ReadonlyMap<string, string>;
+  transcripts: ReadonlyMap<string, string>;
+};
+
 type HistoryRow = {
   messageId: string;
   role: MessageRow["role"];
-  content: string;
+  /** Null when the caller knows it, and on every row of a message but one. */
+  content: string | null;
   createdAt: string;
   attachmentId: string | null;
   attachmentKind: "image" | "audio" | null;
   signedUrl: string | null;
   signedUrlExpiresAt: string | null;
+  transcriptAudioUploadId: string | null;
+  /** Null when the caller knows it. */
   transcriptContent: string | null;
 };
+
+/** A Postgres array literal, sent as one parameter whatever its length. */
+function arrayLiteral(values: Iterable<string>) {
+  const quoted = Array.from(
+    values,
+    (value) => `"${value.replace(/[\\"]/g, "\\$&")}"`,
+  );
+  return `{${quoted.join(",")}}`;
+}
+
+function knownOrThrow(
+  known: ReadonlyMap<string, string> | undefined,
+  id: string,
+) {
+  const text = known?.get(id);
+  if (text === undefined) throw new Error(`History text missing for ${id}`);
+  return text;
+}
 
 /**
  * The turns a new message's prompt may draw on, newest first, in one query:
  * at most `maximumMessageCount`, and no more than the conversation's window
  * held last time. Deciding which of them fit is the caller's.
+ *
+ * The query still decides which turns, attachments and images there are; the
+ * text it leaves out is only what `knownText` already holds, and a message's
+ * content crosses the wire once however many attachments it has. Sending the
+ * text is most of what this read costs.
  */
 async function findContextHistory(input: {
   userId: string;
@@ -113,6 +152,7 @@ async function findContextHistory(input: {
   maximumMessageCount: number;
   /** Editing a message: take history from before it, not from the tail. */
   beforeMessageId?: string;
+  knownText?: KnownHistoryText;
 }): Promise<HistoryCandidate[]> {
   // Same order as messageIsBefore: created_at, then role, then id.
   const historyBound =
@@ -131,13 +171,20 @@ async function findContextHistory(input: {
           where bound.${sql.identifier(ChatMessages.id.name)} = ${input.beforeMessageId}
             and bound.${sql.identifier(ChatMessages.conversationId.name)} = ${input.conversationId}
         )`;
+  const knownMessageIds = arrayLiteral(input.knownText?.messages.keys() ?? []);
+  const knownAudioUploadIds = arrayLiteral(
+    input.knownText?.transcripts.keys() ?? [],
+  );
 
   const rows = await db.execute<HistoryRow>(sql`
     with recent_messages as (
       select
         ${ChatMessages.id} as message_id,
         ${ChatMessages.role} as role,
-        ${ChatMessages.content} as content,
+        case
+          when ${ChatMessages.id} = any(${knownMessageIds}::uuid[]) then null
+          else ${ChatMessages.content}
+        end as content,
         ${ChatMessages.createdAt} as created_at
       from ${ChatMessages}
       where ${ChatMessages.conversationId} = ${input.conversationId}
@@ -165,13 +212,22 @@ async function findContextHistory(input: {
     select
       recent_messages.message_id as "messageId",
       recent_messages.role as role,
-      recent_messages.content as content,
+      case
+        when row_number() over (
+          partition by recent_messages.message_id
+          order by ${ChatMessageAttachmentLinks.position}
+        ) = 1 then recent_messages.content
+      end as content,
       recent_messages.created_at as "createdAt",
       ${ChatMessageAttachmentLinks.attachmentId} as "attachmentId",
       ${Attachments.kind} as "attachmentKind",
       ${Attachments.signedUrl} as "signedUrl",
       ${Attachments.signedUrlExpiresAt} as "signedUrlExpiresAt",
-      ${TranscriptContents.content} as "transcriptContent"
+      ${TranscriptContents.audioUploadId} as "transcriptAudioUploadId",
+      case
+        when ${TranscriptContents.audioUploadId} = any(${knownAudioUploadIds}::text[]) then null
+        else ${TranscriptContents.content}
+      end as "transcriptContent"
     from recent_messages
     left join ${ChatMessageAttachmentLinks}
       on ${ChatMessageAttachmentLinks.messageId} = recent_messages.message_id
@@ -189,25 +245,40 @@ async function findContextHistory(input: {
   `);
 
   const history: HistoryCandidate[] = [];
+  const contentByMessageId = new Map<string, string>();
   const historyByMessageId = new Map<string, HistoryCandidate>();
 
   for (const row of rows) {
+    if (row.content !== null)
+      contentByMessageId.set(row.messageId, row.content);
+
     let message = historyByMessageId.get(row.messageId);
     if (!message) {
       message = {
         id: row.messageId,
         role: row.role,
-        content: row.content,
+        content: "",
         createdAt: new Date(row.createdAt),
-        transcriptContents: [],
+        transcripts: [],
         images: [],
       };
       history.push(message);
       historyByMessageId.set(row.messageId, message);
     }
 
-    if (row.attachmentKind === "audio" && row.transcriptContent !== null) {
-      message.transcriptContents.push(row.transcriptContent);
+    if (
+      row.attachmentKind === "audio" &&
+      row.transcriptAudioUploadId !== null
+    ) {
+      message.transcripts.push({
+        audioUploadId: row.transcriptAudioUploadId,
+        content:
+          row.transcriptContent ??
+          knownOrThrow(
+            input.knownText?.transcripts,
+            row.transcriptAudioUploadId,
+          ),
+      });
     }
 
     if (row.attachmentKind === "image" && row.attachmentId !== null) {
@@ -219,6 +290,12 @@ async function findContextHistory(input: {
           : null,
       });
     }
+  }
+
+  for (const message of history) {
+    message.content =
+      contentByMessageId.get(message.id) ??
+      knownOrThrow(input.knownText?.messages, message.id);
   }
 
   return history;
@@ -437,7 +514,10 @@ async function persistAndUnclaimChatTurn(turn: {
 
     await attachments.unclaimAttachments(turn.claimToken, tx);
 
-    return assistantMessage.id;
+    return {
+      userMessageId: userMessage.id,
+      assistantMessageId: assistantMessage.id,
+    };
   });
 }
 

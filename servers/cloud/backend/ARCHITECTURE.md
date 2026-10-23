@@ -127,6 +127,21 @@ have to split the transcription concurrency between them (see
 connections out of the session pooler's fixed budget, so adding one means
 shrinking the pool in `src/db/pool.ts`.
 
+### History text cache
+
+Each `api` process keeps the text of the messages and transcripts it has read
+or saved, per conversation (`src/chat/historyText.ts`), and the next
+turn's history read leaves that text out. Sending it is most of what the read
+costs. The cache needs no shared store, routing or invalidation, because the
+text is written once: nothing updates a message's `content` or a transcript in
+place, and an edit deletes messages and saves new ones under new ids. The query
+still decides which messages, attachments and images a turn gets; the cache
+only fills in text for ids it returned. A process that has never seen a
+conversation reads it in full once.
+
+Keep message and transcript text write-once. A feature that rewrites either in
+place would let this cache serve the old text.
+
 ### Schema changes
 
 Deploys build the database from the migrations in `drizzle/`, through the

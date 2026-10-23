@@ -1,6 +1,10 @@
 import type { z } from "zod";
 import { logger, messageOf } from "@parley/shared/logger";
-import { data, type HistoryCandidate } from "../data";
+import {
+  data,
+  type HistoryCandidate,
+  type HistoryTranscript,
+} from "../data";
 import { buildUserTurn, chat, type ChatTurn } from "../ai";
 import { measurePreparation } from "../preparationMetrics";
 import { uploads } from "../uploads";
@@ -12,6 +16,7 @@ import {
   admitHistory,
   countMessagesInContextWindow,
 } from "./contextWindow";
+import { historyText } from "./historyText";
 import { buildPrompt, containsImageInput, withTranscripts } from "./prompt";
 import type { TurnClaim } from "./turnClaim";
 
@@ -86,6 +91,8 @@ export type PreparedTurn = {
   /** Each replayed turn's length, newest first, for the next turn's window. */
   historyCharCounts: number[];
   newTurnCharCount: number;
+  /** The new turn's transcripts, kept with its text once it's saved. */
+  newTurnTranscripts: HistoryTranscript[];
 };
 
 /** History candidates as the prompt would carry them, measured for the budget. */
@@ -93,7 +100,7 @@ function measureHistory(candidates: readonly HistoryCandidate[]) {
   return candidates.map((candidate) => {
     const promptContent = withTranscripts(
       candidate.content,
-      candidate.transcriptContents,
+      candidate.transcripts.map((transcript) => transcript.content),
     );
     return {
       role: candidate.role,
@@ -139,6 +146,7 @@ export async function prepareTurn(
   claim: TurnClaim,
   beforeMessageId?: string,
 ): Promise<PreparedTurn> {
+  const knownText = historyText.known(request.userId, request.conversationId);
   const [
     conversationClaimed,
     attachmentsReserved,
@@ -160,9 +168,15 @@ export async function prepareTurn(
         conversationId: request.conversationId,
         maximumMessageCount: MAX_HISTORY_MESSAGES,
         ...(beforeMessageId === undefined ? {} : { beforeMessageId }),
+        ...(knownText === undefined ? {} : { knownText }),
       }),
     ),
   ]);
+  historyText.rememberHistory(
+    request.userId,
+    request.conversationId,
+    candidates,
+  );
 
   if (!conversationClaimed) {
     const ownedConversation = await data.conversations.findOwnedConversation(
@@ -179,14 +193,17 @@ export async function prepareTurn(
     throw new TurnRejected(404, { message: "Image not found" });
   }
   const transcripts = request.audioUploadIds.flatMap((audioUploadId) => {
-    const transcript = transcriptByAudioUploadId.get(audioUploadId);
-    return transcript === undefined ? [] : [transcript];
+    const content = transcriptByAudioUploadId.get(audioUploadId);
+    return content === undefined ? [] : [{ audioUploadId, content }];
   });
   if (transcripts.length !== request.audioUploadIds.length) {
     throw new TurnRejected(404, { message: "Transcript not found" });
   }
 
-  const newTurnContent = withTranscripts(request.content, transcripts);
+  const newTurnContent = withTranscripts(
+    request.content,
+    transcripts.map((transcript) => transcript.content),
+  );
   if (newTurnContent.length >= MAX_CONTEXT_CHARS) {
     throw new TurnRejected(413, {
       message: "Message is too long for one message",
@@ -225,6 +242,7 @@ export async function prepareTurn(
     prompt,
     historyCharCounts: history.map((turn) => turn.contextCharCount),
     newTurnCharCount: newTurnContent.length,
+    newTurnTranscripts: transcripts,
   };
 }
 
@@ -287,8 +305,8 @@ async function titleForFirstTurn(content: string, conversationId: string) {
 
 /**
  * Asks the model, handing each piece of the answer to `onDelta`, then saves
- * the turn and lets go of the claim in one transaction. Returns the
- * conversation's new head.
+ * the turn and lets go of the claim in one transaction, keeping its text for
+ * the next turn's history read here. Returns the conversation's new head.
  */
 export async function answerTurn(
   request: TurnRequest,
@@ -312,21 +330,32 @@ export async function answerTurn(
   );
 
   const title = await conversationTitle;
-  return measurePreparation("persistAndUnclaimChatTurn", undefined, () =>
-    data.messages.persistAndUnclaimChatTurn({
-      userId: request.userId,
-      conversationId: request.conversationId,
-      content: request.content,
-      attachmentIds: request.attachmentIds,
-      chosenModelId: request.chosenModelId,
-      assistantContent,
-      conversationTitle: title,
-      contextWindowMessageCount: countMessagesInContextWindow([
-        assistantContent.length,
-        prepared.newTurnCharCount,
-        ...prepared.historyCharCounts,
-      ]),
-      claimToken: claim.token,
-    }),
+  const saved = await measurePreparation(
+    "persistAndUnclaimChatTurn",
+    undefined,
+    () =>
+      data.messages.persistAndUnclaimChatTurn({
+        userId: request.userId,
+        conversationId: request.conversationId,
+        content: request.content,
+        attachmentIds: request.attachmentIds,
+        chosenModelId: request.chosenModelId,
+        assistantContent,
+        conversationTitle: title,
+        contextWindowMessageCount: countMessagesInContextWindow([
+          assistantContent.length,
+          prepared.newTurnCharCount,
+          ...prepared.historyCharCounts,
+        ]),
+        claimToken: claim.token,
+      }),
   );
+  historyText.rememberTurn(request.userId, request.conversationId, {
+    userMessageId: saved.userMessageId,
+    content: request.content,
+    transcripts: prepared.newTurnTranscripts,
+    assistantMessageId: saved.assistantMessageId,
+    assistantContent,
+  });
+  return saved.assistantMessageId;
 }
