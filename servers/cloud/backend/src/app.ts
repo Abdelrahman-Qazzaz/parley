@@ -92,6 +92,19 @@ export async function createApp() {
   // first-party. Under `npm run dev:cloud` it isn't built and Vite serves it.
   const clientDir = path.resolve(env.CLIENT_DIR);
   if (existsSync(path.join(clientDir, "index.html"))) {
+    // Vite names each file under /assets after a hash of its contents, so a
+    // changed file arrives under a new name and a browser can keep these for
+    // good. The page has no hash in its name, so a browser checks it every
+    // time, or it would stay on the old page, and old assets, after a deploy.
+    app.use("*", async (c, next) => {
+      await next();
+      if (!c.res.ok) return;
+      if (c.req.path.startsWith("/assets/")) {
+        c.header("Cache-Control", "public, max-age=31536000, immutable");
+      } else if (c.res.headers.get("Content-Type")?.startsWith("text/html")) {
+        c.header("Cache-Control", "no-cache");
+      }
+    });
     app.use("*", serveStatic({ root: clientDir }));
     // The client's own routes are pages rather than files. Only those: any
     // other path is the API's, and one it doesn't have is a 404.

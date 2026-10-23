@@ -72,7 +72,8 @@ export const persistOptions = {
     key: "parley-query-cache",
   }),
   maxAge: 24 * 60 * 60 * 1000,
-  // Bump when a cached shape changes, to drop entries written by an older build.
-  buster: "v3",
+  // Bump when a cached shape changes, or what a catalog lists does, to drop
+  // entries written by an older build.
+  buster: "v4",
   dehydrateOptions: { shouldDehydrateQuery: shouldPersist },
 };

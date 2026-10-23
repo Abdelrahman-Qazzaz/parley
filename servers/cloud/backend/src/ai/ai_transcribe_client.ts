@@ -105,23 +105,33 @@ export function getTranscribeModelData(): Promise<TranscribeModelData> {
 }
 
 /**
- * Deepgram's speech-to-text models, by the id a job is created with. Its own
- * names repeat across generations ("general" is both nova-2 and nova-3), so
- * the canonical name is what a person picks from too.
+ * The models offered, in the order shown, with the names they're shown by.
+ * Deepgram's catalog lists about forty: older generations, industry variants
+ * (drive-thru, voicemail, ATC) and models private to an account, which only
+ * made the list harder to choose from. Ids are canonical names, since
+ * Deepgram's own names repeat across generations ("general" is both nova-2
+ * and nova-3).
  */
+const OFFERED_MODELS: readonly TranscribeModel[] = [
+  { id: "nova-3-general", name: "Nova 3" },
+  { id: "nova-3-medical", name: "Nova 3 Medical" },
+  { id: "nova-2-general", name: "Nova 2" },
+  { id: "whisper-large", name: "Whisper Large" },
+];
+
+/** The offered models Deepgram's catalog currently has. */
 async function listModels(): Promise<TranscribeModel[]> {
   const modelData = await getTranscribeModelData();
-  return Object.keys(modelData).map((id) => ({ id, name: id }));
+  return OFFERED_MODELS.filter((model) => Object.hasOwn(modelData, model.id));
 }
 
 /**
- * Whether a model id can be used for transcription: one listModels
- * lists. Deepgram STT models are single-modality, so presence in the catalog
- * is the whole check, as it is for chat.findModel.
+ * Whether a model id can be used for transcription: one listModels lists.
+ * Deepgram STT models are single-modality, so being offered and in the
+ * catalog is the whole check, as presence is for chat.findModel.
  */
 async function isValidModel(modelId: string): Promise<boolean> {
-  const modelData = await getTranscribeModelData();
-  return Object.hasOwn(modelData, modelId);
+  return (await listModels()).some((model) => model.id === modelId);
 }
 
 export const DEFAULT_TRANSCRIBE_MODEL = "nova-3-general";

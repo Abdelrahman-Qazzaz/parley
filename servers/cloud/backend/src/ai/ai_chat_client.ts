@@ -184,13 +184,17 @@ async function fetchChatModels(): Promise<ChatModel[]> {
   const models = (await client.models.list({ outputModalities: "text" })).result
     .data;
 
-  return models.map((model) => ({
-    id: model.id,
-    name: model.name,
-    contextTokens: model.contextLength,
-    acceptsImages: model.architecture.inputModalities.includes("image"),
-    pricing: toPricing(model.pricing),
-  }));
+  // ":batch" variants are for OpenRouter's batch API, which doesn't stream, so
+  // none of them can hold a chat.
+  return models
+    .filter((model) => !model.id.endsWith(":batch"))
+    .map((model) => ({
+      id: model.id,
+      name: model.name,
+      contextTokens: model.contextLength,
+      acceptsImages: model.architecture.inputModalities.includes("image"),
+      pricing: toPricing(model.pricing),
+    }));
 }
 
 // Every send looks up the chosen model here, so the cache keeps that lookup

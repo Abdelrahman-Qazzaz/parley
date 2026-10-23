@@ -8,6 +8,7 @@
     "./contract": "./src/contract.ts",
     "./cursor": "./src/cursor.ts",
     "./events": "./src/events.ts",
+    "./limits": "./src/limits.ts",
     "./logger": "./src/logger.ts",
     "./shutdown": "./src/shutdown.ts",
     "./sse": "./src/sse.ts",

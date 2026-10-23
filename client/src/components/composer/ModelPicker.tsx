@@ -4,11 +4,11 @@ import {
   describePricing,
   meetsRequirements,
   priceTier,
-  providerSlug,
   type ChatModel,
   type MessageRequirements,
   type ModelPricing,
 } from "../../api/models";
+import { useServer } from "../../hooks/server/useServer";
 import { fuzzyScoreAny } from "../../lib/fuzzy";
 import { Icon } from "../ui/Icon";
 import { useDismissable } from "../ui/useDismissable";
@@ -28,7 +28,6 @@ type Entry = {
   model: ChatModel;
   provider: string;
   name: string;
-  slug: string;
   score: number;
 };
 
@@ -89,6 +88,7 @@ export function ModelPicker({
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [provider, setProvider] = useState<string | null>(null);
+  const recommendedIds = useServer().recommendedChatModelIds;
   const menuRef = useDismissable<HTMLDivElement>(open, () => setOpen(false));
 
   // Requirement filtering happens before anything the user drives, so the
@@ -104,31 +104,29 @@ export function ModelPicker({
             model,
             provider: label,
             name,
-            slug: providerSlug(model.id),
             score: 0,
           } satisfies Entry;
         }),
     [models, requirements],
   );
 
+  // Keyed by the display label, as the list's groups are: one provider can
+  // publish under several id prefixes ("meta" and "meta-llama", and the "~"
+  // aliases), and keying by prefix listed it once per prefix.
   const providers = useMemo(() => {
-    const counts = new Map<string, { label: string; count: number }>();
+    const counts = new Map<string, number>();
     for (const entry of eligible) {
-      const current = counts.get(entry.slug);
-      counts.set(entry.slug, {
-        label: entry.provider,
-        count: (current?.count ?? 0) + 1,
-      });
+      counts.set(entry.provider, (counts.get(entry.provider) ?? 0) + 1);
     }
     return [...counts.entries()]
-      .map(([slug, meta]) => ({ slug, ...meta }))
+      .map(([label, count]) => ({ label, count }))
       .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
   }, [eligible]);
 
   const matches = useMemo(() => {
     const query = search.trim();
     const scored = eligible.flatMap((entry) => {
-      if (provider && entry.slug !== provider) return [];
+      if (provider && entry.provider !== provider) return [];
       const score = fuzzyScoreAny(
         [entry.name, entry.id, entry.provider],
         query,
@@ -145,7 +143,8 @@ export function ModelPicker({
   }, [eligible, provider, search]);
 
   // Grouping only makes sense while browsing: a search is ranked by relevance
-  // across every provider, and a chosen provider is already one group.
+  // across every provider, and a chosen provider is already one group. The
+  // recommended models lead, and stay in their providers' groups as well.
   const grouped = useMemo(() => {
     if (search.trim() || provider) return null;
     const groups = new Map<string, Entry[]>();
@@ -157,10 +156,17 @@ export function ModelPicker({
     for (const list of groups.values()) {
       list.sort((a, b) => a.name.localeCompare(b.name));
     }
-    return [...groups.entries()].sort(
+    const byProvider = [...groups.entries()].sort(
       (a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]),
     );
-  }, [matches, provider, search]);
+    const recommended = recommendedIds.flatMap((id) => {
+      const entry = matches.find((match) => match.id === id);
+      return entry ? [entry] : [];
+    });
+    return recommended.length > 0
+      ? [["Recommended", recommended] as const, ...byProvider]
+      : byProvider;
+  }, [matches, provider, search, recommendedIds]);
 
   const selected = eligible.find((entry) => entry.id === value);
   // Only worth saying when it actually cost the user options.
@@ -272,12 +278,12 @@ export function ModelPicker({
               </button>
               {providers.map((item) => (
                 <button
-                  key={item.slug}
+                  key={item.label}
                   type="button"
-                  onClick={() => setProvider(item.slug)}
+                  onClick={() => setProvider(item.label)}
                   title={item.label}
                   className={`flex w-full items-center justify-between px-3 py-1.5 text-left text-[12px] transition-colors ${
-                    provider === item.slug
+                    provider === item.label
                       ? "bg-signal-tint text-signal-strong"
                       : "text-muted hover:bg-sunk hover:text-ink"
                   }`}

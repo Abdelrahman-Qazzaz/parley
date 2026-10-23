@@ -26,6 +26,11 @@ export type Server = {
   /** The models a new chat and a new transcript start on, when offered. */
   defaultChatModelId: string;
   defaultTranscribeModelId: string;
+  /**
+   * Chat models listed first in the picker, in this order, ahead of the full
+   * catalog. Ones the catalog doesn't offer are skipped.
+   */
+  recommendedChatModelIds: readonly string[];
 };
 
 /**

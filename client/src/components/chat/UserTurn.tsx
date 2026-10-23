@@ -167,7 +167,7 @@ export function UserTurn({
             disabled={!canEdit}
             aria-label="Edit message"
             title="Edit message"
-            className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 disabled:hidden group-hover/turn:opacity-100"
+            className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-muted opacity-0 pointer-coarse:opacity-100 transition-opacity hover:text-ink focus-visible:opacity-100 disabled:hidden group-hover/turn:opacity-100"
           >
             <Icon name="pencil" className="h-3.5 w-3.5" />
             <span className="text-xs">Edit</span>

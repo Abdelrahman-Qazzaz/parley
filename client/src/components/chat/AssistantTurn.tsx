@@ -43,13 +43,13 @@ export function AssistantTurn({
           <button
             type="button"
             onClick={() => void copy()}
-            className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-muted opacity-0 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover/turn:opacity-100"
+            className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-muted opacity-0 pointer-coarse:opacity-100 transition-opacity hover:text-ink focus-visible:opacity-100 group-hover/turn:opacity-100"
           >
             <Icon name={copied ? "check" : "copy"} className="h-3.5 w-3.5" />
             <span className="text-xs">{copied ? "Copied" : "Copy"}</span>
           </button>
           {modelName && (
-            <span className="font-mono text-[11px] text-faint opacity-0 transition-opacity group-hover/turn:opacity-100">
+            <span className="font-mono text-[11px] text-faint opacity-0 pointer-coarse:opacity-100 transition-opacity group-hover/turn:opacity-100">
               {modelName}
             </span>
           )}
