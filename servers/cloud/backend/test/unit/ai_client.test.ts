@@ -115,6 +115,20 @@ describe("listChatModels", () => {
     // Only text-output models are relevant here; transcription is Deepgram's.
     expect(mockModelsList).toHaveBeenCalledWith({ outputModalities: "text" });
   });
+
+  it("leaves out batch-only variants, which can't stream a reply", async () => {
+    mockGetOrSetCache.mockImplementationOnce(runFetch);
+    mockModelsList.mockResolvedValueOnce({
+      result: {
+        data: [
+          openRouterListModel,
+          { ...openRouterListModel, id: `${openRouterListModel.id}:batch` },
+        ],
+      },
+    });
+
+    expect(await chat.listModels()).toEqual([sampleModel]);
+  });
 });
 
 describe("findChatModel", () => {

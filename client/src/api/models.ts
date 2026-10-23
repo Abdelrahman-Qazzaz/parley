@@ -57,9 +57,11 @@ const PROVIDER_LABELS: Record<string, string> = {
   ai21: "AI21",
 };
 
-export function providerSlug(modelId: string): string {
+// A leading "~" marks OpenRouter's alias ids ("~openai/gpt-chat-latest"), which
+// belong to the same provider as the model they point at.
+function providerSlug(modelId: string): string {
   const [slug] = modelId.split("/");
-  return slug && slug !== modelId ? slug : "other";
+  return slug && slug !== modelId ? slug.replace(/^~/, "") : "other";
 }
 
 function labelForSlug(slug: string): string {

@@ -21,6 +21,17 @@ export const cloudServer: Server = {
   uploads: "signed",
   defaultChatModelId: "openai/gpt-4o-mini",
   defaultTranscribeModelId: "nova-3-general",
+  // OpenRouter's "~…-latest" ids follow each family's newest model, so this
+  // list doesn't go stale as models are released.
+  recommendedChatModelIds: [
+    "openai/gpt-4o-mini",
+    "~anthropic/claude-sonnet-latest",
+    "~anthropic/claude-haiku-latest",
+    "~google/gemini-pro-latest",
+    "~google/gemini-flash-latest",
+    "~openai/gpt-mini-latest",
+    "~deepseek/deepseek-flash-latest",
+  ],
 };
 
 const LOCAL_PORT = "3002";
@@ -50,6 +61,8 @@ export const localServer: Server = {
   uploads: "direct",
   defaultChatModelId: "sonnet",
   defaultTranscribeModelId: "small",
+  // Its catalog is a handful of Claude models already.
+  recommendedChatModelIds: [],
 };
 
 export function authLoginUrl(): string {
