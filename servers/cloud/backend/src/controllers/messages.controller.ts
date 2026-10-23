@@ -1,5 +1,4 @@
 // TODO: stop referring to ONLY images as attachments. attachments means both in one var, seperated by "kind" attr.
-// TODO: refactor and fix patching&deletion handlers.
 
 import type { Context } from "hono";
 import type {

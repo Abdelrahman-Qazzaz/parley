@@ -2,23 +2,7 @@ import "dotenv/config";
 import { homedir } from "node:os";
 import path from "node:path";
 import { z } from "zod";
-
-function parseEnv<S extends z.ZodTypeAny>(
-  schema: S,
-  label: string,
-): z.infer<S> {
-  const result = schema.safeParse(process.env);
-  if (!result.success) {
-    console.error(`Invalid environment variables (${label}):`);
-    for (const [key, errors] of Object.entries(
-      result.error.flatten().fieldErrors,
-    )) {
-      console.error(`  ${key}: ${errors?.join(", ") ?? "invalid"}`);
-    }
-    process.exit(1);
-  }
-  return result.data;
-}
+import { parseEnv } from "@parley/shared/parseEnv";
 
 const nodeEnvSchema = z
   .enum(["development", "production", "test"])
@@ -63,7 +47,7 @@ export const apiEnvSchema = baseEnvSchema.extend({
     ),
   /**
    * Origins besides this machine's whose pages may call the API,
-   * comma-separated: the hosted client, e.g. https://parley.up.railway.app,
+   * comma-separated: the hosted client, e.g. https://parley.example.com,
    * which reaches "This computer" from the browser. Each may read and change
    * everything here, so list only the app's own.
    */

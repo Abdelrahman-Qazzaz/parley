@@ -121,7 +121,7 @@ Production is one VPS running `servers/cloud/compose.yaml` with
 randomize it.
 
 Running more than one instance needs more than a replica count: rate limits
-and event streams are per process (see MESSAGE_LATENCY.md), and so are the
+and event streams are per process (see the root TODO.md), and so are the
 replies being written (`src/replies.ts`), so a stop request or a reloaded
 page has to reach the instance writing the reply. The instances
 have to split the transcription concurrency between them (see

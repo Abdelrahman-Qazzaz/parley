@@ -1,4 +1,4 @@
-import { verifyServices } from "../shared/preflight";
+import { verifyServices } from "@parley/shared/preflight";
 import { pingChatAI } from "../shared/ai/ai_chat_client";
 import { pingTranscribeAI } from "../shared/ai/ai_transcribe_client";
 import { ytDlp } from "./src/ytDlp";

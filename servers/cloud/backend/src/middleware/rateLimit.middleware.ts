@@ -62,7 +62,7 @@ const stores: MemoryStore[] = [];
  * A policy from policies.ts as middleware, counting in this process's memory.
  * The API runs as one instance, so the counts are exact and no request waits
  * on a round trip to a shared store. With several instances each would count
- * on its own; see MESSAGE_LATENCY.md before scaling out.
+ * on its own; see TODO.md before scaling out.
  *
  * RATE_LIMIT_MULTIPLIER raises every budget for the load test, which would
  * otherwise measure mostly 429s; production refuses to start with it set.

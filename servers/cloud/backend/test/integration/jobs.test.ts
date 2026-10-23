@@ -181,11 +181,13 @@ describe.skipIf(!testState.databaseUrl)("audio jobs in PostgreSQL", () => {
       const audioUploadId = await createJob();
       const claimed = await jobs.claimAudioJob(audioUploadId);
 
-      await jobs.failAudioJob(
-        audioUploadId,
-        claimed!.claimToken,
-        "Could not be transcribed",
-      );
+      expect(
+        await jobs.failAudioJob(
+          audioUploadId,
+          claimed!.claimToken,
+          "Could not be transcribed",
+        ),
+      ).toBe(true);
 
       expect(await readJob(audioUploadId)).toMatchObject({
         status: "failed",
@@ -197,11 +199,13 @@ describe.skipIf(!testState.databaseUrl)("audio jobs in PostgreSQL", () => {
       const audioUploadId = await createJob();
       await jobs.claimAudioJob(audioUploadId);
 
-      await jobs.failAudioJob(
-        audioUploadId,
-        randomUUID(),
-        "Could not be transcribed",
-      );
+      expect(
+        await jobs.failAudioJob(
+          audioUploadId,
+          randomUUID(),
+          "Could not be transcribed",
+        ),
+      ).toBe(false);
 
       expect(await readJob(audioUploadId)).toMatchObject({
         status: "processing",

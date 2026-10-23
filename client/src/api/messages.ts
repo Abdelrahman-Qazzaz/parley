@@ -1,7 +1,6 @@
 import type {
   ChatMessage,
   MessageAttachmentInput,
-  MessageImage,
   MessagesResponse,
   MessageTranscript,
   ReplyInProgress,
@@ -18,7 +17,6 @@ import { serverUrl, type Server } from "./server";
 export type {
   ChatMessage,
   MessageAttachmentInput,
-  MessageImage,
   MessagesResponse,
   MessageTranscript,
   ReplyInProgress,

@@ -54,7 +54,7 @@ describe("handleTranscribeJob", () => {
     mocks.signUrl.mockResolvedValue("https://signed.example/audio");
     mocks.transcribeAI.mockRejectedValue(new Error("Deepgram unavailable"));
     mocks.unclaimAndResetAudioJob.mockResolvedValue(true);
-    mocks.failAudioJob.mockResolvedValue(undefined);
+    mocks.failAudioJob.mockResolvedValue(true);
   });
 
   describe("storing a transcript", () => {
@@ -179,6 +179,7 @@ describe("handleTranscribeJob", () => {
       await expect(
         handleTranscribeJob(audioInput, firstAttempt),
       ).resolves.toBeUndefined();
+      expect(mocks.sendEvent).not.toHaveBeenCalled();
     });
 
     it("leaves a failed claim to the consumer, touching no job", async () => {
@@ -224,6 +225,22 @@ describe("handleTranscribeJob", () => {
         claimToken,
         "No speech found in the audio",
       );
+    });
+
+    it("tells the user's open streams the job failed", async () => {
+      await handleTranscribeJob(audioInput, lastAttempt);
+
+      expect(mocks.sendEvent).toHaveBeenCalledWith("user_01", "jobUpdated", {
+        audioUploadId,
+      });
+    });
+
+    it("announces nothing when the job is no longer this worker's to fail", async () => {
+      mocks.failAudioJob.mockResolvedValue(false);
+
+      await handleTranscribeJob(audioInput, lastAttempt);
+
+      expect(mocks.sendEvent).not.toHaveBeenCalled();
     });
 
     it("leaves the message to be dead-lettered when failing the job fails", async () => {

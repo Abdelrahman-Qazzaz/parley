@@ -77,7 +77,8 @@ async function transcribeAudio(job: ClaimedJob) {
  * rather than tried again in the same outage.
  *
  * On the last attempt the job fails for good. The job row records that, so
- * the message is done.
+ * the message is done. Returns whether this worker failed it, so the user is
+ * told only about a failure that was recorded.
  */
 async function settleFailedJob(
   audioUploadId: UploadId,
@@ -86,12 +87,11 @@ async function settleFailedJob(
   error: unknown,
 ) {
   if (lastAttempt) {
-    await data.jobs.failAudioJob(
+    return data.jobs.failAudioJob(
       audioUploadId,
       claimToken,
       failureMessage(error),
     );
-    return;
   }
 
   let unclaimed: boolean;
@@ -108,7 +108,7 @@ async function settleFailedJob(
     );
   }
   // Completed, deleted or claimed by another worker: nothing to try again.
-  if (!unclaimed) return;
+  if (!unclaimed) return false;
   throw error;
 }
 
@@ -126,13 +126,12 @@ export async function handleTranscribeJob(
   },
   { attempt, lastAttempt, redelivered }: DeliveryMetadata,
 ) {
-  let claimToken: string | null = null;
-  let userId: string;
+  let job: ClaimedJob | null = null;
 
   try {
-    const job = await data.jobs.claimAudioJob(audioUploadId, redelivered);
+    job = await data.jobs.claimAudioJob(audioUploadId, redelivered);
     if (!job) return;
-    claimToken = job.claimToken;
+    const { claimToken } = job;
 
     const transcript = captions ?? (await transcribeAudio(job));
     if (!transcript.trim()) throw new NoSpeechError();
@@ -151,7 +150,6 @@ export async function handleTranscribeJob(
       log.debug("Discarded result from superseded claim", { audioUploadId });
       return;
     }
-    userId = job.userId;
   } catch (error) {
     log.error("Transcription job failed", error, {
       audioUploadId,
@@ -159,11 +157,19 @@ export async function handleTranscribeJob(
       redelivered,
     });
     // Nothing claimed: the consumer tries again or dead-letters it.
-    if (!claimToken) throw error;
-    await settleFailedJob(audioUploadId, claimToken, lastAttempt, error);
+    if (!job) throw error;
+    const failed = await settleFailedJob(
+      audioUploadId,
+      job.claimToken,
+      lastAttempt,
+      error,
+    );
+    // The client stops polling while its stream is open, so a failure it
+    // isn't told about shows as processing until the page reloads.
+    if (failed) events.send(job.userId, "jobUpdated", { audioUploadId });
     return;
   }
 
   // Tells the user's open streams the job is done, so their screen updates.
-  events.send(userId, "jobUpdated", { audioUploadId });
+  events.send(job.userId, "jobUpdated", { audioUploadId });
 }

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { z } from "zod";
+import { parseEnv as parseSharedEnv } from "@parley/shared/parseEnv";
 
 const ANSI_RED = "\x1b[31m";
 const ANSI_RESET = "\x1b[0m";
@@ -25,22 +26,9 @@ function warnIfNotRunningUnderDoppler(): void {
   );
 }
 
-function parseEnv<S extends z.ZodTypeAny>(
-  schema: S,
-  label: string,
-): z.infer<S> {
+function parseEnv<S extends z.ZodTypeAny>(schema: S, label: string) {
   warnIfNotRunningUnderDoppler();
-  const result = schema.safeParse(process.env);
-  if (!result.success) {
-    console.error(`Invalid environment variables (${label}):`);
-    for (const [key, errors] of Object.entries(
-      result.error.flatten().fieldErrors,
-    )) {
-      console.error(`  ${key}: ${errors?.join(", ") ?? "invalid"}`);
-    }
-    process.exit(1);
-  }
-  return result.data;
+  return parseSharedEnv(schema, label);
 }
 
 const nodeEnvSchema = z

@@ -15,14 +15,17 @@ const MAX_LEADING_PENALTY = 12;
 function isWordStart(text: string, index: number): boolean {
   if (index === 0) return true;
   const previous = text[index - 1];
-  return !/[a-z0-9]/i.test(previous) || (/[a-z]/.test(previous) && /[A-Z]/.test(text[index]));
+  return (
+    !/[a-z0-9]/i.test(previous) ||
+    (/[a-z]/.test(previous) && /[A-Z]/.test(text[index]))
+  );
 }
 
 /**
  * Higher is better; null when `query` is not a subsequence of `text`.
  * An empty query matches everything with a score of 0.
  */
-export function fuzzyScore(text: string, query: string): number | null {
+function fuzzyScore(text: string, query: string): number | null {
   if (!query) return 0;
 
   const haystack = text.toLowerCase();
