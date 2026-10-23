@@ -15,6 +15,12 @@ Already done on this branch:
 - #5: a saved turn no longer runs the two cleanup queries before its stream
   closes (`4334ef8`). `persistAndUnclaimChatTurn` is now `persistAndUnclaimChatTurn`
   (`83dc19f`), since it releases the claim and reservations itself.
+- The history read leaves out message and transcript text the process
+  already holds (`history-text-cache`), so from a conversation's third turn
+  on it costs about one round trip, the same as the claim beside it. Against
+  the Frankfurt dev database from the sandbox (~75 ms a round trip), the
+  `Promise.all` went from 146 to 76 ms with 20 messages and from 282 to 75 ms
+  with a full window.
 
 | #   | What                                    | Delays                   | When                                 |
 | --- | --------------------------------------- | ------------------------ | ------------------------------------ |

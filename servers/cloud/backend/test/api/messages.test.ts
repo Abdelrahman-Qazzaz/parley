@@ -162,6 +162,7 @@ vi.mock("../../src/preparationMetrics", async (importActual) => {
 });
 
 import { createApp } from "../../src/app";
+import { resetHistoryText } from "../../src/chat/historyText";
 import { resetRateLimits } from "../../src/middleware/rateLimit.middleware";
 import { measurePreparation } from "../../src/preparationMetrics";
 import {
@@ -235,7 +236,7 @@ function createMessageHistory(
     role: "user",
     createdAt: new Date(createdAt),
     content: "",
-    transcriptContents: [],
+    transcripts: [],
     images: imageUrls.map((url) => ({
       imageUploadId: url,
       signedUrl: url,
@@ -275,6 +276,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   // Every case sends turns; none should spend another's chat-turn budget.
   resetRateLimits();
+  resetHistoryText();
   mockFindOwnedConversation.mockResolvedValue(ownedConversation);
   mockClaimConversationTurn.mockImplementation(
     (_userId, _conversationId, _lastMessageId, claimToken = "claim-token") =>
@@ -299,7 +301,10 @@ beforeEach(() => {
   );
   mockFindMessageTranscriptAttachments.mockResolvedValue(new Map());
   mockFindTranscripts.mockResolvedValue(new Map());
-  mockPersistAndUnclaimChatTurn.mockResolvedValue(assistantRow.id);
+  mockPersistAndUnclaimChatTurn.mockResolvedValue({
+    userMessageId: userRow.id,
+    assistantMessageId: assistantRow.id,
+  });
   mockDeleteOwnedMessage.mockResolvedValue({
     status: "deleted",
     ids: [messageId],
@@ -713,7 +718,10 @@ describe("POST /conversations/:conversationId/messages", () => {
   it("keeps protection through persistence after the client disconnects", async () => {
     const client = new AbortController();
     const generation = Promise.withResolvers<string>();
-    const persistence = Promise.withResolvers<string>();
+    const persistence = Promise.withResolvers<{
+      userMessageId: string;
+      assistantMessageId: string;
+    }>();
     mockResolveImages.mockResolvedValueOnce([resolvedImage]);
     mockChatAI.mockReturnValueOnce(generation.promise);
     mockPersistAndUnclaimChatTurn.mockReturnValueOnce(persistence.promise);
@@ -737,7 +745,10 @@ describe("POST /conversations/:conversationId/messages", () => {
     );
     expect(mockUnclaimAttachments).not.toHaveBeenCalled();
     expect(mockUnclaimConversationTurn).not.toHaveBeenCalled();
-    persistence.resolve(assistantRow.id);
+    persistence.resolve({
+      userMessageId: userRow.id,
+      assistantMessageId: assistantRow.id,
+    });
 
     // Saving the turn released both, so there's nothing left to clean up.
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -1078,12 +1089,43 @@ describe("POST /conversations/:conversationId/messages", () => {
     );
   });
 
+  it("leaves out of the next history read the text this one read and saved", async () => {
+    const olderId = "650e8400-e29b-41d4-a716-446655440000";
+    mockFindContextHistory.mockResolvedValueOnce([
+      createMessageHistory({
+        id: olderId,
+        content: "Earlier",
+        transcripts: [{ audioUploadId: "audio-history", content: "T" }],
+      }),
+    ]);
+    mockChatAI.mockResolvedValueOnce("Hello world");
+    mockChatAI.mockResolvedValueOnce("Second reply");
+
+    for (const messageContent of ["Hi there", "And again"]) {
+      const res = await postMessage({ messageContent, chosenModelId: modelId });
+      expect(res.status).toBe(200);
+      await res.text();
+    }
+
+    expect(mockFindContextHistory.mock.calls[0][0]).not.toHaveProperty(
+      "knownText",
+    );
+    expect(mockFindContextHistory.mock.calls[1][0].knownText).toEqual({
+      messages: new Map([
+        [olderId, "Earlier"],
+        [userRow.id, "Hi there"],
+        [assistantRow.id, "Hello world"],
+      ]),
+      transcripts: new Map([["audio-history", "T"]]),
+    });
+  });
+
   it("replays transcript history without reading the transcripts again", async () => {
     mockFindContextHistory.mockResolvedValueOnce([
       createMessageHistory({
         id: assistantRow.id,
         content: "Newer",
-        transcriptContents: ["T"],
+        transcripts: [{ audioUploadId: "audio-history", content: "T" }],
       }),
     ]);
     mockChatAI.mockResolvedValueOnce("Hello world");
@@ -1247,7 +1289,10 @@ describe("POST /conversations/:conversationId/messages", () => {
           id: messageId,
           role: "user",
           content: "Compare these",
-          transcriptContents: [firstTranscript, secondTranscript],
+          transcripts: [
+            { audioUploadId: "audio-first", content: firstTranscript },
+            { audioUploadId: "audio-second", content: secondTranscript },
+          ],
         }),
       ]);
       mockChatAI.mockResolvedValueOnce("Hello world");
