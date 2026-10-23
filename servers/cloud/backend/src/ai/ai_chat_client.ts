@@ -123,6 +123,8 @@ type ChatOptions = {
   sessionId?: string | undefined;
   /** Ceiling on the whole call. Defaults to CHAT_TOTAL_TIMEOUT_MS. */
   timeoutMs?: number | undefined;
+  /** Ends the call early: the stop button, through the reply registry. */
+  signal?: AbortSignal | undefined;
 };
 
 async function complete(
@@ -149,6 +151,7 @@ async function complete(
     progressTimeoutMs: opts.onDelta
       ? CHAT_BETWEEN_CHUNKS_TIMEOUT_MS
       : undefined,
+    signal: opts.signal,
   };
 
   return withTimeout(timeoutOptions, (ctx) =>

@@ -11,6 +11,7 @@ import { randomUUID } from "node:crypto";
 import { streamSSE } from "hono/streaming";
 import { logger } from "@parley/shared/logger";
 import { SSEEventQueue } from "@parley/shared/sse";
+import type { TrackedReply } from "@parley/shared/replies";
 import {
   data,
   type MessageRow,
@@ -23,6 +24,8 @@ import {
   withPreparationMetrics,
 } from "../preparationMetrics";
 import { uploads } from "../uploads";
+import { events as serverEvents } from "../events";
+import { replies, replyKey } from "../replies";
 import { authed } from "../middleware/auth.middleware";
 import { validate } from "../middleware/validate.middleware";
 import { conversationReqParamSchema } from "../schema/conversations.schema";
@@ -51,6 +54,7 @@ function toMessageJson(
     role: row.role,
     content: row.content,
     chosenModelId: row.chosenModelId,
+    stopped: row.stopped,
     conversationId: row.conversationId,
     createdAt: row.createdAt.toISOString(),
     attachments: images,
@@ -73,6 +77,11 @@ export const handleListMessages = authed.createHandlers(
   async (c) => {
     const { userId } = c.var;
     const { conversationId } = c.req.valid("param");
+
+    // Read before the rows: a reply that ends in between is then in both,
+    // until the replyFinished it sends has the client read again, rather than
+    // in neither, with nothing to say it's missing.
+    const replyInProgress = replies.find(replyKey(userId, conversationId));
 
     // Ownership check and the rows themselves are independent reads; the rows
     // are simply discarded on the 404 path.
@@ -99,14 +108,16 @@ export const handleListMessages = authed.createHandlers(
           transcriptsByMessageId.get(row.id),
         ),
       ),
+      replyInProgress,
     } satisfies MessagesResponse);
   },
 );
 
 /**
  * Answers a turn as server-sent events: `delta` ({ delta }) per model chunk,
- * then `done` ({ lastMessageId }) once the turn is stored, or `error`
- * ({ message }) if the model call fails. A turn rejected before the model is
+ * then `done` ({ lastMessageId, stopped }) once the turn is stored, `cancelled`
+ * if it was stopped before any reply came, or `error` ({ message }) if the
+ * model call fails. A turn rejected before the model is
  * asked gets a plain JSON error instead. The client reads the stream with
  * fetch + response.body.getReader() (EventSource can't POST).
  *
@@ -132,9 +143,14 @@ function streamTurn(
   void (async () => {
     const events = new SSEEventQueue<ReplyStreamEvents>();
     let streamResponse: Response | undefined;
+    let reply: TrackedReply | undefined;
 
     try {
       const prepared = await prepare();
+      reply = replies.start(
+        replyKey(request.userId, request.conversationId),
+        request.content,
+      );
 
       streamResponse = streamSSE(c, (stream) =>
         events.pipeTo(stream, c.req.raw.signal),
@@ -144,10 +160,11 @@ function streamTurn(
       const modelStartedAt = performance.now();
       const modelStartedAfterMs = msSince(metrics.startedAt);
       let firstTokenLogged = false;
-      const lastMessageId = await answerTurn(
+      const answer = await answerTurn(
         request,
         claim,
         prepared,
+        reply,
         (delta) => {
           if (delta.length > 0 && !firstTokenLogged) {
             firstTokenLogged = true;
@@ -161,7 +178,12 @@ function streamTurn(
         },
       );
 
-      events.push("done", { lastMessageId });
+      if (answer) {
+        events.push("done", answer);
+      } else {
+        await claim.release();
+        events.push("cancelled", {});
+      }
       return streamResponse;
     } catch (error) {
       // Released before answering, so a client that retries at once doesn't
@@ -179,6 +201,14 @@ function streamTurn(
       return streamResponse;
     } finally {
       events.end();
+      if (reply) {
+        reply.end();
+        // For a page that was reloaded mid-reply: its stream is gone, and
+        // this is how it hears the turn is saved.
+        serverEvents.send(request.userId, "replyFinished", {
+          conversationId: request.conversationId,
+        });
+      }
     }
   })().then(responseReady.resolve, responseReady.reject);
 
@@ -257,6 +287,24 @@ export const handlePatchMessage = authed.createHandlers(
         return prepared;
       });
     });
+  },
+);
+
+/**
+ * POST /conversations/:conversationId/messages/stop — stops the reply being
+ * written. Its turn's stream ends as stopping leaves it: `done` with the
+ * reply saved so far, or `cancelled` if none had come.
+ *
+ * Its own request, because the reply stream closing isn't one: that's also
+ * what a dropped connection looks like, and a reply outlives those.
+ */
+export const handleStopReply = authed.createHandlers(
+  validate("param", conversationReqParamSchema),
+  (c) => {
+    const { conversationId } = c.req.valid("param");
+    return replies.stop(replyKey(c.var.userId, conversationId))
+      ? c.body(null, 204)
+      : c.json({ message: "No reply in progress" }, 404);
   },
 );
 

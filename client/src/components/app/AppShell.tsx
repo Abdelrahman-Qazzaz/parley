@@ -3,6 +3,7 @@ import { Outlet } from "react-router-dom";
 import { useServerReachable } from "../../hooks/server/useServerReachable";
 import { useServerReady } from "../../hooks/server/useServerReady";
 import { useJobUpdatesBridge } from "../../hooks/events/useJobUpdatesBridge";
+import { useReplyUpdatesBridge } from "../../hooks/events/useReplyUpdatesBridge";
 import { SourcesProvider } from "../../sources/SourcesProvider";
 import { SourceDialog } from "../sources/SourceDialog";
 import { SourcesDrawer } from "../sources/SourcesDrawer";
@@ -26,6 +27,7 @@ export function AppShell() {
   // One subscription for the whole app: transcript progress refreshes the job
   // caches the composer chips and the drawer both read.
   useJobUpdatesBridge(ready);
+  useReplyUpdatesBridge(ready);
 
   const shell = useMemo(
     () => ({

@@ -31,6 +31,9 @@ type ComposerProps = {
   requirements: MessageRequirements;
   sending: boolean;
   canSend: boolean;
+  /** Set while a reply is being written that the stop button can reach. */
+  onStop: (() => void) | null;
+  stopping: boolean;
   /** What the send is waiting on, if anything — shown under the box. */
   blockedReason: string | null;
   onSend: () => void;
@@ -48,6 +51,8 @@ export function Composer({
   requirements,
   sending,
   canSend,
+  onStop,
+  stopping,
   blockedReason,
   onSend,
 }: ComposerProps) {
@@ -164,23 +169,41 @@ export function Composer({
               error={modelsError}
             />
             <span className="flex-1" />
-            <button
-              type="button"
-              onClick={onSend}
-              disabled={!canSend}
-              aria-label={sending ? "Waiting for the reply" : "Send message"}
-              className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                canSend || sending
-                  ? "bg-signal text-white hover:bg-signal-strong"
-                  : "bg-line text-faint"
-              }`}
-            >
-              {sending ? (
-                <Meter state="live" tone="current" className="h-3.5" />
-              ) : (
+            {sending ? (
+              <button
+                type="button"
+                onClick={onStop ?? undefined}
+                disabled={!onStop || stopping}
+                aria-label={
+                  stopping
+                    ? "Stopping the reply"
+                    : onStop
+                      ? "Stop the reply"
+                      : "Waiting for the reply"
+                }
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-signal text-white transition-colors hover:bg-signal-strong disabled:hover:bg-signal"
+              >
+                {onStop && !stopping ? (
+                  <Icon name="stop" className="h-4 w-4" />
+                ) : (
+                  <Meter state="live" tone="current" className="h-3.5" />
+                )}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onSend}
+                disabled={!canSend}
+                aria-label="Send message"
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                  canSend
+                    ? "bg-signal text-white hover:bg-signal-strong"
+                    : "bg-line text-faint"
+                }`}
+              >
                 <Icon name="send" className="h-4 w-4" />
-              )}
-            </button>
+              </button>
+            )}
           </div>
         </div>
 

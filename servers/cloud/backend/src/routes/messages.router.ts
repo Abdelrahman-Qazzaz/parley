@@ -36,6 +36,12 @@ messagesRouter.post(
   ...messagesController.handleCreateMessage,
 );
 
+messagesRouter.post(
+  "/stop",
+  conversationRateLimiter,
+  ...messagesController.handleStopReply,
+);
+
 messagesRouter.patch(
   "/:messageId",
   chatTurnRateLimiter,

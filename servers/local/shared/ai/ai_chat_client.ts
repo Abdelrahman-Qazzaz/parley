@@ -292,6 +292,8 @@ type ChatOptions = {
   instructions?: string | undefined;
   /** Ceiling on the whole call. Defaults to CHAT_TOTAL_TIMEOUT_MS. */
   timeoutMs?: number | undefined;
+  /** Ends the call early: the stop button, through the reply registry. */
+  signal?: AbortSignal | undefined;
 };
 
 export async function chatAI(
@@ -304,6 +306,7 @@ export async function chatAI(
     timeoutMs: opts.timeoutMs ?? CHAT_TOTAL_TIMEOUT_MS,
     firstProgressTimeoutMs: onDelta ? CHAT_FIRST_TOKEN_TIMEOUT_MS : undefined,
     progressTimeoutMs: onDelta ? CHAT_BETWEEN_CHUNKS_TIMEOUT_MS : undefined,
+    signal: opts.signal,
   };
 
   return withTimeout(timeoutOptions, ({ abortSignal, markProgress }) =>

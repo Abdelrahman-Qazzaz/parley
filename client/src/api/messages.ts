@@ -4,6 +4,7 @@ import type {
   MessageImage,
   MessagesResponse,
   MessageTranscript,
+  ReplyInProgress,
   ReplyStreamEvents,
   SendMessageBody,
 } from "@parley/shared/contract";
@@ -11,7 +12,7 @@ import {
   readServerSentEvents,
   type ServerSentEvent,
 } from "@parley/shared/sseReader";
-import { apiFetch, apiJson, jsonRequest } from "./http";
+import { ApiError, apiFetch, apiJson, jsonRequest } from "./http";
 import { serverUrl, type Server } from "./server";
 
 export type {
@@ -20,6 +21,7 @@ export type {
   MessageImage,
   MessagesResponse,
   MessageTranscript,
+  ReplyInProgress,
 };
 
 /**
@@ -63,8 +65,12 @@ export async function fetchMessages(
 }
 
 type StreamCallbacks = {
+  /** The reply has started, so it can be stopped from now on. */
+  onOpen: () => void;
   onDelta: (delta: string) => void;
-  onDone: (lastMessageId: string) => void;
+  onDone: (lastMessageId: string, stopped: boolean) => void;
+  /** Stopped before any of the reply came: nothing was saved. */
+  onCancelled: () => void;
 };
 
 function dispatchReplyEvent(
@@ -81,7 +87,9 @@ function dispatchReplyEvent(
   if (eventName === "delta" && typeof data.delta === "string") {
     callbacks.onDelta(data.delta);
   } else if (eventName === "done" && typeof data.lastMessageId === "string") {
-    callbacks.onDone(data.lastMessageId);
+    callbacks.onDone(data.lastMessageId, data.stopped === true);
+  } else if (eventName === "cancelled") {
+    callbacks.onCancelled();
   } else if (eventName === "error") {
     throw new Error(
       typeof data.message === "string" ? data.message : "Model response failed",
@@ -118,16 +126,39 @@ export async function streamMessage(
   );
 
   if (!response.body) throw new Error("The response stream was empty");
+  callbacks.onOpen();
 
   let completed = false;
   await readServerSentEvents(response.body, (event) =>
     dispatchReplyEvent(event, {
-      onDelta: callbacks.onDelta,
-      onDone: (lastMessageId) => {
+      ...callbacks,
+      onDone: (lastMessageId, stopped) => {
         completed = true;
-        callbacks.onDone(lastMessageId);
+        callbacks.onDone(lastMessageId, stopped);
+      },
+      onCancelled: () => {
+        completed = true;
+        callbacks.onCancelled();
       },
     }),
   );
   if (!completed) throw new Error("The response stream ended unexpectedly");
+}
+
+/**
+ * Stops the reply being written in a conversation. The turn's own stream, or
+ * the replyFinished event for a page that no longer has it, says how it
+ * ended. A 404 means it ended before the stop got there, which is no failure.
+ */
+export async function stopReply(
+  server: Server,
+  conversationId: string,
+): Promise<void> {
+  try {
+    await apiFetch(server, `/conversations/${conversationId}/messages/stop`, {
+      method: "POST",
+    });
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) throw error;
+  }
 }

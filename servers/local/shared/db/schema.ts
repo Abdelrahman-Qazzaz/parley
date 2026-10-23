@@ -154,6 +154,9 @@ export const ChatMessages = sqliteTable(
     content: text("content").notNull(),
     // Model that produced an assistant message; null for user messages.
     chosenModelId: text("chosen_model_id"),
+    // An assistant reply someone stopped partway; its content is what came
+    // before they did.
+    stopped: integer("stopped", { mode: "boolean" }).default(false).notNull(),
 
     createdAt: timestamp("created_at").default(now).notNull(),
     updatedAt: timestamp("updated_at")

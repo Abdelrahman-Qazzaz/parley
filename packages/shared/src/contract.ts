@@ -67,12 +67,30 @@ export type ChatMessage = {
   createdAt: string;
   attachments: MessageImage[]; // rename to imageAttachments
   transcriptAttachments: MessageTranscript[];
+  /** An assistant reply someone stopped before it finished. */
+  stopped: boolean;
+};
+
+/**
+ * A turn the server is answering right now. Neither message is stored until
+ * the reply finishes, so this is the only place either shows up meanwhile.
+ */
+export type ReplyInProgress = {
+  /** The message being answered, as the user wrote it. */
+  content: string;
+  /** The reply so far. */
+  assistantContent: string;
 };
 
 /** GET /conversations/:conversationId/messages, oldest first. */
 export type MessagesResponse = {
   lastMessageId: string | null;
   messages: ChatMessage[];
+  /**
+   * Set while a turn is being answered. Its messages join `messages` once
+   * it's saved, and the server sends `replyFinished` then.
+   */
+  replyInProgress: ReplyInProgress | null;
 };
 
 export type MessageAttachmentInput =
@@ -97,7 +115,10 @@ export type SendMessageBody = {
  */
 export type ReplyStreamEvents = {
   delta: { delta: string };
-  done: { lastMessageId: string };
+  /** The turn is saved. `stopped` when it was stopped partway. */
+  done: { lastMessageId: string; stopped: boolean };
+  /** Stopped before any of the reply came, so nothing was saved. */
+  cancelled: Record<string, never>;
   error: ErrorBody;
 };
 
@@ -203,4 +224,6 @@ export type QueuedYoutube = {
 export type ServerEvents = {
   /** A job changed; refetch it. */
   jobUpdated: { audioUploadId: string };
+  /** A reply finished, was stopped or failed; refetch the conversation. */
+  replyFinished: { conversationId: string };
 };
