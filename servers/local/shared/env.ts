@@ -2,23 +2,7 @@ import "dotenv/config";
 import { homedir } from "node:os";
 import path from "node:path";
 import { z } from "zod";
-
-function parseEnv<S extends z.ZodTypeAny>(
-  schema: S,
-  label: string,
-): z.infer<S> {
-  const result = schema.safeParse(process.env);
-  if (!result.success) {
-    console.error(`Invalid environment variables (${label}):`);
-    for (const [key, errors] of Object.entries(
-      result.error.flatten().fieldErrors,
-    )) {
-      console.error(`  ${key}: ${errors?.join(", ") ?? "invalid"}`);
-    }
-    process.exit(1);
-  }
-  return result.data;
-}
+import { parseEnv } from "@parley/shared/parseEnv";
 
 const nodeEnvSchema = z
   .enum(["development", "production", "test"])

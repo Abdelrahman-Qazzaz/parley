@@ -5,7 +5,7 @@ vi.mock("@parley/shared/logger", async (importActual) => ({
   logger: { error: vi.fn() },
 }));
 
-import { verifyServices } from "../../shared/preflight";
+import { verifyServices } from "@parley/shared/preflight";
 
 const missing = () =>
   Promise.reject(

@@ -1,24 +1,9 @@
 import { z } from "zod";
 import type { QueueYoutubeBody } from "@parley/shared/contract";
 import { takesBody } from "@parley/shared/takesBody";
+import { isYoutubeUrl } from "@parley/shared/youtube";
 import type { UploadId } from "@parley/shared/types";
 import { DEFAULT_TRANSCRIBE_MODEL, transcription } from "../ai";
-
-const YOUTUBE_HOSTS = new Set([
-  "youtube.com",
-  "www.youtube.com",
-  "m.youtube.com",
-  "music.youtube.com",
-  "youtu.be",
-]);
-
-function isYoutubeUrl(raw: string): boolean {
-  try {
-    return YOUTUBE_HOSTS.has(new URL(raw).hostname);
-  } catch {
-    return false;
-  }
-}
 
 /** Treat a blank ("" or null) optional field as unset. */
 const blankToUndefined = (v: unknown) =>

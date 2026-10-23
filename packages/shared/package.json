@@ -10,6 +10,8 @@
     "./events": "./src/events.ts",
     "./limits": "./src/limits.ts",
     "./logger": "./src/logger.ts",
+    "./parseEnv": "./src/parseEnv.ts",
+    "./preflight": "./src/preflight.ts",
     "./replies": "./src/replies.ts",
     "./shutdown": "./src/shutdown.ts",
     "./sse": "./src/sse.ts",
@@ -17,7 +19,8 @@
     "./takesBody": "./src/takesBody.ts",
     "./try-catch": "./src/try-catch.ts",
     "./types": "./src/types.ts",
-    "./withTimeout": "./src/withTimeout.ts"
+    "./withTimeout": "./src/withTimeout.ts",
+    "./youtube": "./src/youtube.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

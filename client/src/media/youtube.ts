@@ -1,21 +1,4 @@
-// Mirrors the server's YOUTUBE_HOSTS (servers/cloud/backend/src/schema/upload.schema.ts)
-// so the composer can offer a transcript the moment a link is typed — the
-// server remains the authority on what it will actually accept.
-const YOUTUBE_HOSTS = new Set([
-  "youtube.com",
-  "www.youtube.com",
-  "m.youtube.com",
-  "music.youtube.com",
-  "youtu.be",
-]);
-
-export function isYoutubeUrl(raw: string): boolean {
-  try {
-    return YOUTUBE_HOSTS.has(new URL(raw).hostname);
-  } catch {
-    return false;
-  }
-}
+import { isYoutubeUrl } from "@parley/shared/youtube";
 
 /** The last YouTube link in what the user has typed, or null. */
 export function findYoutubeUrl(text: string): string | null {
