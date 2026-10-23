@@ -10,6 +10,7 @@ import {
   mq,
   type DeliveryMetadata,
 } from "../../shared/message-queue/messageQueue";
+import type { TranscriptSegment } from "@parley/shared/transcript";
 import type { UploadId } from "@parley/shared/types";
 
 const log = logger.child({ component: "transcribe" });
@@ -96,10 +97,10 @@ async function settleFailedJob(
 export async function handleTranscribeJob(
   {
     audioUploadId,
-    transcript: captions,
+    segments: captions,
   }: {
     audioUploadId: UploadId;
-    transcript?: string;
+    segments?: TranscriptSegment[];
   },
   { attempt, lastAttempt }: DeliveryMetadata,
 ) {
@@ -110,17 +111,19 @@ export async function handleTranscribeJob(
     if (!job) return;
     claimToken = job.claimToken;
 
-    const transcript = captions ?? (await transcribeAudio(job));
-    if (!transcript.trim()) throw new NoSpeechError();
+    const segments = captions ?? (await transcribeAudio(job));
+    if (!segments.some((segment) => segment.text.trim())) {
+      throw new NoSpeechError();
+    }
 
     log.debug("Transcription produced", {
       audioUploadId,
-      length: transcript.length,
+      segments: segments.length,
     });
 
     const saved = await data.transcripts.saveCompletedTranscript(
       audioUploadId,
-      transcript,
+      segments,
       claimToken,
     );
     if (!saved) {

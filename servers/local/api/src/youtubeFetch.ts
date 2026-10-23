@@ -7,6 +7,7 @@ import {
   type QueuePayloads,
 } from "../../shared/message-queue/messageQueue";
 import { files, MAX_AUDIO_BYTES } from "../../shared/files";
+import type { TranscriptSegment } from "@parley/shared/transcript";
 import { YtDlpError, ytDlp, type VideoInfo } from "./ytDlp";
 
 const log = logger.child({ component: "youtube-fetch" });
@@ -62,14 +63,23 @@ function captionTrackUrl(info: VideoInfo): string | null {
   return track?.find((format) => format.ext === "json3")?.url ?? null;
 }
 
-type CaptionEvents = { events?: { segs?: { utf8?: string }[] }[] };
+type CaptionEvents = {
+  events?: {
+    tStartMs?: number;
+    dDurationMs?: number;
+    segs?: { utf8?: string }[];
+  }[];
+};
 
 /**
- * The video's captions as plain text, or null when it has none worth using,
- * so the audio is transcribed instead. Even a many-hour video's captions are
- * a few hundred KB, small enough to travel in a queue message.
+ * The video's captions, one segment per caption line, or null when it has
+ * none worth using, so the audio is transcribed instead. Even a many-hour
+ * video's captions are a few hundred KB, small enough to travel in a queue
+ * message.
  */
-export async function fetchCaptions(url: string): Promise<string | null> {
+export async function fetchCaptions(
+  url: string,
+): Promise<TranscriptSegment[] | null> {
   try {
     const trackUrl = captionTrackUrl(await ytDlp.probe(url));
     if (!trackUrl) {
@@ -80,18 +90,30 @@ export async function fetchCaptions(url: string): Promise<string | null> {
     const response = await fetch(trackUrl);
     if (!response.ok) throw new Error(`captions answered ${response.status}`);
     const { events = [] } = (await response.json()) as CaptionEvents;
-    const text = events
-      .map(({ segs = [] }) => segs.map((seg) => seg.utf8 ?? "").join(""))
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!text) {
+    const segments = events.flatMap(
+      ({ tStartMs = 0, dDurationMs = 0, segs = [] }) => {
+        const text = segs
+          .map((seg) => seg.utf8 ?? "")
+          .join("")
+          .trim();
+        return text
+          ? [
+              {
+                start: tStartMs / 1000,
+                end: (tStartMs + dDurationMs) / 1000,
+                text,
+              },
+            ]
+          : [];
+      },
+    );
+    if (segments.length === 0) {
       log.info("Caption track was empty", { url });
       return null;
     }
 
-    log.info("Fetched captions", { url, chars: text.length });
-    return text;
+    log.info("Fetched captions", { url, segments: segments.length });
+    return segments;
   } catch (error) {
     // The audio is still there to transcribe.
     log.warn("Could not fetch captions", { url, error: messageOf(error) });
@@ -182,7 +204,7 @@ export async function handleYoutubeFetch({
     if (captions) {
       mq.publish(mq.queues.CAPTION_TRANSCRIPT, {
         audioUploadId,
-        transcript: captions,
+        segments: captions,
       });
       return;
     }

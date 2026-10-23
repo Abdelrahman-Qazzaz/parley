@@ -1,5 +1,6 @@
 import { DeepgramClient } from "@deepgram/sdk";
 import type { TranscribeModel } from "@parley/shared/contract";
+import type { TranscriptSegment } from "@parley/shared/transcript";
 import { getEnv } from "../env";
 import { CACHE_KEYS, cache } from "../cache";
 
@@ -22,13 +23,20 @@ async function ping(): Promise<void> {
   await deepgram.auth.v1.tokens.grant();
 }
 
-async function transcribe(model: string, audioUrl: string): Promise<string> {
+/**
+ * The audio at `audioUrl`, transcribed: Deepgram's utterances, each a stretch
+ * of speech between pauses, with when it was said.
+ */
+async function transcribe(
+  model: string,
+  audioUrl: string,
+): Promise<TranscriptSegment[]> {
   const response = await deepgram.listen.v1.media.transcribeUrl(
     {
       url: audioUrl,
       model,
       smart_format: true,
-      paragraphs: true,
+      utterances: true,
     },
     {
       timeoutInSeconds: TRANSCRIBE_TIMEOUT_SECONDS,
@@ -43,11 +51,11 @@ async function transcribe(model: string, audioUrl: string): Promise<string> {
     throw new Error("Deepgram returned no transcription results");
   }
 
-  const [alternative] = response.results.channels[0]?.alternatives ?? [];
-
-  // `paragraphs.transcript` is the same text broken into paragraphs, which
-  // reads better as model input than the single unbroken line.
-  return alternative?.paragraphs?.transcript ?? alternative?.transcript ?? "";
+  return (response.results.utterances ?? []).map((utterance) => ({
+    start: utterance.start ?? 0,
+    end: utterance.end ?? utterance.start ?? 0,
+    text: utterance.transcript ?? "",
+  }));
 }
 
 type DeepgramModel = {

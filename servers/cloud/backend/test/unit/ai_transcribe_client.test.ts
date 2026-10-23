@@ -1,16 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { CACHE_KEYS } from "../../src/cache/cacheKeys";
 
-const { mockModelsList, mockGetOrSetCache } = vi.hoisted(() => ({
-  mockModelsList: vi.fn(),
-  mockGetOrSetCache: vi.fn(),
-}));
+const { mockModelsList, mockGetOrSetCache, mockTranscribeUrl } = vi.hoisted(
+  () => ({
+    mockModelsList: vi.fn(),
+    mockGetOrSetCache: vi.fn(),
+    mockTranscribeUrl: vi.fn(),
+  }),
+);
 
 vi.mock("@deepgram/sdk", () => ({
   DeepgramClient: class {
     manage = { v1: { models: { list: mockModelsList } } };
     auth = { v1: { tokens: { grant: vi.fn() } } };
-    listen = { v1: { media: { transcribeUrl: vi.fn() } } };
+    listen = { v1: { media: { transcribeUrl: mockTranscribeUrl } } };
   },
 }));
 
@@ -43,6 +46,43 @@ const sttResponse = {
     { name: "general", canonical_name: "nova-2-general", uuid: "u2" },
   ],
 };
+
+describe("transcribe", () => {
+  it("answers Deepgram's utterances as segments", async () => {
+    mockTranscribeUrl.mockResolvedValue({
+      results: {
+        channels: [],
+        utterances: [
+          { start: 0.5, end: 2, transcript: "Hello there." },
+          { start: 4, end: 5.25, transcript: "Next." },
+        ],
+      },
+    });
+
+    expect(
+      await transcription.transcribe("nova-3-general", "https://audio"),
+    ).toEqual([
+      { start: 0.5, end: 2, text: "Hello there." },
+      { start: 4, end: 5.25, text: "Next." },
+    ]);
+    expect(mockTranscribeUrl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://audio",
+        model: "nova-3-general",
+        utterances: true,
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("is empty when nothing was said", async () => {
+    mockTranscribeUrl.mockResolvedValue({ results: { channels: [] } });
+
+    expect(
+      await transcription.transcribe("nova-3-general", "https://audio"),
+    ).toEqual([]);
+  });
+});
 
 describe("getTranscribeModelData", () => {
   beforeEach(() => {

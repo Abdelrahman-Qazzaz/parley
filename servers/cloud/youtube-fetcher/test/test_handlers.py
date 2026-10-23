@@ -10,6 +10,7 @@ import handlers
 from contract import QueueName, _Queues, contract
 
 MAX_BYTES = 1000
+CAPTIONS = [{"start": 0.0, "end": 1.5, "text": "the captions"}]
 
 
 @pytest.fixture(autouse=True)
@@ -186,7 +187,7 @@ class TestHandleYtFetch:
     def test_captions_skip_the_audio_download_and_travel_in_the_message(
         self, publish, monkeypatch
     ):
-        caption_fetch = MagicMock(return_value="the captions")
+        caption_fetch = MagicMock(return_value=CAPTIONS)
         audio_fetch = MagicMock()
         monkeypatch.setattr(handlers, "_fetch_captions", caption_fetch)
         monkeypatch.setattr(handlers, "_fetch_with_retries", audio_fetch)
@@ -204,11 +205,11 @@ class TestHandleYtFetch:
         caption_fetch.assert_called_once_with("https://youtu.be/x")
         publish.assert_called_once_with(
             QueueName("caption_transcript"),
-            {"audioUploadId": "u1", "transcript": "the captions"},
+            {"audioUploadId": "u1", "segments": CAPTIONS},
         )
 
     def test_captions_are_not_fetched_unless_asked_for(self, publish, monkeypatch):
-        caption_fetch = MagicMock(return_value="the captions")
+        caption_fetch = MagicMock(return_value=CAPTIONS)
         monkeypatch.setattr(handlers, "_fetch_captions", caption_fetch)
         monkeypatch.setattr(handlers, "_fetch_with_retries", MagicMock())
 
@@ -232,7 +233,7 @@ class TestHandleYtFetch:
         # The API used to reserve a caption upload and send its id. A message
         # still queued from before that changed must not fail on the field.
         monkeypatch.setattr(
-            handlers, "_fetch_captions", MagicMock(return_value="the captions")
+            handlers, "_fetch_captions", MagicMock(return_value=CAPTIONS)
         )
 
         handlers.handle_yt_fetch(
@@ -247,7 +248,7 @@ class TestHandleYtFetch:
 
         publish.assert_called_once_with(
             QueueName("caption_transcript"),
-            {"audioUploadId": "u1", "transcript": "the captions"},
+            {"audioUploadId": "u1", "segments": CAPTIONS},
         )
 
     def test_unavailable_captions_fall_back_to_audio(self, publish, monkeypatch):
@@ -353,8 +354,9 @@ class TestHandleYtFetch:
 class TestFetchCaptions:
     def test_returns_the_first_available_caption_track(self, monkeypatch):
         fetched_transcript = [
-            SimpleNamespace(text="First caption"),
-            SimpleNamespace(text="  Second caption  "),
+            SimpleNamespace(text="First caption", start=0.5, duration=2.0),
+            SimpleNamespace(text="  ", start=2.5, duration=1.0),
+            SimpleNamespace(text="  Second caption  ", start=3.0, duration=1.5),
         ]
         selected_transcript = SimpleNamespace(
             language_code="en",
@@ -365,15 +367,20 @@ class TestFetchCaptions:
         monkeypatch.setattr(
             handlers, "YouTubeTranscriptApi", MagicMock(return_value=transcript_api)
         )
-        text = handlers._fetch_captions("https://youtu.be/dQw4w9WgXcQ")
+        segments = handlers._fetch_captions("https://youtu.be/dQw4w9WgXcQ")
 
         transcript_api.list.assert_called_once_with("dQw4w9WgXcQ")
-        assert text == "First caption Second caption"
+        assert segments == [
+            {"start": 0.5, "end": 2.5, "text": "First caption"},
+            {"start": 3.0, "end": 4.5, "text": "Second caption"},
+        ]
 
     def test_empty_caption_track_is_none(self, monkeypatch):
         selected_transcript = SimpleNamespace(
             language_code="en",
-            fetch=MagicMock(return_value=[SimpleNamespace(text="  ")]),
+            fetch=MagicMock(
+                return_value=[SimpleNamespace(text="  ", start=0.0, duration=1.0)]
+            ),
         )
         transcript_api = MagicMock()
         transcript_api.list.return_value = [selected_transcript]

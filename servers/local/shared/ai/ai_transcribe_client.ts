@@ -3,6 +3,7 @@ import path from "node:path";
 import { createInterface } from "node:readline";
 import { fileURLToPath } from "node:url";
 import type { TranscribeModel } from "@parley/shared/contract";
+import type { TranscriptSegment } from "@parley/shared/transcript";
 import { getBaseEnv } from "../env";
 import { withTimeout } from "@parley/shared/withTimeout";
 
@@ -98,20 +99,6 @@ export async function pingTranscribeAI(): Promise<void> {
   await runWhisper(["--check"]);
 }
 
-/** A pause at least this long between segments starts a new paragraph. */
-const PARAGRAPH_PAUSE_SECONDS = 2;
-
-/**
- * A paragraph this long ends at the next sentence end. A talk can run for
- * minutes without a pause that long, which would otherwise make it one block.
- */
-const PARAGRAPH_TARGET_CHARS = 500;
-
-/** Whether text ends a sentence, closing quotes and brackets aside. */
-const endsSentence = (text: string) => /[.!?]["')\]]*$/.test(text);
-
-type Segment = { start: number; end: number; text: string };
-
 // How long a transcription takes depends on the audio's length and this
 // machine's speed, so the total is generous. What's held tight is silence: a
 // run that prints nothing for this long has stalled. The first segment also
@@ -121,16 +108,14 @@ const FIRST_SEGMENT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 const BETWEEN_SEGMENTS_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 
 /**
- * The audio file at `audioPath`, transcribed, in paragraphs: where the
- * speaker pauses, or at a sentence end once a paragraph is long enough.
- * Whisper reads the format from the file's contents.
+ * The audio file at `audioPath`, transcribed: each segment Whisper heard, in
+ * order. Whisper reads the format from the file's contents.
  */
 export async function transcribeAI(
   model: string,
   audioPath: string,
-): Promise<string> {
-  const paragraphs: string[] = [];
-  let lastEnd = 0;
+): Promise<TranscriptSegment[]> {
+  const segments: TranscriptSegment[] = [];
 
   await withTimeout(
     {
@@ -143,24 +128,12 @@ export async function transcribeAI(
         abortSignal,
         onLine: (line) => {
           markProgress();
-          const segment = JSON.parse(line) as Segment;
-          const text = segment.text.trim();
-          if (!text) return;
-
-          const paragraph = paragraphs.at(-1);
-          const startsParagraph =
-            paragraph === undefined ||
-            segment.start - lastEnd >= PARAGRAPH_PAUSE_SECONDS ||
-            (paragraph.length >= PARAGRAPH_TARGET_CHARS &&
-              endsSentence(paragraph));
-          if (startsParagraph) paragraphs.push(text);
-          else paragraphs[paragraphs.length - 1] = `${paragraph} ${text}`;
-          lastEnd = segment.end;
+          segments.push(JSON.parse(line) as TranscriptSegment);
         },
       }),
   );
 
-  return paragraphs.join("\n\n");
+  return segments;
 }
 
 /**

@@ -271,11 +271,11 @@ async function transcribeCounted(
               transcript: TRANSCRIPT,
               confidence: 0.99,
               words: [],
-              paragraphs: { transcript: TRANSCRIPT, paragraphs: [] },
             },
           ],
         },
       ],
+      utterances: [{ start: 0, end: 60, transcript: TRANSCRIPT }],
     },
   });
 }

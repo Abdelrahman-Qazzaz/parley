@@ -60,7 +60,7 @@ describe("saveCompletedTranscript", () => {
 
     const saved = await transcripts.saveCompletedTranscript(
       audioUploadId,
-      "stale transcript",
+      [{ start: 0, end: 1, text: "stale transcript" }],
       claimToken,
     );
 
@@ -78,15 +78,16 @@ describe("saveCompletedTranscript", () => {
 
     const saved = await transcripts.saveCompletedTranscript(
       audioUploadId,
-      "current transcript",
+      [{ start: 65, end: 70, text: "current transcript" }],
       claimToken,
     );
 
     expect(saved).toBe(true);
     expect(mockValues).toHaveBeenCalledWith({
       audioUploadId,
-      content: "current transcript",
-      charCount: 18,
+      content: "[1:05] current transcript",
+      segments: [{ start: 65, end: 70, text: "current transcript" }],
+      charCount: 25,
     });
   });
 });

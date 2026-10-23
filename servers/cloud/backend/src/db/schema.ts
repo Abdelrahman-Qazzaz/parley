@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   primaryKey,
   text,
@@ -11,6 +12,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { pgEnum } from "drizzle-orm/pg-core";
+import type { TranscriptSegment } from "@parley/shared/transcript";
 
 export const jobStatusEnum = pgEnum("job_status", [
   "queued",
@@ -245,10 +247,15 @@ export const AttachmentTurnReservations = pgTable(
 ).enableRLS();
 
 /**
- * The transcript text a completed job produced, out of the job row so it isn't
+ * The transcript a completed job produced, out of the job row so it isn't
  * pulled by the job list. A row exists only while a valid transcript does — the
- * the worker inserts it on completion, so its presence means "ready".
- * `charCount` lets a chat turn be budgeted without reading the body.
+ * worker inserts it on completion, so its presence means "ready".
+ *
+ * - content: the text the model and the user read, with a timestamp at each
+ *   paragraph (transcriptText in @parley/shared/transcript).
+ * - segments: what the transcriber heard, with when; null for transcripts
+ *   made before timestamps were kept.
+ * - charCount lets a chat turn be budgeted without reading the body.
  */
 export const TranscriptContents = pgTable("transcript_contents", {
   // The audio job this transcript belongs to (1:1).
@@ -258,6 +265,7 @@ export const TranscriptContents = pgTable("transcript_contents", {
       onDelete: "cascade",
     }),
   content: text("content").notNull(),
+  segments: jsonb("segments").$type<TranscriptSegment[]>(),
   charCount: integer("char_count").notNull(),
 }).enableRLS();
 

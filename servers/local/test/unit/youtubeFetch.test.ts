@@ -54,9 +54,16 @@ function downloads(files: Record<string, number>) {
 }
 
 /** A json3 caption track answering with these lines. */
+/** A json3 track with one line a second, each a second long. */
 function captionsAnswer(...lines: string[]) {
   return new Response(
-    JSON.stringify({ events: lines.map((utf8) => ({ segs: [{ utf8 }] })) }),
+    JSON.stringify({
+      events: lines.map((utf8, i) => ({
+        tStartMs: i * 1000,
+        dDurationMs: 1000,
+        segs: [{ utf8 }],
+      })),
+    }),
   );
 }
 
@@ -151,7 +158,13 @@ describe("handleYoutubeFetch", () => {
     expect(published("caption_transcript")).toEqual([
       [
         "caption_transcript",
-        { audioUploadId: job.audioUploadId, transcript: "Hello there" },
+        {
+          audioUploadId: job.audioUploadId,
+          segments: [
+            { start: 0, end: 1, text: "Hello" },
+            { start: 1, end: 2, text: "there" },
+          ],
+        },
       ],
     ]);
     expect(mockDownloadAudio).not.toHaveBeenCalled();
@@ -204,7 +217,9 @@ describe("fetchCaptions", () => {
     });
     fetchMock.mockResolvedValue(captionsAnswer("Hello"));
 
-    expect(await fetchCaptions(job.url)).toBe("Hello");
+    expect(await fetchCaptions(job.url)).toEqual([
+      { start: 0, end: 1, text: "Hello" },
+    ]);
     expect(fetchMock).toHaveBeenCalledWith("https://captions/en");
   });
 
@@ -217,11 +232,13 @@ describe("fetchCaptions", () => {
     });
     fetchMock.mockResolvedValue(captionsAnswer("Hello"));
 
-    expect(await fetchCaptions(job.url)).toBe("Hello");
+    expect(await fetchCaptions(job.url)).toEqual([
+      { start: 0, end: 1, text: "Hello" },
+    ]);
     expect(fetchMock).toHaveBeenCalledWith("https://captions/en-orig");
   });
 
-  it("joins the caption text into one line", async () => {
+  it("makes each caption line a segment, with when it's shown", async () => {
     mockProbe.mockResolvedValue({
       subtitles: { en: [{ ext: "json3", url: "https://captions/en" }] },
     });
@@ -229,16 +246,27 @@ describe("fetchCaptions", () => {
       new Response(
         JSON.stringify({
           events: [
-            { segs: [{ utf8: "we're" }, { utf8: " no" }] },
-            { segs: [{ utf8: "\n" }] },
-            { segs: [{ utf8: "strangers  " }] },
+            {
+              tStartMs: 1500,
+              dDurationMs: 2000,
+              segs: [{ utf8: "we're" }, { utf8: " no" }],
+            },
+            { tStartMs: 3000, segs: [{ utf8: "\n" }] },
+            {
+              tStartMs: 3500,
+              dDurationMs: 500,
+              segs: [{ utf8: "strangers  " }],
+            },
             {},
           ],
         }),
       ),
     );
 
-    expect(await fetchCaptions(job.url)).toBe("we're no strangers");
+    expect(await fetchCaptions(job.url)).toEqual([
+      { start: 1.5, end: 3.5, text: "we're no" },
+      { start: 3.5, end: 4, text: "strangers" },
+    ]);
   });
 
   it("is null for an empty track", async () => {
