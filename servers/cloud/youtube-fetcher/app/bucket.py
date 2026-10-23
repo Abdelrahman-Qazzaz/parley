@@ -23,7 +23,7 @@ def ping_bucket() -> None:
 
 def _object_path(user_id: str, kind: str, storage_object_id: str) -> str:
     """Storage key "<userId>/<kind>/<storageObjectId>". Mirrors objectPath in
-    backend/src/storage/bucket.ts so both services agree on the layout, and owner
+    backend/src/storage/core.ts so both services agree on the layout, and owner
     and kind both stay structural. Keep them in sync."""
     return f"{user_id}/{kind}/{storage_object_id}"
 

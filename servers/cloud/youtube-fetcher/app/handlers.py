@@ -37,8 +37,8 @@ PERMANENT_FAILURES = (
     "is not a valid url",
 )
 
-# Transcription derives the audio format from the stored content type
-# (backend/src/ai/transcribe.ts) — it must be accurate, not just plausible.
+# Stored as the object's content type: the bucket only takes audio/* types,
+# and storage serves it with the file when Deepgram fetches it.
 EXT_CONTENT_TYPES = {
     "webm": "audio/webm",
     "m4a": "audio/mp4",
@@ -158,8 +158,8 @@ def _fetch_and_upload(audio_upload_id: str, url: str, user_id: str) -> None:
     with tempfile.TemporaryDirectory() as tmp:
         options = {
             # Lowest-bitrate audio-only stream: STT downsamples to 16kHz mono,
-            # so anything above ~48kbps is discarded work — and transcribe.ts
-            # base64s the whole file into one JSON body, where the bytes hurt.
+            # so anything above ~48kbps is discarded work, and every byte
+            # counts against the 50 MB storage limit.
             "format": "worstaudio/bestaudio/best",
             "outtmpl": f"{tmp}/audio.%(ext)s",
             "noplaylist": True,
@@ -232,6 +232,6 @@ def _fetch_and_upload(audio_upload_id: str, url: str, user_id: str) -> None:
         )
         log.info("Downloaded %s: %d bytes, %s", audio_upload_id, size, content_type)
         # upload_audio builds the "<userId>/audios/<storageObjectId>" key (same
-        # convention as direct uploads, backend/src/storage/bucket.ts objectPath),
+        # convention as direct uploads, objectPath in backend/src/storage/core.ts),
         # so transcription finds it and ownership stays structural.
         bucket.upload_audio(user_id, audio_upload_id, str(audio), content_type)

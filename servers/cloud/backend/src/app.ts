@@ -89,7 +89,7 @@ export async function createApp() {
   app.route("/conversations", conversationsRouter);
 
   // The built client, on the API's own origin, so the session cookie is
-  // first-party. Under `npm run dev:cloud` it isn't built and Vite serves it.
+  // first-party. Under `npm run dev` it isn't built and Vite serves it.
   const clientDir = path.resolve(env.CLIENT_DIR);
   if (existsSync(path.join(clientDir, "index.html"))) {
     // Vite names each file under /assets after a hash of its contents, so a

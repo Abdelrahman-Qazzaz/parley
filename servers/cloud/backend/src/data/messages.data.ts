@@ -322,16 +322,12 @@ async function createMessage(
 }
 
 /**
- * Scoped by conversation as well as owner, so a message id from another of the
- * user's conversations doesn't delete through this route. Null when nothing
- * matched, which the caller reports as a 404.
- */
-
-/**
  * Deletes a message and everything after it, moving the conversation head
  * back. A claimed turn blocks it, unless the claim is the caller's own
  * (`claimToken`) — editing a message rewinds under the claim it already holds.
  * `onlyRole` refuses a message of any other role, before anything is deleted.
+ * Scoped by conversation as well as owner; null when nothing matched, which
+ * the caller reports as a 404.
  */
 async function deleteOwnedMessage(
   userId: string,
