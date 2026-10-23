@@ -10,11 +10,15 @@ import {
 
 import { jobs } from "./jobs.data";
 import type { JobSource } from "@parley/shared/contract";
+import {
+  transcriptText,
+  type TranscriptSegment,
+} from "@parley/shared/transcript";
 import type { UploadId } from "@parley/shared/types";
 import { attachments } from "./attachments.data";
 
 /**
- * The transcript text a completed job produced. Lives here, not in the job row
+ * The transcript a completed job produced. Lives here, not in the job row
  * or the bucket, so it can be joined into a chat's context (for `charCount`) and
  * read only for the turns that make the budget. Read scoped by owner; presence
  * of a row means a valid transcript is ready.
@@ -22,12 +26,14 @@ import { attachments } from "./attachments.data";
 
 async function insertTranscript(
   audioUploadId: UploadId,
-  content: string,
+  segments: readonly TranscriptSegment[],
   executor: Executor = db,
 ) {
+  const content = transcriptText(segments);
   await executor.insert(TranscriptContents).values({
     audioUploadId,
     content,
+    segments: [...segments],
     charCount: content.length,
   });
 }
@@ -39,14 +45,14 @@ async function insertTranscript(
  */
 async function saveCompletedTranscript(
   audioUploadId: UploadId,
-  content: string,
+  segments: readonly TranscriptSegment[],
   claimToken: string,
 ) {
   return db.transaction(async (tx) => {
     const ownsJob = await jobs.completeAudioJob(audioUploadId, claimToken, tx);
     if (!ownsJob) return false;
 
-    await insertTranscript(audioUploadId, content, tx);
+    await insertTranscript(audioUploadId, segments, tx);
     return true;
   });
 }

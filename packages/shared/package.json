@@ -17,6 +17,7 @@
     "./sse": "./src/sse.ts",
     "./sseReader": "./src/sseReader.ts",
     "./takesBody": "./src/takesBody.ts",
+    "./transcript": "./src/transcript.ts",
     "./try-catch": "./src/try-catch.ts",
     "./types": "./src/types.ts",
     "./withTimeout": "./src/withTimeout.ts",

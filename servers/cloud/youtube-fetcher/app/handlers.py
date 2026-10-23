@@ -80,10 +80,12 @@ def _fetch_with_retries(audio_upload_id: str, url: str, user_id: str) -> None:
             time.sleep(backoff)
 
 
-def _fetch_captions(url: str) -> str | None:
-    """The video's first caption track as plain text, or None when it has none
-    worth using. The text travels in the caption_transcript message itself:
-    even a many-hour video's captions are a few hundred KB."""
+def _fetch_captions(url: str) -> list[dict] | None:
+    """The video's first caption track, one segment per caption line in the
+    shape the API's TranscriptSegment takes ({"start", "end", "text"}, in
+    seconds), or None when it has none worth using. The segments travel in the
+    caption_transcript message itself: even a many-hour video's captions are a
+    few hundred KB."""
     video_id = YoutubeIE.extract_id(url)
 
     try:
@@ -96,20 +98,26 @@ def _fetch_captions(url: str) -> str | None:
         log.info("No usable captions for %s: %s", video_id, error)
         return None
 
-    transcript_text = " ".join(
-        snippet.text.strip() for snippet in fetched_transcript if snippet.text.strip()
-    )
-    if not transcript_text:
+    segments = [
+        {
+            "start": snippet.start,
+            "end": snippet.start + snippet.duration,
+            "text": snippet.text.strip(),
+        }
+        for snippet in fetched_transcript
+        if snippet.text.strip()
+    ]
+    if not segments:
         log.info("Caption track for %s was empty", video_id)
         return None
 
     log.info(
-        "Fetched %s captions for %s: %d characters",
+        "Fetched %s captions for %s: %d segments",
         selected_transcript.language_code,
         video_id,
-        len(transcript_text),
+        len(segments),
     )
-    return transcript_text
+    return segments
 
 
 def handle_yt_fetch(event: dict) -> None:
@@ -119,11 +127,11 @@ def handle_yt_fetch(event: dict) -> None:
         user_id: str = event["userId"]
         use_captions_if_available = event["useCaptionsIfAvailable"]
 
-        transcript = _fetch_captions(url) if use_captions_if_available else None
-        if transcript:
+        segments = _fetch_captions(url) if use_captions_if_available else None
+        if segments:
             mq.publish_threadsafe(
                 contract.queues.CAPTION_TRANSCRIPT,
-                {"audioUploadId": audio_upload_id, "transcript": transcript},
+                {"audioUploadId": audio_upload_id, "segments": segments},
             )
             return
 

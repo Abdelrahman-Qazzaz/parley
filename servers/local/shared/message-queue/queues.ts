@@ -1,3 +1,4 @@
+import type { TranscriptSegment } from "@parley/shared/transcript";
 import type { UploadId } from "@parley/shared/types";
 
 export const QUEUES = {
@@ -32,6 +33,6 @@ export type QueuePayloads = {
   [QUEUES.CAPTION_TRANSCRIPT]: {
     audioUploadId: UploadId;
     /** The video's captions, used as the transcript instead of its audio. */
-    transcript: string;
+    segments: TranscriptSegment[];
   };
 };

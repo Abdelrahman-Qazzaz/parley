@@ -55,7 +55,7 @@ describe("transcribeAI", () => {
   it("transcribes the file with the model, keeping models in DATA_DIR", async () => {
     mockSpawn.mockImplementation(fakeProcess([segment(0, 2, " Hello.")]));
 
-    expect(await transcribe()).toBe("Hello.");
+    expect(await transcribe()).toEqual([{ start: 0, end: 2, text: " Hello." }]);
 
     const { args } = spawned(mockSpawn);
     expect(valueOf(args, "--model")).toBe("small");
@@ -65,42 +65,21 @@ describe("transcribeAI", () => {
     expect(args.at(-1)).toBe("/data/audios/talk");
   });
 
-  it("joins segments into paragraphs where the speaker pauses", async () => {
+  it("answers every segment Whisper printed, in order", async () => {
     mockSpawn.mockImplementation(
-      fakeProcess([
-        segment(0, 2, " First thought."),
-        segment(2.5, 4, " Still the same."),
-        segment(7, 9, " After a pause."),
-        segment(9, 9.5, "  "),
-        segment(10, 11, " Same again."),
-      ]),
+      fakeProcess([segment(0, 2, " First."), segment(7, 9, " After a pause.")]),
     );
 
-    expect(await transcribe()).toBe(
-      "First thought. Still the same.\n\nAfter a pause. Same again.",
-    );
-  });
-
-  it("ends a long paragraph at the next sentence end, pause or not", async () => {
-    const long = `${"word ".repeat(100).trim()}`;
-    mockSpawn.mockImplementation(
-      fakeProcess([
-        segment(0, 10, ` ${long}`),
-        segment(10, 11, " still going,"),
-        segment(11, 12, " until here."),
-        segment(12, 13, " Next one."),
-      ]),
-    );
-
-    expect(await transcribe()).toBe(
-      `${long} still going, until here.\n\nNext one.`,
-    );
+    expect(await transcribe()).toEqual([
+      { start: 0, end: 2, text: " First." },
+      { start: 7, end: 9, text: " After a pause." },
+    ]);
   });
 
   it("is empty for audio with no speech", async () => {
     mockSpawn.mockImplementation(fakeProcess([]));
 
-    expect(await transcribe()).toBe("");
+    expect(await transcribe()).toEqual([]);
   });
 
   it("fails with the whole exception, when its message runs over lines", async () => {
@@ -146,7 +125,7 @@ describe("transcribeAI timeouts", () => {
     const result = transcribe();
 
     await vi.advanceTimersByTimeAsync(29 * MINUTE);
-    expect(await result).toBe("Hi.");
+    expect(await result).toEqual([{ start: 0, end: 1, text: " Hi." }]);
   });
 
   it("gives up on a run that stalls between segments, and kills it", async () => {

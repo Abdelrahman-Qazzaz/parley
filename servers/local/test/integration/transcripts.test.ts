@@ -40,13 +40,18 @@ describe("saveCompletedTranscript", () => {
     expect(
       await transcripts.saveCompletedTranscript(
         audioUploadId,
-        "Hello there",
+        [{ start: 1, end: 2, text: "Hello there" }],
         claimToken,
       ),
     ).toBe(true);
 
     expect(await db.select().from(TranscriptContents)).toEqual([
-      { audioUploadId, content: "Hello there", charCount: 11 },
+      {
+        audioUploadId,
+        content: "[0:01] Hello there",
+        segments: [{ start: 1, end: 2, text: "Hello there" }],
+        charCount: 18,
+      },
     ]);
     const [job] = await db.select().from(AudioTranscriptionJobs);
     expect(job?.status).toBe("completed");
@@ -58,7 +63,7 @@ describe("saveCompletedTranscript", () => {
     expect(
       await transcripts.saveCompletedTranscript(
         audioUploadId,
-        "stale transcript",
+        [{ start: 0, end: 1, text: "stale transcript" }],
         randomUUID(),
       ),
     ).toBe(false);
@@ -75,17 +80,17 @@ describe("findTranscripts", () => {
     const second = await claimedJob();
     await transcripts.saveCompletedTranscript(
       first.audioUploadId,
-      "first",
+      [{ start: 0, end: 1, text: "first" }],
       first.claimToken,
     );
     await transcripts.saveCompletedTranscript(
       second.audioUploadId,
-      "second",
+      [{ start: 0, end: 1, text: "second" }],
       second.claimToken,
     );
 
     expect(await transcripts.findTranscripts([first.audioUploadId])).toEqual(
-      new Map([[first.audioUploadId, "first"]]),
+      new Map([[first.audioUploadId, "[0:00] first"]]),
     );
   });
 

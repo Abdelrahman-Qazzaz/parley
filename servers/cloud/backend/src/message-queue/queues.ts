@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { transcriptSegmentSchema } from "@parley/shared/transcript";
 import type { UploadId } from "@parley/shared/types";
 
 export const QUEUES = {
@@ -42,7 +43,7 @@ export const QUEUE_PAYLOAD_SCHEMAS = {
   [QUEUES.CAPTION_TRANSCRIPT]: z.object({
     audioUploadId: uploadId,
     /** The video's captions, used as the transcript instead of its audio. */
-    transcript: z.string(),
+    segments: z.array(transcriptSegmentSchema),
   }),
 } as const satisfies Record<Queue, z.ZodTypeAny>;
 

@@ -58,14 +58,17 @@ describe("handleTranscribeJob", () => {
   });
 
   describe("storing a transcript", () => {
+    const transcribed = [{ start: 0, end: 2, text: "the audio, transcribed" }];
+    const captions = [{ start: 0, end: 2, text: "the captions" }];
+
     beforeEach(() => {
-      mocks.transcribeAI.mockResolvedValue("the audio, transcribed");
+      mocks.transcribeAI.mockResolvedValue(transcribed);
       mocks.saveCompletedTranscript.mockResolvedValue(true);
     });
 
     it("stores the captions the message carries, without transcribing audio", async () => {
       await handleTranscribeJob(
-        { audioUploadId, transcript: "the captions" },
+        { audioUploadId, segments: captions },
         firstAttempt,
       );
 
@@ -73,7 +76,7 @@ describe("handleTranscribeJob", () => {
       expect(mocks.transcribeAI).not.toHaveBeenCalled();
       expect(mocks.saveCompletedTranscript).toHaveBeenCalledWith(
         audioUploadId,
-        "the captions",
+        captions,
         claimToken,
       );
     });
@@ -91,7 +94,7 @@ describe("handleTranscribeJob", () => {
       );
       expect(mocks.saveCompletedTranscript).toHaveBeenCalledWith(
         audioUploadId,
-        "the audio, transcribed",
+        transcribed,
         claimToken,
       );
     });
@@ -138,7 +141,7 @@ describe("handleTranscribeJob", () => {
 
   describe("before the last attempt", () => {
     it("treats an empty transcript as a failure", async () => {
-      mocks.transcribeAI.mockResolvedValue("   ");
+      mocks.transcribeAI.mockResolvedValue([{ start: 0, end: 1, text: "   " }]);
 
       await expect(
         handleTranscribeJob(audioInput, firstAttempt),
@@ -215,7 +218,7 @@ describe("handleTranscribeJob", () => {
     });
 
     it("says so when the audio had no speech in it", async () => {
-      mocks.transcribeAI.mockResolvedValue("   ");
+      mocks.transcribeAI.mockResolvedValue([{ start: 0, end: 1, text: "   " }]);
 
       await handleTranscribeJob(audioInput, lastAttempt);
 
