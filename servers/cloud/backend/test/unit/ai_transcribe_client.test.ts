@@ -86,11 +86,22 @@ describe("listTranscribeModels", () => {
     mockModelsList.mockResolvedValue(sttResponse);
   });
 
-  it("lists each model by its canonical name", async () => {
+  it("lists the offered models the catalog has, by canonical name", async () => {
     expect(await transcription.listModels()).toEqual([
-      { id: "nova-3-general", name: "nova-3-general" },
-      { id: "nova-2-general", name: "nova-2-general" },
+      { id: "nova-3-general", name: "Nova 3" },
+      { id: "nova-2-general", name: "Nova 2" },
     ]);
+  });
+
+  it("leaves out catalog models that aren't offered", async () => {
+    mockModelsList.mockResolvedValue({
+      stt: [
+        ...sttResponse.stt,
+        { name: "drivethru", canonical_name: "nova-2-drivethru", uuid: "u3" },
+      ],
+    });
+    const ids = (await transcription.listModels()).map((model) => model.id);
+    expect(ids).not.toContain("nova-2-drivethru");
   });
 });
 
@@ -115,7 +126,7 @@ describe("isValidTranscribeModel", () => {
     );
   });
 
-  it("rejects a model that is not in the catalog", async () => {
+  it("rejects an offered model that is not in the catalog", async () => {
     expect(await transcription.isValidModel("whisper-large")).toBe(false);
   });
 });
