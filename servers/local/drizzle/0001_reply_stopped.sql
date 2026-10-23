@@ -1,0 +1,1 @@
+ALTER TABLE `chat_messages` ADD `stopped` integer DEFAULT false NOT NULL;

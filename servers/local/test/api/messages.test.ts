@@ -142,6 +142,7 @@ vi.mock("../../shared/ai/ai_chat_client", async (importActual) => {
 });
 
 import { createApp } from "../../api/app";
+import { events } from "../../api/src/events";
 import { MAX_CONTEXT_CHARS } from "../../api/src/controllers/messages.controller";
 import { MAX_TRANSCRIPTS } from "../../api/src/schema/messages.schema";
 import { originHeaders } from "../helpers/headers";
@@ -168,6 +169,7 @@ const userRow = {
   role: "user",
   content: "Hi there",
   chosenModelId: null,
+  stopped: false,
   conversationId,
   createdAt,
 };
@@ -176,6 +178,7 @@ const assistantRow = {
   role: "assistant",
   content: "Hello world",
   chosenModelId: modelId,
+  stopped: false,
   conversationId,
   createdAt,
 };
@@ -301,6 +304,7 @@ describe("GET /conversations/:conversationId/messages", () => {
         { ...userRow, attachments: [], transcriptAttachments: [] },
         { ...assistantRow, attachments: [], transcriptAttachments: [] },
       ],
+      replyInProgress: null,
     });
   });
 
@@ -377,6 +381,7 @@ describe("GET /conversations/:conversationId/messages", () => {
         },
         { ...assistantRow, attachments: [], transcriptAttachments: [] },
       ],
+      replyInProgress: null,
     });
   });
 
@@ -861,7 +866,9 @@ describe("POST /conversations/:conversationId/messages", () => {
     expect(body).toContain(JSON.stringify({ delta: "Hello " }));
     expect(body).toContain(JSON.stringify({ delta: "world" }));
     expect(body).toContain("event: done");
-    expect(body).toContain(JSON.stringify({ lastMessageId: assistantRow.id }));
+    expect(body).toContain(
+      JSON.stringify({ lastMessageId: assistantRow.id, stopped: false }),
+    );
     expect(body).not.toContain("event: error");
     // The persisted head trails the tokens the client rendered.
     expect(body.indexOf("event: delta")).toBeLessThan(
@@ -1502,7 +1509,9 @@ describe("PATCH /conversations/:conversationId/messages/:messageId", () => {
 
     expect(response.status).toBe(200);
     expect(body).toContain("event: delta");
-    expect(body).toContain(JSON.stringify({ lastMessageId: assistantRow.id }));
+    expect(body).toContain(
+      JSON.stringify({ lastMessageId: assistantRow.id, stopped: false }),
+    );
 
     // The history stops before the edited message.
     expect(mockFindCreateMessageHistory).toHaveBeenCalledWith(
@@ -1699,6 +1708,114 @@ describe("PATCH /conversations/:conversationId/messages/:messageId", () => {
     expect(response.status).toBe(413);
     expect(mockDeleteMessage).not.toHaveBeenCalled();
     expect(mockUnclaimConversationTurn).toHaveBeenCalledOnce();
+  });
+});
+
+describe("stopping a reply", () => {
+  async function request(path: string, init: RequestInit = {}) {
+    return (await createApp()).request(
+      `http://localhost/conversations/${conversationId}/messages${path}`,
+      {
+        ...init,
+        headers: { ...originHeaders(), "Content-Type": "application/json" },
+      },
+    );
+  }
+
+  function sendTurn() {
+    return request("", {
+      method: "POST",
+      body: JSON.stringify(
+        messageRequestBody({
+          messageContent: "Hi there",
+          chosenModelId: modelId,
+          lastMessageId: null,
+        }),
+      ),
+    });
+  }
+
+  const stopReply = () => request("/stop", { method: "POST" });
+
+  /**
+   * A model call that sends `deltas`, then runs `whileWaiting` and waits to be
+   * stopped, as the real one would keep writing until it is.
+   */
+  function modelThatWaits(
+    deltas: string[],
+    whileWaiting: () => Promise<unknown> = stopReply,
+  ) {
+    mockChatAI.mockImplementation(
+      async (
+        _model: string,
+        _turns: unknown,
+        opts: {
+          onDelta: (d: string) => Promise<void>;
+          signal: AbortSignal;
+        },
+      ) => {
+        for (const delta of deltas) await opts.onDelta(delta);
+        await whileWaiting();
+        await new Promise((_, reject) => {
+          const fail = () => reject(opts.signal.reason as Error);
+          if (opts.signal.aborted) fail();
+          opts.signal.addEventListener("abort", fail);
+        });
+      },
+    );
+  }
+
+  it("saves what came before the stop, marked as stopped", async () => {
+    modelThatWaits(["Hello "]);
+
+    const body = await (await sendTurn()).text();
+
+    expect(body).toContain(
+      JSON.stringify({ lastMessageId: assistantRow.id, stopped: true }),
+    );
+    expect(mockPersistAndUnclaimChatTurn).toHaveBeenCalledWith(
+      expect.objectContaining({ assistantContent: "Hello ", stopped: true }),
+    );
+  });
+
+  it("saves nothing, and lets go of the turn, when stopped before any reply", async () => {
+    modelThatWaits([]);
+
+    const body = await (await sendTurn()).text();
+
+    expect(body).toContain("event: cancelled");
+    expect(body).not.toContain("event: done");
+    expect(mockPersistAndUnclaimChatTurn).not.toHaveBeenCalled();
+    expect(mockUnclaimConversationTurn).toHaveBeenCalledWith(
+      conversationId,
+      mockClaimConversationTurn.mock.calls[0][2],
+    );
+  });
+
+  it("shows a reloaded page the turn being answered, and stops showing it once saved", async () => {
+    mockFindConversationMessages.mockResolvedValue([]);
+    const sendEvent = vi.spyOn(events, "send");
+    let whileWriting: unknown;
+    modelThatWaits(["Hello "], async () => {
+      whileWriting = await (await request("")).json();
+      await stopReply();
+    });
+
+    await (await sendTurn()).text();
+
+    expect(whileWriting).toMatchObject({
+      replyInProgress: { content: "Hi there", assistantContent: "Hello " },
+    });
+    expect(await (await request("")).json()).toMatchObject({
+      replyInProgress: null,
+    });
+    expect(sendEvent).toHaveBeenCalledWith("everyone", "replyFinished", {
+      conversationId,
+    });
+  });
+
+  it("says there's nothing to stop when no reply is being written", async () => {
+    expect((await stopReply()).status).toBe(404);
   });
 });
 

@@ -4,6 +4,7 @@ import { createConversation, type Conversation } from "../../api/conversations";
 import { ApiError, errorMessage } from "../../api/http";
 import {
   fetchMessages,
+  stopReply,
   streamMessage,
   type ChatMessage,
   type MessageAttachmentInput,
@@ -15,6 +16,9 @@ import { useToast } from "../../hooks/toast/useToast";
 import { stageSource, type StagedSource } from "../../sources/types";
 import type { PendingTurn } from "./types";
 import { localId } from "../../lib/localId";
+
+/** A turn stopped before any of its reply came, so nothing was saved. */
+class TurnCancelled extends Error {}
 
 /** Deltas arrive faster than a long reply can be re-parsed; batch them. */
 const FLUSH_INTERVAL_MS = 80;
@@ -89,8 +93,7 @@ function messageAttachmentsOf(
 function toStoredTurns(
   input: { content: string; modelId: string; sources: StagedSource[] },
   conversationId: string,
-  assistantId: string,
-  assistantContent: string,
+  assistant: { id: string; content: string; stopped: boolean },
 ): ChatMessage[] {
   const createdAt = new Date().toISOString();
   const user: ChatMessage = {
@@ -120,18 +123,20 @@ function toStoredTurns(
           ]
         : [],
     ),
+    stopped: false,
   };
-  const assistant: ChatMessage = {
-    id: assistantId,
-    role: "assistant",
-    content: assistantContent,
-    chosenModelId: input.modelId,
-    conversationId,
-    createdAt,
-    attachments: [],
-    transcriptAttachments: [],
-  };
-  return [user, assistant];
+  return [
+    user,
+    {
+      ...assistant,
+      role: "assistant",
+      chosenModelId: input.modelId,
+      conversationId,
+      createdAt,
+      attachments: [],
+      transcriptAttachments: [],
+    },
+  ];
 }
 
 /**
@@ -189,6 +194,7 @@ function toPendingTurn(
     ),
     assistantContent: "",
     reloading: false,
+    stoppable: false,
   };
 }
 
@@ -234,6 +240,7 @@ export function useChatSend() {
     {},
   );
   const [sendingKeys, setSendingKeys] = useState<Record<string, boolean>>({});
+  const [stoppingKeys, setStoppingKeys] = useState<Record<string, boolean>>({});
 
   const dropPending = useCallback((conversationId: string) => {
     setPendingTurns((current) => without(current, conversationId));
@@ -277,6 +284,9 @@ export function useChatSend() {
       input: TurnInput,
       replaces: { message: ChatMessage; storedId: string } | null,
     ) => {
+      // A stop of a reply this page only showed has nothing here to clear
+      // it once that reply ends, so the next turn starts unstopped.
+      setStoppingKeys((current) => without(current, target));
       setPendingTurns((current) => ({
         ...current,
         [target]: toPendingTurn(
@@ -288,7 +298,10 @@ export function useChatSend() {
         ),
       }));
 
-      let storedAssistantId: string | null = null;
+      // Set from a callback, which TypeScript doesn't follow; typed by hand so
+      // it isn't narrowed to null for good.
+      let stored = null as { id: string; stopped: boolean } | null;
+      let cancelled = false;
       const deltas = createDeltaBuffer((assistantContent) =>
         setPendingTurns((current) => {
           const turn = current[target];
@@ -309,15 +322,31 @@ export function useChatSend() {
             ...(replaces ? { replacesMessageId: replaces.storedId } : {}),
           },
           {
+            onOpen: () =>
+              setPendingTurns((current) => {
+                const turn = current[target];
+                if (!turn) return current;
+                return { ...current, [target]: { ...turn, stoppable: true } };
+              }),
             onDelta: (delta) => deltas.push(delta),
-            onDone: (lastMessageId) => {
-              storedAssistantId = lastMessageId;
+            onDone: (lastMessageId, stopped) => {
+              stored = { id: lastMessageId, stopped };
+            },
+            onCancelled: () => {
+              cancelled = true;
             },
           },
         );
       } finally {
         deltas.stop();
+        setStoppingKeys((current) => without(current, target));
       }
+      if (cancelled) throw new TurnCancelled();
+      const assistant = {
+        id: stored?.id ?? `local:${localId()}`,
+        content: deltas.text,
+        stopped: stored?.stopped ?? false,
+      };
 
       // Write the finished turn into the cache rather than refetching the
       // conversation: the whole history came down the wire after every
@@ -341,16 +370,9 @@ export function useChatSend() {
               )
             : messages;
           return {
-            lastMessageId: storedAssistantId ?? current?.lastMessageId ?? null,
-            messages: [
-              ...kept,
-              ...toStoredTurns(
-                input,
-                target,
-                storedAssistantId ?? `local:${localId()}`,
-                deltas.text,
-              ),
-            ],
+            lastMessageId: stored?.id ?? current?.lastMessageId ?? null,
+            messages: [...kept, ...toStoredTurns(input, target, assistant)],
+            replyInProgress: null,
           };
         },
       );
@@ -372,7 +394,8 @@ export function useChatSend() {
    * A turn that didn't take, sent or edited alike: the composer gets the
    * message back and the chat is refetched to show what the server kept. A
    * failed edit's rewind stands, so the edited message is gone from the chat
-   * and its text waits in the composer, as a failed send's does.
+   * and its text waits in the composer, as a failed send's does. A turn
+   * stopped before its reply began ends the same way, without the error.
    */
   const recover = useCallback(
     (
@@ -403,6 +426,7 @@ export function useChatSend() {
           );
       }
       input.onRestore(input.content, input.sources, conversationId ?? "new");
+      if (error instanceof TurnCancelled) return;
       toast.show({
         kind: "error",
         message:
@@ -471,5 +495,33 @@ export function useChatSend() {
     [recover, storedIdOf, streamTurn],
   );
 
-  return { pendingTurns, sendingKeys, send, edit };
+  /**
+   * Stops the reply being written in a conversation, whether this page is
+   * streaming it or only showing how far it had got. How it ends arrives the
+   * way the reply would have: its stream, or the replyFinished event.
+   */
+  const stop = useCallback(
+    async (conversationId: string) => {
+      setStoppingKeys((current) => ({ ...current, [conversationId]: true }));
+      try {
+        await stopReply(server, conversationId);
+      } catch (error) {
+        toast.show({
+          kind: "error",
+          message: errorMessage(error, "The reply didn't stop."),
+        });
+        setStoppingKeys((current) => without(current, conversationId));
+      }
+    },
+    [server, toast],
+  );
+
+  return {
+    pendingTurns,
+    sendingKeys,
+    stoppingKeys,
+    send,
+    edit,
+    stop,
+  };
 }

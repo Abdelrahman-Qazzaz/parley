@@ -22,6 +22,7 @@ const messageColumns = {
   role: ChatMessages.role,
   content: ChatMessages.content,
   chosenModelId: ChatMessages.chosenModelId,
+  stopped: ChatMessages.stopped,
   conversationId: ChatMessages.conversationId,
   createdAt: ChatMessages.createdAt,
 };
@@ -308,6 +309,7 @@ async function createMessage(
     conversationId: string;
     userId: string;
     chosenModelId?: string;
+    stopped?: boolean;
   },
   executor: Executor = db,
 ) {
@@ -470,6 +472,8 @@ async function persistAndUnclaimChatTurn(turn: {
   attachmentIds: readonly string[];
   chosenModelId: string;
   assistantContent: string;
+  /** The reply was stopped partway, so `assistantContent` is what came. */
+  stopped?: boolean;
   conversationTitle?: string;
   contextWindowMessageCount: number;
   claimToken: string;
@@ -490,6 +494,7 @@ async function persistAndUnclaimChatTurn(turn: {
           role: "assistant",
           content: turn.assistantContent,
           chosenModelId: turn.chosenModelId,
+          stopped: turn.stopped ?? false,
           conversationId: turn.conversationId,
           userId: turn.userId,
         },

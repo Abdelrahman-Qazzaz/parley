@@ -9,10 +9,16 @@ export function AssistantTurn({
   content,
   modelId,
   streaming,
+  elsewhere,
+  stopped,
 }: {
   content: string;
   modelId?: string | null;
   streaming?: boolean;
+  /** Streaming, but not to this page: `content` is how far it had got. */
+  elsewhere?: boolean;
+  /** Someone stopped it before it finished. */
+  stopped?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const { models } = useChatModelsQuery(useServerReady());
@@ -38,8 +44,18 @@ export function AssistantTurn({
         </div>
       )}
 
+      {elsewhere && content.length > 0 && (
+        <p className="mt-2 text-sm text-faint">
+          Still writing
+          <span className="caret" />
+        </p>
+      )}
+
       {!streaming && content.length > 0 && (
         <div className="mt-2 flex h-7 items-center gap-3">
+          {stopped && (
+            <span className="px-1.5 text-xs text-faint">Stopped</span>
+          )}
           <button
             type="button"
             onClick={() => void copy()}

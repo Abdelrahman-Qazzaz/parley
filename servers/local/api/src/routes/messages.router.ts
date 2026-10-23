@@ -34,6 +34,12 @@ messagesRouter.post(
   messagesController.handleCreateMessage,
 );
 
+messagesRouter.post(
+  "/stop",
+  validateReqParams(conversationReqParamSchema),
+  messagesController.handleStopReply,
+);
+
 messagesRouter.patch(
   `/:${CTX_KEYS.messageId}`,
   validateReqParams(messageReqParamSchema),

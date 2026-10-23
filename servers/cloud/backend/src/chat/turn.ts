@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { TrackedReply } from "@parley/shared/replies";
 import { logger, messageOf } from "@parley/shared/logger";
 import { data, type HistoryCandidate, type HistoryTranscript } from "../data";
 import { buildUserTurn, chat, type ChatTurn } from "../ai";
@@ -303,11 +304,16 @@ async function titleForFirstTurn(content: string, conversationId: string) {
  * Asks the model, handing each piece of the answer to `onDelta`, then saves
  * the turn and lets go of the claim in one transaction, keeping its text for
  * the next turn's history read here. Returns the conversation's new head.
+ *
+ * A stopped reply is saved with what came before the stop, marked as
+ * stopped. One stopped before anything came isn't saved: this returns null,
+ * and the caller still holds the claim.
  */
 export async function answerTurn(
   request: TurnRequest,
   claim: TurnClaim,
   prepared: PreparedTurn,
+  reply: TrackedReply,
   onDelta: (delta: string) => void,
 ) {
   const conversationTitle =
@@ -315,15 +321,28 @@ export async function answerTurn(
       ? titleForFirstTurn(request.content, request.conversationId)
       : Promise.resolve(undefined);
 
-  const assistantContent = await chat.complete(
-    request.chosenModelId,
-    prepared.prompt,
-    {
-      onDelta: async (delta) => onDelta(delta),
-      maxOutputTokens: MAX_RESPONSE_TOKENS,
-      sessionId: request.conversationId,
-    },
-  );
+  let assistantContent: string;
+  let stopped = false;
+  try {
+    assistantContent = await chat.complete(
+      request.chosenModelId,
+      prepared.prompt,
+      {
+        onDelta: async (delta) => {
+          reply.append(delta);
+          onDelta(delta);
+        },
+        maxOutputTokens: MAX_RESPONSE_TOKENS,
+        sessionId: request.conversationId,
+        signal: reply.signal,
+      },
+    );
+  } catch (error) {
+    if (!reply.stopped) throw error;
+    if (reply.text.length === 0) return null;
+    assistantContent = reply.text;
+    stopped = true;
+  }
 
   const title = await conversationTitle;
   const saved = await measurePreparation(
@@ -337,6 +356,7 @@ export async function answerTurn(
         attachmentIds: request.attachmentIds,
         chosenModelId: request.chosenModelId,
         assistantContent,
+        stopped,
         conversationTitle: title,
         contextWindowMessageCount: countMessagesInContextWindow([
           assistantContent.length,
@@ -353,5 +373,5 @@ export async function answerTurn(
     assistantMessageId: saved.assistantMessageId,
     assistantContent,
   });
-  return saved.assistantMessageId;
+  return { lastMessageId: saved.assistantMessageId, stopped };
 }

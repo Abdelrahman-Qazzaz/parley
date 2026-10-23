@@ -17,10 +17,28 @@ import { useSources } from "../../sources/useSources";
 import { Composer } from "../composer/Composer";
 import { DropOverlay } from "../composer/DropOverlay";
 import { MessageList } from "./MessageList";
-import type { ChatMessage } from "../../api/messages";
+import type { ChatMessage, ReplyInProgress } from "../../api/messages";
+import type { PendingTurn } from "./types";
 import { sourcesOfMessage, useChatSend } from "./useChatSend";
 
 const NEW_CHAT_KEY = "new";
+
+/**
+ * A turn the server is answering that this page isn't streaming: sent from
+ * another tab, or before a reload. Only its text is known.
+ */
+function pendingTurnOf(reply: ReplyInProgress): PendingTurn {
+  return {
+    content: reply.content,
+    replacesMessageId: null,
+    images: [],
+    transcripts: [],
+    assistantContent: reply.assistantContent,
+    reloading: false,
+    stoppable: true,
+    elsewhere: true,
+  };
+}
 
 function blockedReasonFor(sources: StagedSource[]): string | null {
   const failed = sources.find((source) => source.status === "failed");
@@ -53,7 +71,8 @@ export function ChatView() {
   const messagesQuery = useMessagesQuery(conversationId);
   const chatModels = useChatModelsQuery(ready);
   const [modelPick, setModelPick] = useState<string | null>(null);
-  const { pendingTurns, sendingKeys, send, edit } = useChatSend();
+  const { pendingTurns, sendingKeys, stoppingKeys, send, edit, stop } =
+    useChatSend();
 
   const [dragging, setDragging] = useState(false);
   const dragDepth = useRef(0);
@@ -106,7 +125,12 @@ export function ChatView() {
       ? modelPick
       : resolveDefaultModel(eligibleIds, server.defaultChatModelId);
 
-  const sending = !!sendingKeys[draftKey];
+  const replyInProgress = messagesQuery.data?.replyInProgress ?? null;
+  const pending = conversationId
+    ? (pendingTurns[conversationId] ??
+      (replyInProgress ? pendingTurnOf(replyInProgress) : null))
+    : null;
+  const sending = !!sendingKeys[draftKey] || !!replyInProgress;
   const blockedReason = blockedReasonFor(sources);
   const historyReady =
     !conversationId || (!!messagesQuery.data && !messagesQuery.error);
@@ -199,9 +223,7 @@ export function ChatView() {
       ) : (
         <MessageList
           messages={messagesQuery.data?.messages ?? []}
-          pending={
-            conversationId ? (pendingTurns[conversationId] ?? null) : null
-          }
+          pending={pending}
           loading={!!conversationId && messagesQuery.isLoading}
           onEdit={handleEdit}
           canEdit={canEdit}
@@ -220,6 +242,12 @@ export function ChatView() {
         requirements={requirements}
         sending={sending}
         canSend={canSend}
+        onStop={
+          conversationId && pending?.stoppable
+            ? () => void stop(conversationId)
+            : null
+        }
+        stopping={!!conversationId && !!stoppingKeys[conversationId]}
         blockedReason={blockedReason}
         onSend={handleSend}
       />

@@ -10,6 +10,7 @@ import type {
   ReplyStreamEvents,
 } from "@parley/shared/contract";
 import { SSEEventQueue } from "@parley/shared/sse";
+import type { TrackedReply } from "@parley/shared/replies";
 import {
   data,
   type CreateMessageHistory,
@@ -30,6 +31,8 @@ import type { ChatImage, ChatTurn } from "../../../shared/ai/ai_chat_client";
 import { logger, messageOf } from "@parley/shared/logger";
 import { files } from "../../../shared/files";
 import type { MessageAttachmentInput } from "../schema/messages.schema";
+import { EVERYONE, events as serverEvents } from "../events";
+import { replies } from "../replies";
 
 const log = logger.child({ controller: "messages" });
 
@@ -80,6 +83,7 @@ function toMessageJson(
     role: row.role,
     content: row.content,
     chosenModelId: row.chosenModelId,
+    stopped: row.stopped,
     conversationId: row.conversationId,
     createdAt: row.createdAt.toISOString(),
     attachments: images,
@@ -184,6 +188,11 @@ function countMessagesInContextWindow(
 export async function handleListMessages(c: Context) {
   const conversationId = c.get(CTX_KEYS.conversationId);
 
+  // Read before the rows: a reply that ends in between is then in both,
+  // until the replyFinished it sends has the client read again, rather than
+  // in neither, with nothing to say it's missing.
+  const replyInProgress = replies.find(conversationId);
+
   // The conversation and its rows are independent reads; the rows
   // are simply discarded on the 404 path.
   const [conversation, rows] = await Promise.all([
@@ -208,6 +217,7 @@ export async function handleListMessages(c: Context) {
         transcriptsByMessageId.get(row.id),
       ),
     ),
+    replyInProgress,
   } satisfies MessagesResponse);
 }
 
@@ -225,6 +235,20 @@ async function unclaimConversationSafely(
       conversationId,
     });
   }
+}
+
+/**
+ * Lets go of a turn that won't be saved. A failed read does not cancel
+ * acquisition; settle it before releasing anything.
+ */
+async function releaseClaims(
+  messageInput: MessageRequest,
+  claimPromises: readonly [Promise<string | null>, Promise<boolean>],
+  claimToken: string,
+) {
+  await Promise.allSettled(claimPromises);
+  await data.attachments.unclaimAttachments(claimToken).catch(() => {});
+  await unclaimConversationSafely(messageInput.conversationId, claimToken);
 }
 
 type MessageRequest = {
@@ -273,9 +297,9 @@ class MessageRequestError extends Error {
  * POST /conversations/:conversationId/messages — build the model context, stream
  * the reply over SSE, and persist the turn without the client waiting on it.
  *
- * Events: `delta` ({ delta }) per model chunk, then `done` ({ lastMessageId })
- * after the completed turn is stored, or `error` ({ message }) if the model call
- * fails. The client consumes this with fetch + response.body.getReader()
+ * Events: `delta` ({ delta }) per model chunk, then `done` ({ lastMessageId,
+ * stopped }) after the completed turn is stored, `cancelled` if it was stopped
+ * before any reply came, or `error` ({ message }) if the model call fails. The client consumes this with fetch + response.body.getReader()
  * (EventSource can't POST).
  *
  * The run that produces the reply is decoupled from the response stream, so a
@@ -455,10 +479,13 @@ function streamAndPersistMessageTurn(
   void (async () => {
     const events = new SSEEventQueue<ReplyStreamEvents>();
     let streamResponse: Response | undefined;
+    let reply: TrackedReply | undefined;
 
     try {
       const { turns, history, newMessageContextCharCount } =
         await prepareTurn();
+      reply = replies.start(messageInput.conversationId, messageInput.content);
+      const tracked = reply;
 
       streamResponse = streamSSE(c, (stream) =>
         events.pipeTo(stream, c.req.raw.signal),
@@ -469,11 +496,28 @@ function streamAndPersistMessageTurn(
         messageInput.expectedLastMessageId === null
           ? titleForFirstTurn(messageInput.content, messageInput.conversationId)
           : Promise.resolve(undefined);
-      const assistantContent = await chatAI(messageInput.chosenModelId, turns, {
-        onDelta: async (delta) => {
-          events.push("delta", { delta });
-        },
-      });
+      let assistantContent: string;
+      let stopped = false;
+      try {
+        assistantContent = await chatAI(messageInput.chosenModelId, turns, {
+          onDelta: async (delta) => {
+            tracked.append(delta);
+            events.push("delta", { delta });
+          },
+          signal: tracked.signal,
+        });
+      } catch (error) {
+        // A stopped reply is saved with what came before the stop; one
+        // stopped before anything came isn't saved at all.
+        if (!tracked.stopped) throw error;
+        if (tracked.text.length === 0) {
+          await releaseClaims(messageInput, claimPromises, claimToken);
+          events.push("cancelled", {});
+          return streamResponse;
+        }
+        assistantContent = tracked.text;
+        stopped = true;
+      }
       const contextWindowMessageCount = countMessagesInContextWindow([
         assistantContent.length,
         newMessageContextCharCount,
@@ -485,20 +529,18 @@ function streamAndPersistMessageTurn(
         attachmentIds: messageInput.attachmentIds,
         chosenModelId: messageInput.chosenModelId,
         assistantContent,
+        stopped,
         conversationTitle: await conversationTitlePromise,
         contextWindowMessageCount,
         claimToken,
       });
 
-      events.push("done", { lastMessageId });
+      events.push("done", { lastMessageId, stopped });
       return streamResponse;
     } catch (error) {
       // Released before answering, so a client that retries at once doesn't
-      // meet its own claim. A failed read does not cancel acquisition; settle
-      // it before releasing anything.
-      await Promise.allSettled(claimPromises);
-      await data.attachments.unclaimAttachments(claimToken).catch(() => {});
-      await unclaimConversationSafely(messageInput.conversationId, claimToken);
+      // meet its own claim.
+      await releaseClaims(messageInput, claimPromises, claimToken);
 
       if (!streamResponse) {
         if (error instanceof MessageRequestError) {
@@ -511,6 +553,14 @@ function streamAndPersistMessageTurn(
       return streamResponse;
     } finally {
       events.end();
+      if (reply) {
+        reply.end();
+        // For a page that was reloaded mid-reply: its stream is gone, and
+        // this is how it hears the turn is saved.
+        serverEvents.send(EVERYONE, "replyFinished", {
+          conversationId: messageInput.conversationId,
+        });
+      }
     }
   })().then(responseReady.resolve, responseReady.reject);
 
@@ -574,6 +624,20 @@ export async function handlePatchMessage(c: Context) {
       return prepared;
     },
   );
+}
+
+/**
+ * POST /conversations/:conversationId/messages/stop — stops the reply being
+ * written. Its turn's stream ends as stopping leaves it: `done` with the
+ * reply saved so far, or `cancelled` if none had come.
+ *
+ * Its own request, because the reply stream closing isn't one: that's also
+ * what a dropped connection looks like, and a reply outlives those.
+ */
+export function handleStopReply(c: Context) {
+  return replies.stop(c.get(CTX_KEYS.conversationId))
+    ? c.body(null, 204)
+    : c.json({ message: "No reply in progress" }, 404);
 }
 
 /** DELETE /conversations/:conversationId/messages/:messageId */

@@ -5,6 +5,9 @@ const glyphs = {
   plus: <path d="M12 5v14M5 12h14" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
   send: <path d="M12 19V5M5 12l7-7 7 7" />,
+  stop: (
+    <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" />
+  ),
   arrowDown: <path d="M12 5v14M19 12l-7 7-7-7" />,
   chevronDown: <path d="M6 9.5 12 15.5l6-6" />,
   check: <path d="M5 13l4 4L19 7" />,
@@ -50,8 +53,12 @@ const glyphs = {
       <path d="m16 16 4 4" />
     </>
   ),
-  trash: <path d="M4 7h16M9 7V4.5h6V7M6.5 7l.9 12.1a1 1 0 0 0 1 .9h7.2a1 1 0 0 0 1-.9L17.5 7M10 11v6M14 11v6" />,
-  pencil: <path d="M4 20.5h4.2L20 8.7a2.4 2.4 0 1 0-3.4-3.4L4.8 17.1zM14.5 7.5l3 3" />,
+  trash: (
+    <path d="M4 7h16M9 7V4.5h6V7M6.5 7l.9 12.1a1 1 0 0 0 1 .9h7.2a1 1 0 0 0 1-.9L17.5 7M10 11v6M14 11v6" />
+  ),
+  pencil: (
+    <path d="M4 20.5h4.2L20 8.7a2.4 2.4 0 1 0-3.4-3.4L4.8 17.1zM14.5 7.5l3 3" />
+  ),
   copy: (
     <>
       <rect x="9" y="9" width="11" height="11" rx="2" />
@@ -59,7 +66,9 @@ const glyphs = {
     </>
   ),
   download: <path d="M12 4v11m-5-4.5 5 5 5-5M4.5 20h15" />,
-  refresh: <path d="M20 5.5v5h-5M4 18.5v-5h5M19.4 10.5a7.5 7.5 0 0 0-13-3.4M4.6 13.5a7.5 7.5 0 0 0 13 3.4" />,
+  refresh: (
+    <path d="M20 5.5v5h-5M4 18.5v-5h5M19.4 10.5a7.5 7.5 0 0 0-13-3.4M4.6 13.5a7.5 7.5 0 0 0 13 3.4" />
+  ),
   panelLeft: (
     <>
       <rect x="3" y="4.5" width="18" height="15" rx="2" />
@@ -72,9 +81,7 @@ const glyphs = {
       <path d="M12 3v1.5M12 19.5V21M21 12h-1.5M4.5 12H3m14.36 5.36-1.06-1.06M7.7 7.7 6.64 6.64m10.72 0L16.3 7.7M7.7 16.3l-1.06 1.06" />
     </>
   ),
-  moon: (
-    <path d="M20.4 15.4A9 9 0 0 1 8.6 3.6a9 9 0 1 0 11.8 11.8z" />
-  ),
+  moon: <path d="M20.4 15.4A9 9 0 0 1 8.6 3.6a9 9 0 1 0 11.8 11.8z" />,
   alert: (
     <>
       <circle cx="12" cy="12" r="9" />

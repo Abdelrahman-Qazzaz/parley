@@ -105,6 +105,7 @@ export function MessageList({
                     key={message.id}
                     content={message.content}
                     modelId={message.chosenModelId}
+                    stopped={message.stopped}
                   />
                 ),
               )}
@@ -116,7 +117,11 @@ export function MessageList({
                     images={pending.images}
                     transcripts={pending.transcripts}
                   />
-                  <AssistantTurn content={pending.assistantContent} streaming />
+                  <AssistantTurn
+                    content={pending.assistantContent}
+                    streaming
+                    elsewhere={pending.elsewhere}
+                  />
                 </>
               )}
             </div>

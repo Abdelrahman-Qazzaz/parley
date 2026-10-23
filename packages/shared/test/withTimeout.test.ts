@@ -22,4 +22,20 @@ describe("withTimeout", () => {
     await vi.advanceTimersByTimeAsync(5_000);
     await expect(result).resolves.toBe(false);
   });
+
+  it("aborts when the caller's signal does, with its reason", async () => {
+    const caller = new AbortController();
+    const result = withTimeout(
+      { timeoutMs: 60_000, signal: caller.signal },
+      ({ abortSignal }) =>
+        new Promise((_, reject) => {
+          abortSignal.addEventListener("abort", () =>
+            reject(abortSignal.reason as Error),
+          );
+        }),
+    );
+
+    caller.abort(new Error("stopped"));
+    await expect(result).rejects.toThrow("stopped");
+  });
 });

@@ -10,6 +10,7 @@
     "./events": "./src/events.ts",
     "./limits": "./src/limits.ts",
     "./logger": "./src/logger.ts",
+    "./replies": "./src/replies.ts",
     "./shutdown": "./src/shutdown.ts",
     "./sse": "./src/sse.ts",
     "./sseReader": "./src/sseReader.ts",

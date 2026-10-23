@@ -1,5 +1,6 @@
 import {
   bigint,
+  boolean,
   index,
   integer,
   pgTable,
@@ -164,6 +165,9 @@ export const ChatMessages = pgTable(
     content: text("content").notNull(),
     // Model that produced an assistant message; null for user messages.
     chosenModelId: text("chosen_model_id"),
+    // An assistant reply someone stopped partway; its content is what came
+    // before they did.
+    stopped: boolean("stopped").default(false).notNull(),
 
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

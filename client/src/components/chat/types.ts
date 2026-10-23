@@ -23,4 +23,11 @@ export type PendingTurn = {
    * what the server kept, rather than flashing back in the meantime.
    */
   reloading: boolean;
+  /** The reply has started, so the stop button can reach it. */
+  stoppable: boolean;
+  /**
+   * Another tab or an earlier visit sent this turn, so its reply isn't
+   * streaming here: what's shown is how far it had got, until it's saved.
+   */
+  elsewhere?: boolean;
 };
