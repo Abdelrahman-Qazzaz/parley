@@ -2,6 +2,7 @@ import type { z } from "zod";
 import { logger, messageOf } from "@parley/shared/logger";
 import { data, type HistoryCandidate } from "../data";
 import { buildUserTurn, chat, type ChatTurn } from "../ai";
+import { measurePreparation } from "../preparationMetrics";
 import { uploads } from "../uploads";
 import type { messageCreateBodySchema } from "../schema/messages.schema";
 import {
@@ -147,14 +148,20 @@ export async function prepareTurn(
   ] = await Promise.all([
     claim.conversationClaimed,
     claim.attachmentsReserved,
-    data.images.resolveImages(request.userId, request.imageUploadIds),
-    data.transcripts.findTranscripts(request.userId, request.audioUploadIds),
-    data.messages.findContextHistory({
-      userId: request.userId,
-      conversationId: request.conversationId,
-      maximumMessageCount: MAX_HISTORY_MESSAGES,
-      ...(beforeMessageId === undefined ? {} : { beforeMessageId }),
-    }),
+    measurePreparation("resolveImages", claim.preparationId, () =>
+      data.images.resolveImages(request.userId, request.imageUploadIds),
+    ),
+    measurePreparation("findTranscripts", claim.preparationId, () =>
+      data.transcripts.findTranscripts(request.userId, request.audioUploadIds),
+    ),
+    measurePreparation("findContextHistory", claim.preparationId, () =>
+      data.messages.findContextHistory({
+        userId: request.userId,
+        conversationId: request.conversationId,
+        maximumMessageCount: MAX_HISTORY_MESSAGES,
+        ...(beforeMessageId === undefined ? {} : { beforeMessageId }),
+      }),
+    ),
   ]);
 
   if (!conversationClaimed) {
@@ -304,19 +311,22 @@ export async function answerTurn(
     },
   );
 
-  return data.messages.persistAndUnclaimChatTurn({
-    userId: request.userId,
-    conversationId: request.conversationId,
-    content: request.content,
-    attachmentIds: request.attachmentIds,
-    chosenModelId: request.chosenModelId,
-    assistantContent,
-    conversationTitle: await conversationTitle,
-    contextWindowMessageCount: countMessagesInContextWindow([
-      assistantContent.length,
-      prepared.newTurnCharCount,
-      ...prepared.historyCharCounts,
-    ]),
-    claimToken: claim.token,
-  });
+  const title = await conversationTitle;
+  return measurePreparation("persistAndUnclaimChatTurn", undefined, () =>
+    data.messages.persistAndUnclaimChatTurn({
+      userId: request.userId,
+      conversationId: request.conversationId,
+      content: request.content,
+      attachmentIds: request.attachmentIds,
+      chosenModelId: request.chosenModelId,
+      assistantContent,
+      conversationTitle: title,
+      contextWindowMessageCount: countMessagesInContextWindow([
+        assistantContent.length,
+        prepared.newTurnCharCount,
+        ...prepared.historyCharCounts,
+      ]),
+      claimToken: claim.token,
+    }),
+  );
 }
