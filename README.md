@@ -1,10 +1,12 @@
 # Parley
 
 Chat with Claude about audio, video, YouTube videos and images. It comes in
-two parts, sharing one client: the hosted app (`servers/cloud/`), and a server
-you run on your own machine (`servers/local/`). This README is about the
-second. On your machine, chat goes through your own Claude Code and audio is
-transcribed locally with Whisper, so nothing needs an API key.
+two parts, sharing one client (`client/`) and a wire contract
+(`packages/shared/`): the hosted app, documented in
+[`servers/cloud/README.md`](servers/cloud/README.md), and a server you run on
+your own machine (`servers/local/`), which this README is about. On your
+machine, chat goes through your own Claude Code and audio is transcribed
+locally with Whisper, so nothing needs an API key.
 
 ## What you need
 
@@ -77,4 +79,4 @@ npm run dev --prefix client # the client with hot reload on :5173
 
 Open <http://localhost:5173/local>. `servers/local/ARCHITECTURE.md` describes
 how the local server fits together; `npm test` in `servers/local/` runs its
-tests.
+tests. Its debugger listens on 9231 (`chrome://inspect`).

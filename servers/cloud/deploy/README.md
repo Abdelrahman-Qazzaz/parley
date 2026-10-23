@@ -37,8 +37,7 @@ Once per server. Steps 1 to 3 happen on your own machine.
    in with a key.
 
 4. **Secrets.** In Doppler, project `parley`, fill in the `prd` config with
-   the production values (Railway's service variables are the current ones),
-   plus `RABBITMQ_PASSWORD`, from `openssl rand -hex 24`. Leave out `MQ_URL`,
+   the production values, plus `RABBITMQ_PASSWORD`, from `openssl rand -hex 24`. Leave out `MQ_URL`,
    `PORT`, `CLIENT_URL` and `API_BASE_URL`: the compose files set those.
    Then create a service token for `prd` (Access → Service Tokens) and paste
    it into this, followed by Enter and Ctrl-D:

@@ -4,25 +4,23 @@ Create git worktrees from this checkout as ../summarizer-<feature>, on a branch 
 
     git worktree add ../summarizer-<feature> -b <feature>
 
-Gitignored setup doesn't come with the worktree. From inside the new worktree, on the servers/ layout (main from the two-servers branch on; see PLAN.md):
+Gitignored setup doesn't come with the worktree. From inside the new worktree:
 
     ln -s ../../../summarizer/servers/cloud/.env servers/cloud/.env
     npm install
 
-The repo is one npm workspace (from the shared-library merge on), so that installs the client, both servers and packages/shared. In the sandbox, use `npm install --ignore-scripts` and then `npm rebuild mise`: the root's prepare script rewrites the git hooks, which every worktree shares, and the sandbox's system npm fails on this mount, so run it as `npx -y npm@11.14.1`.
+The repo is one npm workspace, so that installs the client, both servers and packages/shared. In the sandbox, run `npx -y npm@11.14.1 install --ignore-scripts` and then `npx -y npm@11.14.1 rebuild mise`: the sandbox's system npm fails on this mount, and the root's prepare script would rewrite the git hooks every worktree shares.
 
 Only if the work touches the YouTube fetcher (the pre-commit hook runs its ruff). The sandbox's python3 has no ensurepip, so use uv:
 
     uv venv servers/cloud/youtube-fetcher/.venv
     VIRTUAL_ENV=servers/cloud/youtube-fetcher/.venv uv pip install -r servers/cloud/youtube-fetcher/requirements.txt -r servers/cloud/youtube-fetcher/requirements-dev.txt
 
-Branches still on the old layout (local-edition, and anything cut before two-servers) keep backend/ and youtube-fetcher/ at the root:
-
-    ln -s ../../summarizer/backend/.env backend/.env
-    ln -s ../../summarizer/youtube-fetcher/.env youtube-fetcher/.env
-    npm install && npm install --prefix backend && npm install --prefix client
-
 Remove a finished worktree with `git worktree remove ../summarizer-<feature>`, not by deleting the folder.
+
+## Checks
+
+`npm run knip` from the root finds unused files, exports and dependencies. Open work is in [TODO.md](TODO.md).
 
 ## Testing in a browser
 

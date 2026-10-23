@@ -76,7 +76,7 @@ isn't measuring 429s. To check the real limits are enforced:
 | RabbitMQ   | RabbitMQ                                                              | `MQ_URL`                       |
 
 Each override is read in the one place its client is built, and
-`shared/env.ts` refuses all of them when `NODE_ENV=production`, so none of this
+`backend/src/env.ts` refuses all of them when `NODE_ENV=production`, so none of this
 can reach a deploy. That's also why the stack runs the production image with
 `NODE_ENV=development`.
 
