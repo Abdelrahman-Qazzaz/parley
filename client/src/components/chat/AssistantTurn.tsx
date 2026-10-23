@@ -34,10 +34,16 @@ export function AssistantTurn({
   return (
     <div className="group/turn">
       {streaming && content.length === 0 ? (
-        <p className="text-sm text-faint">
-          Thinking
-          <span className="caret" />
-        </p>
+        // Not "Thinking": most models don't, they're just slow to start.
+        <span
+          className="typing"
+          role="status"
+          aria-label="Waiting for the reply"
+        >
+          <span />
+          <span />
+          <span />
+        </span>
       ) : (
         <div className="md">
           <Markdown content={content} />
